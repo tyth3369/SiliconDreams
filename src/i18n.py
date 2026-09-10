@@ -7,7 +7,6 @@ UI language switch via session state, no external dependencies.
 
 from __future__ import annotations
 
-
 # ═══════════════════════════════════════════════════
 # Translation dictionaries
 # ═══════════════════════════════════════════════════
@@ -15,8 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.6.0 | (c) 2026",
-
+    "app.footer": "SiliconDreams v0.7.0 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -24,43 +22,35 @@ _ZH = {
     "sidebar.upload_error_size": "文件超过 50MB 限制",
     "sidebar.upload_error_duplicate": "此文件已上传过",
     "sidebar.upload_success": "上传并索引完成",
-
     "sidebar.kb_title": "知识库状态",
     "sidebar.kb_docs": "文档",
     "sidebar.kb_text": "文本",
     "sidebar.kb_table": "表格",
     "sidebar.kb_uploaded": "已上传文件：",
-
     "sidebar.settings_title": "设置",
     "sidebar.settings_model": "LLM 模型",
     "sidebar.settings_model_help": "V3 适合日常对话，R1 适合复杂推理",
     "sidebar.settings_language": "界面语言",
     "sidebar.settings_theme": "主题",
     "sidebar.settings_debug": "Debug 模式",
-
     # -- Theme --
     "theme.auto": "自动",
     "theme.dark": "暗色",
     "theme.light": "浅色",
-
     # -- Spinners / Progress --
     "spinner.parse": "正在解析 PDF...",
     "spinner.chunk": "正在分块...",
     "spinner.vectorize": "正在向量化...",
-
     # -- Status --
     "status.online": "ONLINE",
     "status.no_key": "NO KEY",
     "status.llm_status": "LLM",
-
     # -- Quick Actions --
     "quick.compare": "行业对比",
     "quick.tech": "技术趋势",
     "quick.finance": "财务分析",
-
     # -- Chat --
     "chat.placeholder": "请输入您的问题",
-
     # -- Errors --
     "error.pdf_failed": "PDF 处理失败",
     "error.llm_failed": "LLM 调用失败",
@@ -71,7 +61,6 @@ _ZH = {
         "2. 刷新页面\n\n"
         "详见 [docs/api-keys-guide.md](docs/api-keys-guide.md)"
     ),
-
     # -- Citation --
     "citation.source_tag": "来源",
     "citation.page_prefix": "p",
@@ -81,7 +70,6 @@ _ZH = {
     "citation.financial_label": "财务数据",
     "citation.web_label": "网络搜索",
     "citation.source_count": "个来源",
-
     # -- RAG Context --
     "rag.context_header": "以下是从已上传财报中检索到的相关信息，请基于这些信息回答用户问题。引用数据时必须标注 [来源 p页码]：",
     "rag.error": "RAG 检索异常",
@@ -90,8 +78,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.6.0 | (c) 2026",
-
+    "app.footer": "SiliconDreams v0.7.0 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",
@@ -99,43 +86,35 @@ _EN = {
     "sidebar.upload_error_size": "File exceeds 50MB limit",
     "sidebar.upload_error_duplicate": "This file has already been uploaded",
     "sidebar.upload_success": "uploaded and indexed successfully",
-
     "sidebar.kb_title": "Knowledge Base",
     "sidebar.kb_docs": "Docs",
     "sidebar.kb_text": "Text",
     "sidebar.kb_table": "Tables",
     "sidebar.kb_uploaded": "Uploaded files:",
-
     "sidebar.settings_title": "Settings",
     "sidebar.settings_model": "LLM Model",
     "sidebar.settings_model_help": "V3 for daily chat, R1 for complex reasoning",
     "sidebar.settings_language": "Language",
     "sidebar.settings_theme": "Theme",
     "sidebar.settings_debug": "Debug Mode",
-
     # -- Theme --
     "theme.auto": "Auto",
     "theme.dark": "Dark",
     "theme.light": "Light",
-
     # -- Spinners / Progress --
     "spinner.parse": "Parsing PDF...",
     "spinner.chunk": "Chunking...",
     "spinner.vectorize": "Vectorizing...",
-
     # -- Status --
     "status.online": "ONLINE",
     "status.no_key": "NO KEY",
     "status.llm_status": "LLM",
-
     # -- Quick Actions --
     "quick.compare": "Peer Comparison",
     "quick.tech": "Tech Trends",
     "quick.finance": "Financial Analysis",
-
     # -- Chat --
     "chat.placeholder": "Please enter your question",
-
     # -- Errors --
     "error.pdf_failed": "PDF processing failed",
     "error.llm_failed": "LLM call failed",
@@ -146,7 +125,6 @@ _EN = {
         "2. Refresh the page\n\n"
         "See [docs/api-keys-guide.md](docs/api-keys-guide.md) for details"
     ),
-
     # -- Citation --
     "citation.source_tag": "source",
     "citation.page_prefix": "p",
@@ -156,7 +134,6 @@ _EN = {
     "citation.financial_label": "Financials",
     "citation.web_label": "Web Search",
     "citation.source_count": "sources",
-
     # -- RAG Context --
     "rag.context_header": "The following is relevant information retrieved from uploaded reports. Base your answer on this data. Cite data points with [source pN] format:",
     "rag.error": "RAG retrieval error",
@@ -166,6 +143,7 @@ _EN = {
 # ═══════════════════════════════════════════════════
 # I18n Manager
 # ═══════════════════════════════════════════════════
+
 
 class I18n:
     """Internationalization manager (singleton per session)."""

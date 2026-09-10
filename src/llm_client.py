@@ -5,9 +5,11 @@ SiliconDreams — DeepSeek LLM Client
 支持流式/非流式、自动重试、模型切换。
 """
 
-import time
 import logging
-from typing import Generator, Optional
+import time
+from collections.abc import Generator
+from typing import Optional
+
 from openai import OpenAI
 
 from config import LLMConfig
@@ -62,10 +64,10 @@ class DeepSeekClient:
     def chat(
         self,
         messages: list[dict],
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        system_prompt: Optional[str] = None,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        system_prompt: str | None = None,
     ) -> str:
         """
         同步调用，返回完整回复文本。
@@ -101,11 +103,15 @@ class DeepSeekClient:
                 return response.choices[0].message.content or ""
 
             except Exception as e:
-                logger.warning(f"DeepSeek API 调用失败 (尝试 {attempt + 1}/{self.max_retries}): {e}")
+                logger.warning(
+                    f"DeepSeek API 调用失败 (尝试 {attempt + 1}/{self.max_retries}): {e}"
+                )
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay * (2 ** attempt))  # 指数退避
+                    time.sleep(self.retry_delay * (2**attempt))  # 指数退避
                 else:
-                    raise RuntimeError(f"DeepSeek API 调用失败，已重试 {self.max_retries} 次: {e}")
+                    raise RuntimeError(
+                        f"DeepSeek API 调用失败，已重试 {self.max_retries} 次: {e}"
+                    ) from e
 
     # ── Tool Calling（Agent Loop 使用）───────────────────
 
@@ -113,10 +119,10 @@ class DeepSeekClient:
         self,
         messages: list[dict],
         tools: list[dict],
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        system_prompt: Optional[str] = None,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        system_prompt: str | None = None,
     ) -> dict:
         """
         Non-streaming call with tool/function calling support.
@@ -165,15 +171,18 @@ class DeepSeekClient:
                     for tc in msg.tool_calls:
                         # Parse JSON arguments string
                         import json
+
                         try:
                             args = json.loads(tc.function.arguments)
                         except (json.JSONDecodeError, TypeError):
                             args = {}
-                        tool_calls.append({
-                            "id": tc.id,
-                            "name": tc.function.name,
-                            "arguments": args,
-                        })
+                        tool_calls.append(
+                            {
+                                "id": tc.id,
+                                "name": tc.function.name,
+                                "arguments": args,
+                            }
+                        )
 
                 return {
                     "content": msg.content,
@@ -186,21 +195,21 @@ class DeepSeekClient:
                     f"DeepSeek Tool Calling 失败 (尝试 {attempt + 1}/{self.max_retries}): {e}"
                 )
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay * (2 ** attempt))
+                    time.sleep(self.retry_delay * (2**attempt))
                 else:
                     raise RuntimeError(
                         f"DeepSeek API 调用失败，已重试 {self.max_retries} 次: {e}"
-                    )
+                    ) from e
 
     # ── 流式调用（聊天界面实时显示）───────────────────
 
     def chat_stream(
         self,
         messages: list[dict],
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        system_prompt: Optional[str] = None,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        system_prompt: str | None = None,
     ) -> Generator[str, None, None]:
         """
         流式调用，逐 chunk yield 回复文本。
@@ -235,9 +244,11 @@ class DeepSeekClient:
                 return  # 正常完成
 
             except Exception as e:
-                logger.warning(f"DeepSeek 流式调用失败 (尝试 {attempt + 1}/{self.max_retries}): {e}")
+                logger.warning(
+                    f"DeepSeek 流式调用失败 (尝试 {attempt + 1}/{self.max_retries}): {e}"
+                )
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay * (2 ** attempt))
+                    time.sleep(self.retry_delay * (2**attempt))
                 else:
                     yield f"\n\n> [ERROR] API call failed: {e}"
 
@@ -256,6 +267,7 @@ class DeepSeekClient:
 
 
 # ── 便捷函数 ──────────────────────────────────────────
+
 
 def get_llm() -> DeepSeekClient:
     """获取 LLM 客户端（便捷函数，供 LangChain 集成使用）"""

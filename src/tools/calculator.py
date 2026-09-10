@@ -5,16 +5,17 @@ SiliconDreams — 财务精确计算器
 LLM 不碰数字计算，只负责语言生成。
 
 支持 10 种财务比率 + 同比/环比增长率。
-使用 Python decimal 保证金融级精度，pandas 处理批量对比。
-
-LangChain Tool 接口: 供 Agent 调用
+使用 Python decimal 保证金融级精度。
+本模块是项目中所有财务计算的唯一实现。
 """
 
 from __future__ import annotations
 
 import logging
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional
+from decimal import Decimal
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════
 # 核心计算函数
 # ═══════════════════════════════════════════════════
+
 
 class FinancialCalculator:
     """财务计算器（所有计算 100% Python 执行，零 LLM 依赖）"""
@@ -51,7 +53,11 @@ class FinancialCalculator:
         """
         c, p = Decimal(str(current)), Decimal(str(prior))
         if p == 0:
-            return {"result": None, "formula": "N/A (基数为零)", "interpretation": "无法计算：去年同期值为零"}
+            return {
+                "result": None,
+                "formula": "N/A (基数为零)",
+                "interpretation": "无法计算：去年同期值为零",
+            }
 
         result = float((c - p) / p * 100)
         direction = "上升" if result > 0 else ("下降" if result < 0 else "持平")
@@ -136,11 +142,12 @@ class FinancialCalculator:
         """
         资产负债率 = 总负债 / 总资产 × 100
         """
-        l, a = Decimal(str(total_liabilities)), Decimal(str(total_assets))
-        if a == 0:
+        liabilities = Decimal(str(total_liabilities))
+        assets = Decimal(str(total_assets))
+        if assets == 0:
             return {"result": None, "formula": "N/A", "interpretation": "无法计算：总资产为零"}
 
-        result = float(l / a * 100)
+        result = float(liabilities / assets * 100)
         return {
             "result": round(result, 2),
             "formula": f"{total_liabilities} / {total_assets} × 100",
@@ -195,7 +202,7 @@ class FinancialCalculator:
         if employees == 0:
             return {"result": None, "formula": "N/A", "interpretation": "无法计算：员工数为零"}
 
-        result = float(r / employees)
+        result = float(r / Decimal(str(employees)))
         return {
             "result": round(result, 2),
             "formula": f"{revenue} / {employees}",
@@ -218,6 +225,32 @@ class FinancialCalculator:
             "result": round(result, 2),
             "formula": f"{rd_expense} / {revenue} × 100",
             "interpretation": f"研发投入比为 {result:.2f}%（{intensity}，半导体行业通常 10-25%）",
+        }
+
+    @staticmethod
+    def difference(current: float, prior: float) -> dict:
+        """绝对差值及相对变化幅度。"""
+        c, p = Decimal(str(current)), Decimal(str(prior))
+        diff = c - p
+        relative = None if p == 0 else diff / p * 100
+        return {
+            "result": float(diff),
+            "relative_change_pct": None if relative is None else round(float(relative), 2),
+            "formula": f"{current} - {prior}",
+            "interpretation": f"差值为 {float(diff):.2f}",
+        }
+
+    @staticmethod
+    def ratio(numerator: float, denominator: float) -> dict:
+        """通用比率 = 分子 / 分母。"""
+        n, d = Decimal(str(numerator)), Decimal(str(denominator))
+        if d == 0:
+            return {"result": None, "formula": "N/A", "interpretation": "无法计算：分母为零"}
+        result = n / d
+        return {
+            "result": round(float(result), 4),
+            "formula": f"{numerator} / {denominator}",
+            "interpretation": f"比率为 {float(result):.4f}",
         }
 
     # ── 批量计算 ────────────────────────────────────
@@ -248,13 +281,11 @@ class FinancialCalculator:
                     data["net_profit"], data["revenue"]
                 )["result"]
             if "net_profit" in data and "equity" in data:
-                row["roe"] = FinancialCalculator.roe(
-                    data["net_profit"], data["equity"]
-                )["result"]
+                row["roe"] = FinancialCalculator.roe(data["net_profit"], data["equity"])["result"]
             if "rd_expense" in data and "revenue" in data:
-                row["rd_ratio"] = FinancialCalculator.rd_ratio(
-                    data["rd_expense"], data["revenue"]
-                )["result"]
+                row["rd_ratio"] = FinancialCalculator.rd_ratio(data["rd_expense"], data["revenue"])[
+                    "result"
+                ]
             if "total_liabilities" in data and "total_assets" in data:
                 row["debt_ratio"] = FinancialCalculator.debt_ratio(
                     data["total_liabilities"], data["total_assets"]
@@ -263,68 +294,69 @@ class FinancialCalculator:
         return results
 
 
-# ═══════════════════════════════════════════════════
-# LangChain Tool 封装
-# ═══════════════════════════════════════════════════
+CalculationOperation = Literal[
+    "yoy_growth",
+    "qoq_growth",
+    "gross_margin",
+    "net_margin",
+    "roe",
+    "roa",
+    "debt_ratio",
+    "current_ratio",
+    "pe_ratio",
+    "revenue_per_employee",
+    "rd_ratio",
+    "difference",
+    "ratio",
+]
 
-def create_calculator_tool():
-    """
-    创建 LangChain Tool 供 Agent 调用。
 
-    Agent 在涉及数字计算时必须优先调用此 Tool，
-    严禁 LLM 自行心算。
-    """
-    from langchain.tools import Tool
+class CalculationRequest(BaseModel):
+    """Validated, structured input accepted by the Agent calculator tool."""
 
-    calc = FinancialCalculator()
+    model_config = ConfigDict(extra="forbid")
 
-    def calculate(expression: str) -> str:
-        """
-        执行财务计算。
+    operation: CalculationOperation
+    operands: dict[str, float] = Field(min_length=2)
 
-        输入格式（JSON 字符串）:
-        {
-            "method": "yoy_growth" | "qoq_growth" | "gross_margin" | "net_margin"
-                     | "roe" | "debt_ratio" | "current_ratio" | "pe_ratio"
-                     | "revenue_per_employee" | "rd_ratio",
-            "params": { ... 各方法的参数 ... }
+
+_REQUIRED_OPERANDS: dict[str, tuple[str, ...]] = {
+    "yoy_growth": ("current", "prior"),
+    "qoq_growth": ("current", "previous"),
+    "gross_margin": ("revenue", "cost"),
+    "net_margin": ("net_profit", "revenue"),
+    "roe": ("net_profit", "equity"),
+    "roa": ("net_profit", "total_assets"),
+    "debt_ratio": ("total_liabilities", "total_assets"),
+    "current_ratio": ("current_assets", "current_liabilities"),
+    "pe_ratio": ("stock_price", "eps"),
+    "revenue_per_employee": ("revenue", "employees"),
+    "rd_ratio": ("rd_expense", "revenue"),
+    "difference": ("current", "prior"),
+    "ratio": ("numerator", "denominator"),
+}
+
+
+def calculate_financial(request: CalculationRequest | dict) -> dict:
+    """Validate and execute one financial calculation through the canonical calculator."""
+    parsed = (
+        request
+        if isinstance(request, CalculationRequest)
+        else CalculationRequest.model_validate(request)
+    )
+    required = _REQUIRED_OPERANDS[parsed.operation]
+    missing = [name for name in required if name not in parsed.operands]
+    if missing:
+        return {
+            "error": "missing_operands",
+            "message": f"缺少参数: {', '.join(missing)}",
+            "required": list(required),
         }
 
-        示例:
-        {"method": "yoy_growth", "params": {"current": 57.8, "prior": 54.3}}
-        {"method": "gross_margin", "params": {"revenue": 1000, "cost": 430}}
-        """
-        import json
-
-        try:
-            req = json.loads(expression)
-            method = req.get("method", "")
-            params = req.get("params", {})
-
-            func = getattr(calc, method, None)
-            if func is None:
-                return json.dumps({"error": f"未知计算方法: {method}"}, ensure_ascii=False)
-
-            result = func(**params)
-            return json.dumps(result, ensure_ascii=False, default=str)
-
-        except Exception as e:
-            logger.error(f"财务计算失败: {e}")
-            return json.dumps({"error": str(e)}, ensure_ascii=False)
-
-    tool = Tool(
-        name="financial_calculator",
-        func=calculate,
-        description=(
-            "[MANDATORY] Execute precise financial ratio and growth rate calculations. "
-            "When dealing with numerical comparisons, ratio calculations, or YoY/QoQ analysis, "
-            "you MUST call this tool for accurate results — NEVER calculate manually. "
-            "Supports: yoy_growth, qoq_growth, gross_margin, net_margin, roe, "
-            "debt_ratio, current_ratio, pe_ratio, revenue_per_employee, rd_ratio."
-        ),
-    )
-
-    return tool
+    func = getattr(FinancialCalculator, parsed.operation)
+    params = {name: parsed.operands[name] for name in required}
+    result = func(**params)
+    return {"operation": parsed.operation, "operands": params, **result}
 
 
 # ── 便捷函数 ──────────────────────────────────────────

@@ -7,6 +7,7 @@ SiliconDreams — 全局配置
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # ── 项目根目录 ─────────────────────────────────────────
@@ -25,6 +26,7 @@ DATA_DIR = ROOT_DIR / "data"
 PDF_DIR = DATA_DIR / "pdfs"
 CHROMA_DIR = DATA_DIR / "chroma_db"
 REPORTS_DIR = DATA_DIR / "reports"
+DATABASE_FILE = DATA_DIR / "silicondreams.db"
 TERMINOLOGY_FILE = DATA_DIR / "terminology.json"
 STYLES_DIR = ROOT_DIR / "styles"
 DEVLOG_DIR = ROOT_DIR / "devlog"
@@ -33,6 +35,7 @@ DEVLOG_DIR = ROOT_DIR / "devlog"
 # ── DeepSeek API 配置 ──────────────────────────────────
 class LLMConfig:
     """LLM API 配置"""
+
     api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
     api_base: str = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
     model: str = os.getenv("LLM_MODEL", "deepseek-chat")
@@ -50,6 +53,7 @@ class LLMConfig:
 # ── Web Search API 配置 ──────────────────────────────────
 class SearchConfig:
     """Tavily Search API 配置"""
+
     api_key: str = os.getenv("TAVILY_API_KEY", "")
     api_url: str = "https://api.tavily.com/search"
     max_results: int = 5
@@ -64,6 +68,7 @@ class SearchConfig:
 # ── Embedding 配置 ─────────────────────────────────────
 class EmbeddingConfig:
     """BGE-M3 本地 Embedding 配置"""
+
     model_name: str = "BAAI/bge-m3"
     max_length: int = 8192
     # device 由 EmbeddingManager 运行时自动检测 (mps/cpu)
@@ -73,6 +78,7 @@ class EmbeddingConfig:
         """检测 Apple Silicon MPS 是否可用"""
         try:
             import torch
+
             if torch.backends.mps.is_available():
                 return "mps"
         except ImportError:
@@ -83,6 +89,7 @@ class EmbeddingConfig:
 # ── RAG 配置 ───────────────────────────────────────────
 class RAGConfig:
     """RAG 分块与检索配置"""
+
     # 分块
     text_chunk_size: int = 512
     text_chunk_overlap: int = 64
@@ -93,7 +100,7 @@ class RAGConfig:
     similarity_top_k: int = 8
     rerank_top_n: int = 4
     hybrid_weight_vector: float = 0.7  # 向量权重
-    hybrid_weight_bm25: float = 0.3    # BM25 权重
+    hybrid_weight_bm25: float = 0.3  # BM25 权重
 
     # ChromaDB
     chroma_collection_text: str = "text_chunks"
@@ -103,8 +110,9 @@ class RAGConfig:
 # ── App 配置 ───────────────────────────────────────────
 class AppConfig:
     """应用配置"""
+
     name: str = "SiliconDreams"
-    version: str = "0.6.0"
+    version: str = "0.7.0"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]
@@ -162,7 +170,7 @@ class AppConfig:
             "## Inline Citation Format\n"
             "- Use [1], [2] numeric superscript markers to cite sources in your answer\n"
             "- Each number corresponds to a source in the citation panel\n"
-            "- Example: \"TSMC Q4 2025 revenue reached $33.73B[1] with 62.3% gross margin[2]\"\n\n"
+            '- Example: "TSMC Q4 2025 revenue reached $33.73B[1] with 62.3% gross margin[2]"\n\n'
             "## Important Rules\n"
             "- Once you have enough information from tools to answer the user's question, stop calling tools immediately and generate the final answer\n"
             "- If a tool returns empty results or the same information multiple times, don't keep trying — answer with what you have\n\n"

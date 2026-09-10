@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiliconDreams | AI Semiconductor Research</title>
-    <link rel="stylesheet" href="/static/style.css?v=0.6.8">
+    <link rel="stylesheet" href="/static/style.css?v=0.7.0">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     <script>
         // Language-dependent UI text for client-side language switch
         window._LANG_TEXT = {
@@ -97,6 +98,7 @@
                 <div class="chat-msg {{ msg.role }}">
                     <div class="msg-role">{{ 'USER' if msg.role == 'user' else 'AI' }}</div>
                     <div class="msg-content">{{ msg.content }}</div>
+                    {% if msg.panel_html %}{{ msg.panel_html | safe }}{% endif %}
                 </div>
                 {% endfor %}
                 {% endif %}

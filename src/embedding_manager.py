@@ -17,13 +17,12 @@ class EmbeddingManager:
 
     用法:
         manager = EmbeddingManager.get_instance()
-        embed_model = manager.get_model()
-        embedding = embed_model.get_text_embedding("台积电3nm制程")
+        embedding = manager.get_embedding("台积电3nm制程")
     """
 
     _instance: Optional["EmbeddingManager"] = None
     _model = None
-    _device: Optional[str] = None
+    _device: str | None = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -42,6 +41,7 @@ class EmbeddingManager:
         """检测最佳运行设备：MPS (Apple Silicon GPU) → CPU (fallback)"""
         try:
             import torch
+
             if torch.backends.mps.is_available():
                 logger.info("✅ Embedding 设备: MPS (Apple Silicon GPU)")
                 return "mps"
@@ -69,7 +69,9 @@ class EmbeddingManager:
 
         # 1. Check local cache (curl_cffi download, preferred on macOS)
         local_path = _os.path.expanduser(EmbeddingManager.LOCAL_CACHE)
-        if _os.path.isdir(local_path) and _os.path.isfile(_os.path.join(local_path, "pytorch_model.bin")):
+        if _os.path.isdir(local_path) and _os.path.isfile(
+            _os.path.join(local_path, "pytorch_model.bin")
+        ):
             return True
 
         # 2. Check standard HuggingFace cache
@@ -88,6 +90,7 @@ class EmbeddingManager:
         over the HuggingFace model ID (which triggers network access).
         """
         import os as _os
+
         local_path = _os.path.expanduser(EmbeddingManager.LOCAL_CACHE)
         if _os.path.isfile(_os.path.join(local_path, "pytorch_model.bin")):
             return local_path
@@ -98,17 +101,18 @@ class EmbeddingManager:
         获取 BGE-M3 Embedding 模型（惰性加载，首次调用时下载约 2GB）。
 
         Returns:
-            HuggingFaceEmbedding 实例
+            sentence_transformers.SentenceTransformer 实例
         """
         if self._model is not None:
             return self._model
-
-        from config import EmbeddingConfig
 
         # ── macOS LibreSSL workaround ──────────────────────
         # macOS ships LibreSSL 2.8.3 which can't negotiate modern TLS.
         # If the model is cached (local or HF hub), skip online checks.
         import os as _os
+
+        from config import EmbeddingConfig
+
         if self._is_model_cached(EmbeddingConfig.model_name):
             _os.environ.setdefault("HF_HUB_OFFLINE", "1")
             logger.info("📦 BGE-M3 模型已缓存，跳过在线检查（HF_HUB_OFFLINE=1）")
@@ -118,18 +122,19 @@ class EmbeddingManager:
 
         device = self.get_device()
 
-        from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+        from sentence_transformers import SentenceTransformer
 
         # Use local cache path if available, otherwise HuggingFace model ID
         model_path = self._get_model_path(EmbeddingConfig.model_name)
         logger.info(f"   使用模型路径: {model_path}")
 
-        self._model = HuggingFaceEmbedding(
-            model_name=model_path,
+        self._model = SentenceTransformer(
+            model_name_or_path=model_path,
             device=device,
-            max_length=EmbeddingConfig.max_length,
             trust_remote_code=True,
+            local_files_only=self._is_model_cached(EmbeddingConfig.model_name),
         )
+        self._model.max_seq_length = EmbeddingConfig.max_length
 
         logger.info(f"✅ BGE-M3 模型加载完成 (device={device})")
         return self._model
@@ -145,7 +150,13 @@ class EmbeddingManager:
             1024 维浮点向量
         """
         model = self.get_model()
-        return model.get_text_embedding(text)
+        vector = model.encode(
+            text,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
+        return vector.tolist()
 
     def get_embeddings(self, texts: list[str]) -> list[list[float]]:
         """
@@ -157,8 +168,17 @@ class EmbeddingManager:
         Returns:
             向量列表
         """
+        if not texts:
+            return []
         model = self.get_model()
-        return model.get_text_embedding_batch(texts)
+        vectors = model.encode(
+            texts,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+            batch_size=16,
+        )
+        return vectors.tolist()
 
     @classmethod
     def reset(cls):
@@ -170,6 +190,7 @@ class EmbeddingManager:
 
 # ── Embedding 获取函数 ──────────────────────────────
 # EmbeddingManager 本身已是 Singleton，确保全局唯一实例
+
 
 def get_cached_embedding_model():
     """

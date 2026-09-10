@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Generator, Optional
+from collections.abc import Generator
 
 from src.citation import CitationTracker
 
@@ -127,23 +127,40 @@ TOOLS = [
                 "执行精确的财务计算。支持：同比/环比增长率、毛利率、净利率、"
                 "ROE、资产负债率、流动比率、市盈率、人均营收、研发投入比。"
                 "任何涉及数字比较、比率计算、增长率的问题都必须使用此工具，严禁心算。"
-                "输入格式：'计算类型:数值1,数值2'（如'yoy_growth:120,100'）"
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "expression": {
+                    "operation": {
                         "type": "string",
+                        "enum": [
+                            "yoy_growth",
+                            "qoq_growth",
+                            "gross_margin",
+                            "net_margin",
+                            "roe",
+                            "roa",
+                            "debt_ratio",
+                            "current_ratio",
+                            "pe_ratio",
+                            "revenue_per_employee",
+                            "rd_ratio",
+                            "difference",
+                            "ratio",
+                        ],
+                        "description": "需要执行的计算类型",
+                    },
+                    "operands": {
+                        "type": "object",
                         "description": (
-                            "计算表达式。支持格式："
-                            "'yoy_growth:120,100'（同比增长率）"
-                            "'gross_margin:56.2,100'（毛利率，利润/营收）"
-                            "'net_margin:45.3,100'（净利率）"
-                            "'difference:60,21'（差值）"
+                            "具名数值参数。例如环比使用 current 和 previous；"
+                            "毛利率使用 revenue 和 cost；净利率使用 net_profit 和 revenue。"
                         ),
-                    }
+                        "additionalProperties": {"type": "number"},
+                    },
                 },
-                "required": ["expression"],
+                "required": ["operation", "operands"],
+                "additionalProperties": False,
             },
         },
     },
@@ -196,6 +213,7 @@ TOOL_DONE_LABELS_EN = {
 # Tool Executor
 # ═══════════════════════════════════════════════════════════
 
+
 def _execute_tool(name: str, arguments: dict, tracker: CitationTracker) -> str:
     """
     Execute a tool by name and return the result string.
@@ -237,7 +255,7 @@ def _tool_web_search(arguments: dict, tracker: CitationTracker) -> str:
     if not query:
         return "搜索查询为空，请提供具体的搜索关键词。"
 
-    from src.tools.web_search import _do_search, MAX_RESULTS
+    from src.tools.web_search import MAX_RESULTS, _do_search
 
     # Single HTTP request → both structured + formatted
     results, text = _do_search(query, MAX_RESULTS)
@@ -269,7 +287,7 @@ def _tool_search_reports(arguments: dict, tracker: CitationTracker) -> str:
     if not results:
         return "未在已上传的报告中找到相关信息。可能的原因：没有上传PDF文档，或查询关键词与文档内容不匹配。"
 
-    lines = [f"## 本地报告检索: \"{query}\"\n"]
+    lines = [f'## 本地报告检索: "{query}"\n']
     for i, r in enumerate(results, 1):
         source = r["metadata"].get("source", "unknown")
         page = r["metadata"].get("page", 0) or 0
@@ -330,8 +348,7 @@ def _tool_get_company_data(arguments: dict, tracker: CitationTracker) -> str:
         found = fdm.find_companies(company)
         if not found:
             return (
-                f"未找到 '{company}' 的财务数据。目前支持的公司：台积电（TSMC）、"
-                f"中芯国际（SMIC）。"
+                f"未找到 '{company}' 的财务数据。目前支持的公司：台积电（TSMC）、中芯国际（SMIC）。"
             )
         # Rebuild with the found key
         context, refs = fdm.build_context(" ".join(found), max_companies=1)
@@ -341,121 +358,48 @@ def _tool_get_company_data(arguments: dict, tracker: CitationTracker) -> str:
 
     # Track citations
     for ref in refs:
-        tracker.add_financial(ref["name"], name_en=ref.get("name_en", ""), year=str(ref.get("year", "")))
+        tracker.add_financial(
+            ref["name"],
+            name_en=ref.get("name_en", ""),
+            year=str(ref.get("year", "")),
+            reference_title=ref.get("source_title", ""),
+            url=ref.get("source_url", ""),
+            publisher=ref.get("source_publisher", ""),
+            published_at=ref.get("source_published_at", ""),
+        )
 
     return context
 
 
 def _tool_financial_calculator(arguments: dict) -> str:
-    """Precise financial calculation using Python decimal."""
-    expression = arguments.get("expression", "")
-    if not expression:
-        return "计算表达式为空。请提供格式如 'yoy_growth:120,100' 的计算表达式。"
+    """Execute a validated request through the canonical calculator module."""
+    from pydantic import ValidationError
 
-    from decimal import Decimal, InvalidOperation, DivisionByZero
-    from typing import Tuple
-
-    def _parse_two(value_str: str) -> Tuple[Decimal, Decimal]:
-        """Parse 'a,b' into (Decimal(a), Decimal(b))."""
-        parts = value_str.strip().split(",")
-        if len(parts) < 2:
-            parts = [value_str.strip(), "1"]
-        a = Decimal(parts[0].strip())
-        b = Decimal(parts[1].strip())
-        return a, b
+    from src.tools.calculator import calculate_financial
 
     try:
-        expr = expression.strip()
-        lower = expr.lower()
-
-        if lower.startswith("yoy_growth:") or lower.startswith("yoy:"):
-            current, prior = _parse_two(expr.split(":", 1)[1])
-            if prior == 0:
-                return "计算错误：上期值为零，无法计算同比增长率。"
-            result = (current - prior) / prior * 100
-            return (
-                f"同比增长率: {float(result):.2f}%\n"
-                f"（当期={float(current):.2f}, 上期={float(prior):.2f}, "
-                f"变动={(float(current) - float(prior)):.2f}）"
-            )
-
-        elif lower.startswith("qoq_growth:") or lower.startswith("qoq:"):
-            current, prior = _parse_two(expr.split(":", 1)[1])
-            if prior == 0:
-                return "计算错误：上季值为零，无法计算环比增长率。"
-            result = (current - prior) / prior * 100
-            return (
-                f"环比增长率: {float(result):.2f}%\n"
-                f"（本季={float(current):.2f}, 上季={float(prior):.2f}）"
-            )
-
-        elif lower.startswith("gross_margin:") or lower.startswith("gm:"):
-            profit, revenue = _parse_two(expr.split(":", 1)[1])
-            if revenue == 0:
-                return "计算错误：营收为零，无法计算毛利率。"
-            result = profit / revenue * 100
-            return f"毛利率: {float(result):.2f}%"
-
-        elif lower.startswith("net_margin:") or lower.startswith("nm:"):
-            profit, revenue = _parse_two(expr.split(":", 1)[1])
-            if revenue == 0:
-                return "计算错误：营收为零，无法计算净利率。"
-            result = profit / revenue * 100
-            return f"净利率: {float(result):.2f}%"
-
-        elif lower.startswith("difference:") or lower.startswith("diff:"):
-            a, b = _parse_two(expr.split(":", 1)[1])
-            diff = a - b
-            if b != 0:
-                pct = diff / b * 100
-                return (
-                    f"差值: {float(diff):.2f}\n"
-                    f"（{float(a):.2f} - {float(b):.2f} = {float(diff):.2f}, "
-                    f"变化幅度: {float(pct):.2f}%）"
-                )
-            return f"差值: {float(diff):.2f}（{float(a):.2f} - {float(b):.2f}）"
-
-        elif lower.startswith("roe:"):
-            net_income, equity = _parse_two(expr.split(":", 1)[1])
-            if equity == 0:
-                return "计算错误：权益为零，无法计算ROE。"
-            result = net_income / equity * 100
-            return f"ROE（净资产收益率）: {float(result):.2f}%"
-
-        elif lower.startswith("ratio:") or lower.startswith("divide:"):
-            a, b = _parse_two(expr.split(":", 1)[1])
-            if b == 0:
-                return "计算错误：除数为零。"
-            result = a / b
-            return f"比率: {float(result):.4f}（{float(a):.2f} / {float(b):.2f}）"
-
-        else:
-            return (
-                f"不支持的计算类型: '{expression}'。"
-                f"支持的类型: yoy_growth（同比增长率）, qoq_growth（环比增长率）, "
-                f"gross_margin（毛利率）, net_margin（净利率）, difference（差值）, "
-                f"roe（净资产收益率）, ratio（比率）。"
-            )
-
-    except (InvalidOperation, ValueError) as e:
-        return f"计算表达式格式错误: {e}。请使用数字格式，如 'yoy_growth:120,100'。"
-    except DivisionByZero:
-        return "计算错误：除数为零。"
+        return json.dumps(calculate_financial(arguments), ensure_ascii=False)
+    except ValidationError as e:
+        return json.dumps(
+            {"error": "invalid_calculation_request", "details": e.errors(include_url=False)},
+            ensure_ascii=False,
+        )
     except Exception as e:
         logger.error(f"计算器异常: {e}")
-        return f"计算出错: {e}。请检查输入格式。"
+        return json.dumps({"error": "calculation_failed", "message": str(e)}, ensure_ascii=False)
 
 
 # ═══════════════════════════════════════════════════════════
 # Agent Loop (Generator)
 # ═══════════════════════════════════════════════════════════
 
+
 def run_agent_loop(
     client,  # DeepSeekClient
     messages: list[dict],
     tracker: CitationTracker,
     lang: str = "zh",
-    model: Optional[str] = None,
+    model: str | None = None,
     max_iterations: int = MAX_ITERATIONS,
 ) -> Generator[str, None, None]:
     """
@@ -486,9 +430,9 @@ def run_agent_loop(
     # ── Phase 1: Tool-calling loop ────────────────────
 
     called_tools: set[tuple] = set()  # (tool_name, args_json) for duplicate detection
-    consecutive_same_tool = 0          # track consecutive calls to the same tool
+    consecutive_same_tool = 0  # track consecutive calls to the same tool
     last_tool_name: str | None = None
-    total_web_searches = 0             # total web_search calls across all iterations
+    total_web_searches = 0  # total web_search calls across all iterations
 
     for iteration in range(max_iterations):
         try:
@@ -567,17 +511,16 @@ def run_agent_loop(
                 result = _execute_tool(tool_name, tc["arguments"], tracker)
                 elapsed = time.perf_counter() - t0
 
-                done_label = tool_done_labels.get(
-                    tool_name, f"✅ {tool_name} 完成"
-                )
+                done_label = tool_done_labels.get(tool_name, f"✅ {tool_name} 完成")
                 # Format elapsed time: ms for fast ops, seconds for slow ops
-                if elapsed < 0.1:
-                    time_str = f"{elapsed*1000:.0f}ms"
-                else:
-                    time_str = f"{elapsed:.1f}s"
+                time_str = f"{elapsed * 1000:.0f}ms" if elapsed < 0.1 else f"{elapsed:.1f}s"
 
                 # Build a short summary for the frontend
-                summary = result[:120].replace("\n", " ") + "..." if len(result) > 120 else result.replace("\n", " ")
+                summary = (
+                    result[:120].replace("\n", " ") + "..."
+                    if len(result) > 120
+                    else result.replace("\n", " ")
+                )
 
                 # Emit tool done event
                 done_data = {
@@ -589,23 +532,29 @@ def run_agent_loop(
                 yield f"data: {json.dumps(done_data)}\n\n"
 
                 # Add the tool interaction to messages
-                messages.append({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [{
-                        "id": tc["id"],
-                        "type": "function",
-                        "function": {
-                            "name": tc["name"],
-                            "arguments": json.dumps(tc["arguments"], ensure_ascii=False),
-                        },
-                    }],
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc["id"],
-                    "content": result,
-                })
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": tc["id"],
+                                "type": "function",
+                                "function": {
+                                    "name": tc["name"],
+                                    "arguments": json.dumps(tc["arguments"], ensure_ascii=False),
+                                },
+                            }
+                        ],
+                    }
+                )
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": result,
+                    }
+                )
 
             # Continue to next iteration (LLM may call more tools)
             if force_break:
@@ -669,9 +618,7 @@ def run_agent_loop(
     if not tracker.is_empty():
         citations = tracker.to_list()
         panel_html = CitationTracker.format_panel(citations, lang=lang)
-        yield (
-            f"data: {json.dumps({'citations': citations, 'panel_html': panel_html})}\n\n"
-        )
+        yield (f"data: {json.dumps({'citations': citations, 'panel_html': panel_html})}\n\n")
 
     yield f"data: {json.dumps({'done': True})}\n\n"
 
@@ -679,6 +626,7 @@ def run_agent_loop(
 # ═══════════════════════════════════════════════════════════
 # Fallback: Simple context injection (for R1 or error recovery)
 # ═══════════════════════════════════════════════════════════
+
 
 def build_simple_context(
     query: str,
@@ -691,13 +639,12 @@ def build_simple_context(
     """
     from config import AppConfig
 
-    extra_messages = [
-        {"role": "system", "content": AppConfig.get_system_prompt(lang)}
-    ]
+    extra_messages = [{"role": "system", "content": AppConfig.get_system_prompt(lang)}]
 
     # Terminology
     try:
         from src.terminology import TerminologyManager
+
         tm = TerminologyManager()
         ctx, refs = tm.build_context(query, return_refs=True)
         if ctx:
@@ -710,22 +657,33 @@ def build_simple_context(
     # Financial data
     try:
         from src.financial_data import FinancialDataManager
+
         fdm = FinancialDataManager()
         ctx, refs = fdm.build_context(query)
         if ctx:
             extra_messages.append({"role": "system", "content": ctx})
             for ref in refs:
-                tracker.add_financial(ref["name"], name_en=ref.get("name_en", ""), year=str(ref.get("year", "")))
+                tracker.add_financial(
+                    ref["name"],
+                    name_en=ref.get("name_en", ""),
+                    year=str(ref.get("year", "")),
+                    reference_title=ref.get("source_title", ""),
+                    url=ref.get("source_url", ""),
+                    publisher=ref.get("source_publisher", ""),
+                    published_at=ref.get("source_published_at", ""),
+                )
     except Exception as e:
         logger.warning(f"财务数据注入失败: {e}")
 
     # RAG (only if documents uploaded)
     try:
         from src.vector_store import VectorStore
+
         store = VectorStore()
         stats = store.get_stats()
         if stats.get("doc_count", 0) > 0:
             from src.retriever import get_retriever
+
             retriever = get_retriever()
             results = retriever.retrieve(query, top_k=4)
             if results:
@@ -737,7 +695,7 @@ def build_simple_context(
                     if len(text) > 1500:
                         text = text[:1500] + "..."
                     parts.append(
-                        f"--- [Doc {i+1}] {source}, p{page} (relevance: {r['score']:.2f}) ---\n{text}"
+                        f"--- [Doc {i + 1}] {source}, p{page} (relevance: {r['score']:.2f}) ---\n{text}"
                     )
                     tracker.add_rag(
                         source=source,
@@ -745,10 +703,13 @@ def build_simple_context(
                         snippet=text[:200],
                         score=r["score"],
                     )
-                extra_messages.append({
-                    "role": "system",
-                    "content": f"以下是从已上传财报中检索到的相关信息：\n\n" + "\n\n".join(parts),
-                })
+                extra_messages.append(
+                    {
+                        "role": "system",
+                        "content": "以下是从已上传财报中检索到的相关信息：\n\n"
+                        + "\n\n".join(parts),
+                    }
+                )
     except Exception as e:
         logger.warning(f"RAG 注入失败: {e}")
 

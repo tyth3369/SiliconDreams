@@ -9,9 +9,9 @@ SiliconDreams — PDF 双引擎解析器
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -21,32 +21,36 @@ logger = logging.getLogger(__name__)
 # 数据结构
 # ═══════════════════════════════════════════════════
 
+
 @dataclass
 class TableBlock:
     """单个表格块"""
-    markdown: str           # Markdown 格式的表格
-    page: int               # 页码 (1-indexed)
-    bbox: tuple             # 表格在页面中的位置 (x0, y0, x1, y1)
-    rows: int = 0           # 行数
-    cols: int = 0           # 列数
-    raw_df: Optional[pd.DataFrame] = None  # 原始 DataFrame（pdfplumber 提取）
+
+    markdown: str  # Markdown 格式的表格
+    page: int  # 页码 (1-indexed)
+    bbox: tuple  # 表格在页面中的位置 (x0, y0, x1, y1)
+    rows: int = 0  # 行数
+    cols: int = 0  # 列数
+    raw_df: pd.DataFrame | None = None  # 原始 DataFrame（pdfplumber 提取）
 
 
 @dataclass
 class ParsedDocument:
     """PDF 解析结果"""
-    filename: str                           # 文件名
-    total_pages: int                        # 总页数
-    full_markdown: str                      # 完整 Markdown 文本
-    text_sections: list[dict] = field(default_factory=list)   # [{text, page, section}]
-    tables: list[TableBlock] = field(default_factory=list)     # 提取出的表格
-    metadata: dict = field(default_factory=dict)               # {author, title, date, ...}
-    parse_errors: list[str] = field(default_factory=list)      # 解析中的错误/警告
+
+    filename: str  # 文件名
+    total_pages: int  # 总页数
+    full_markdown: str  # 完整 Markdown 文本
+    text_sections: list[dict] = field(default_factory=list)  # [{text, page, section}]
+    tables: list[TableBlock] = field(default_factory=list)  # 提取出的表格
+    metadata: dict = field(default_factory=dict)  # {author, title, date, ...}
+    parse_errors: list[str] = field(default_factory=list)  # 解析中的错误/警告
 
 
 # ═══════════════════════════════════════════════════
 # 引擎 1: PyMuPDF4LLM (主力)
 # ═══════════════════════════════════════════════════
+
 
 def parse_with_pymupdf4llm(filepath: str | Path) -> ParsedDocument:
     """
@@ -120,9 +124,10 @@ def parse_with_pymupdf4llm(filepath: str | Path) -> ParsedDocument:
 # 引擎 2: pdfplumber (辅助, 复杂表格)
 # ═══════════════════════════════════════════════════
 
+
 def extract_tables_with_pdfplumber(
     filepath: str | Path,
-    pages: Optional[list[int]] = None,
+    pages: list[int] | None = None,
 ) -> list[TableBlock]:
     """
     使用 pdfplumber 提取复杂表格（返回 DataFrame）。
@@ -148,14 +153,13 @@ def extract_tables_with_pdfplumber(
             page = pdf.pages[page_num - 1]
             extracted = page.extract_tables()
 
-            for idx, table_data in enumerate(extracted):
+            for _idx, table_data in enumerate(extracted):
                 if not table_data or len(table_data) < 2:
                     continue  # 空表或只有表头
 
                 # 清理：移除全空行
                 table_data = [
-                    row for row in table_data
-                    if any(cell and str(cell).strip() for cell in row)
+                    row for row in table_data if any(cell and str(cell).strip() for cell in row)
                 ]
                 if len(table_data) < 2:
                     continue
@@ -168,16 +172,20 @@ def extract_tables_with_pdfplumber(
                     df = pd.DataFrame(table_data)
 
                 # 转 Markdown
-                markdown_table = df.to_markdown(index=False) if hasattr(df, 'to_markdown') else _df_to_md(df)
+                markdown_table = (
+                    df.to_markdown(index=False) if hasattr(df, "to_markdown") else _df_to_md(df)
+                )
 
-                tables.append(TableBlock(
-                    markdown=markdown_table,
-                    page=page_num,
-                    bbox=(0, 0, page.width, page.height),
-                    rows=len(df),
-                    cols=len(df.columns),
-                    raw_df=df,
-                ))
+                tables.append(
+                    TableBlock(
+                        markdown=markdown_table,
+                        page=page_num,
+                        bbox=(0, 0, page.width, page.height),
+                        rows=len(df),
+                        cols=len(df.columns),
+                        raw_df=df,
+                    )
+                )
 
     logger.info(f"✅ [pdfplumber] 提取完成: {len(tables)} 个表格")
     return tables
@@ -186,6 +194,7 @@ def extract_tables_with_pdfplumber(
 # ═══════════════════════════════════════════════════
 # 双引擎协调
 # ═══════════════════════════════════════════════════
+
 
 def parse_pdf(filepath: str | Path) -> ParsedDocument:
     """
@@ -230,29 +239,33 @@ def parse_pdf(filepath: str | Path) -> ParsedDocument:
 # 内部辅助函数
 # ═══════════════════════════════════════════════════
 
+
 def _extract_tables_from_markdown(md_text: str) -> list[TableBlock]:
     """从 Markdown 文本中提取所有表格块"""
     import re
+
     tables = []
 
     # 匹配 Markdown 表格: 包含 |---|---| 分隔行的块
-    pattern = r'(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)+)'
+    pattern = r"(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)+)"
     matches = re.finditer(pattern, md_text)
 
-    for idx, match in enumerate(matches):
+    for _idx, match in enumerate(matches):
         table_md = match.group(1).strip()
         # 计算行数和列数
         lines = table_md.split("\n")
         header_cols = len(lines[0].split("|")) - 2  # 去掉首尾空列
         data_rows = len(lines) - 2  # 去掉表头和分隔行
 
-        tables.append(TableBlock(
-            markdown=table_md,
-            page=0,  # PyMuPDF4LLM 不提供页码，后续通过 chunk 位置估算
-            bbox=(0, 0, 0, 0),
-            rows=data_rows,
-            cols=header_cols,
-        ))
+        tables.append(
+            TableBlock(
+                markdown=table_md,
+                page=0,  # PyMuPDF4LLM 不提供页码，后续通过 chunk 位置估算
+                bbox=(0, 0, 0, 0),
+                rows=data_rows,
+                cols=header_cols,
+            )
+        )
 
     return tables
 
@@ -263,10 +276,11 @@ def _split_text_sections(md_text: str, total_pages: int) -> list[dict]:
     估算每段对应的大致页码。
     """
     import re
+
     sections = []
 
     # 按 ## 或 # 标题分割
-    pattern = r'^(#{1,3}\s+.+)$'
+    pattern = r"^(#{1,3}\s+.+)$"
     parts = re.split(pattern, md_text, flags=re.MULTILINE)
 
     current_section = "正文"
@@ -275,22 +289,26 @@ def _split_text_sections(md_text: str, total_pages: int) -> list[dict]:
     for part in parts:
         if re.match(pattern, part):
             if current_text.strip():
-                sections.append({
-                    "text": current_text.strip(),
-                    "section": current_section,
-                    "page_estimate": 0,  # 后续通过字符位置/总比例估算
-                })
+                sections.append(
+                    {
+                        "text": current_text.strip(),
+                        "section": current_section,
+                        "page_estimate": 0,  # 后续通过字符位置/总比例估算
+                    }
+                )
             current_section = part.strip("# ").strip()
             current_text = ""
         else:
             current_text += part + "\n"
 
     if current_text.strip():
-        sections.append({
-            "text": current_text.strip(),
-            "section": current_section,
-            "page_estimate": 0,
-        })
+        sections.append(
+            {
+                "text": current_text.strip(),
+                "section": current_section,
+                "page_estimate": 0,
+            }
+        )
 
     # 估算页码（按字符位置比例）
     total_chars = len(md_text) or 1

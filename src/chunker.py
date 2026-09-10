@@ -6,11 +6,10 @@ SiliconDreams — 智能分块器
 - 元数据: {type, source, page, section, chunk_id}
 """
 
-import re
 import hashlib
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 from config import RAGConfig
 from src.pdf_parser import ParsedDocument, TableBlock
@@ -22,21 +21,24 @@ logger = logging.getLogger(__name__)
 # 数据结构
 # ═══════════════════════════════════════════════════
 
+
 @dataclass
 class Chunk:
     """通用文档块"""
-    chunk_id: str                       # 唯一 ID (hash)
-    text: str                           # 块内容
-    chunk_type: str                     # "text" | "table"
-    source: str                         # 来源文件名
-    page: int                           # 页码 (1-indexed)
-    section: str = ""                   # 章节标题
+
+    chunk_id: str  # 唯一 ID (hash)
+    text: str  # 块内容
+    chunk_type: str  # "text" | "table"
+    source: str  # 来源文件名
+    page: int  # 页码 (1-indexed)
+    section: str = ""  # 章节标题
     metadata: dict = field(default_factory=dict)
 
 
 # ═══════════════════════════════════════════════════
 # 文本分块
 # ═══════════════════════════════════════════════════
+
 
 def chunk_text(
     text: str,
@@ -87,7 +89,9 @@ def chunk_text(
                 if current_len + len(sent) > chunk_size and current_chunk:
                     chunks.append(_make_chunk(current_chunk, source, page, section))
                     # 重叠：保留最后一个句子
-                    last_sent = sentences[sentences.index(sent) - 1] if sentences.index(sent) > 0 else ""
+                    last_sent = (
+                        sentences[sentences.index(sent) - 1] if sentences.index(sent) > 0 else ""
+                    )
                     current_chunk = last_sent[-overlap:] if overlap > 0 else ""
                     current_len = len(current_chunk)
                 current_chunk += sent
@@ -113,13 +117,16 @@ def chunk_text(
     if current_chunk.strip():
         chunks.append(_make_chunk(current_chunk, source, page, section))
 
-    logger.debug(f"文本分块: {len(paragraphs)} 段 → {len(chunks)} 块 (source={source}, page={page})")
+    logger.debug(
+        f"文本分块: {len(paragraphs)} 段 → {len(chunks)} 块 (source={source}, page={page})"
+    )
     return chunks
 
 
 # ═══════════════════════════════════════════════════
 # 表格分块（整体保留）
 # ═══════════════════════════════════════════════════
+
 
 def chunk_tables(
     tables: list[TableBlock],
@@ -141,23 +148,25 @@ def chunk_tables(
     chunks = []
     for i, table in enumerate(tables):
         # 添加上下文前缀
-        prefix = f"[表格 {i+1}] 来源: {source}, 第 {table.page} 页\n"
+        prefix = f"[表格 {i + 1}] 来源: {source}, 第 {table.page} 页\n"
         full_text = prefix + table.markdown
 
-        chunks.append(Chunk(
-            chunk_id=_gen_id(f"{source}_table_{table.page}_{i}"),
-            text=full_text,
-            chunk_type="table",
-            source=source,
-            page=table.page,
-            section="表格",
-            metadata={
-                "table_index": i,
-                "rows": table.rows,
-                "cols": table.cols,
-                "bbox": table.bbox,
-            },
-        ))
+        chunks.append(
+            Chunk(
+                chunk_id=_gen_id(f"{source}_table_{table.page}_{i}"),
+                text=full_text,
+                chunk_type="table",
+                source=source,
+                page=table.page,
+                section="表格",
+                metadata={
+                    "table_index": i,
+                    "rows": table.rows,
+                    "cols": table.cols,
+                    "bbox": table.bbox,
+                },
+            )
+        )
 
     logger.info(f"表格分块: {len(tables)} 个表格 → {len(chunks)} 个 Chunk (source={source})")
     return chunks
@@ -166,6 +175,7 @@ def chunk_tables(
 # ═══════════════════════════════════════════════════
 # 主入口：解析后的文档 → Chunk 列表
 # ═══════════════════════════════════════════════════
+
 
 def chunk_document(doc: ParsedDocument) -> list[Chunk]:
     """
@@ -214,19 +224,20 @@ def chunk_document(doc: ParsedDocument) -> list[Chunk]:
 # 辅助函数
 # ═══════════════════════════════════════════════════
 
+
 def _split_by_paragraph(text: str) -> list[str]:
     """按段落分割（双换行符或 Markdown 标题）"""
     # 先在 Markdown 标题前断行
-    text = re.sub(r'(\n#{1,3}\s)', r'\n\n\1', text)
+    text = re.sub(r"(\n#{1,3}\s)", r"\n\n\1", text)
     # 按双换行分割
-    parts = re.split(r'\n\n+', text)
+    parts = re.split(r"\n\n+", text)
     return [p.strip() for p in parts if p.strip()]
 
 
 def _split_by_sentence(text: str) -> list[str]:
     """按句子分割（中文句号/问号/感叹号, 英文句点）"""
     # 中英文句子边界
-    pattern = r'(?<=[。！？.!?\n])\s*'
+    pattern = r"(?<=[。！？.!?\n])\s*"
     parts = re.split(pattern, text)
     return [p for p in parts if p.strip()]
 
@@ -234,7 +245,7 @@ def _split_by_sentence(text: str) -> list[str]:
 def _make_chunk(text: str, source: str, page: int, section: str) -> Chunk:
     """创建 Chunk 对象"""
     return Chunk(
-        chunk_id=_gen_id(f"{source}_{page}_{section}_{hash(text) & 0xffff}"),
+        chunk_id=_gen_id(f"{source}_{page}_{section}_{hash(text) & 0xFFFF}"),
         text=text.strip(),
         chunk_type="text",
         source=source,

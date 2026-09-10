@@ -7,10 +7,11 @@ Usage:
     python src/tools/download_bge_m3.py
     python src/tools/download_bge_m3.py --mirror https://hf-mirror.com
 """
-import os
-import sys
-import subprocess
+
 import argparse
+import os
+import subprocess
+import sys
 
 MODEL_ID = "BAAI/bge-m3"
 CACHE_DIR = os.path.expanduser("~/.cache/silicondreams/models/bge-m3")
@@ -37,10 +38,14 @@ def download_file(url: str, filepath: str, label: str) -> bool:
         print(f"  ↓ {label}...", end=" ", flush=True)
         try:
             args = [
-                "curl", "-fLsS",  # fail on HTTP errors, follow redirects, silent but show errors
-                "-o", filepath,
-                "--retry", "3",
-                "--retry-delay", "5",
+                "curl",
+                "-fLsS",  # fail on HTTP errors, follow redirects, silent but show errors
+                "-o",
+                filepath,
+                "--retry",
+                "3",
+                "--retry-delay",
+                "5",
             ]
             # Resume partial download if file exists
             if os.path.exists(filepath):
@@ -63,7 +68,8 @@ def download_file(url: str, filepath: str, label: str) -> bool:
 
         if attempt < MAX_RETRIES - 1:
             import time
-            wait = 5 * (2 ** attempt)
+
+            wait = 5 * (2**attempt)
             print(f"    Retrying in {wait}s...")
             time.sleep(wait)
 
@@ -72,8 +78,9 @@ def download_file(url: str, filepath: str, label: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="Download BGE-M3 model")
-    parser.add_argument("--mirror", default="https://hf-mirror.com",
-                        help="HuggingFace mirror base URL")
+    parser.add_argument(
+        "--mirror", default="https://hf-mirror.com", help="HuggingFace mirror base URL"
+    )
     args = parser.parse_args()
 
     mirror = args.mirror.rstrip("/")
