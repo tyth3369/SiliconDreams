@@ -8,12 +8,11 @@ SiliconDreams — ChromaDB 向量存储管理
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
-from config import RAGConfig, CHROMA_DIR
+from config import CHROMA_DIR, RAGConfig
 from src.chunker import Chunk
 from src.embedding_manager import EmbeddingManager
 
@@ -31,7 +30,7 @@ class VectorStore:
         results = store.search_tables("资产负债表", top_k=3)
     """
 
-    def __init__(self, persist_dir: Optional[Path] = None):
+    def __init__(self, persist_dir: Path | None = None):
         """
         Args:
             persist_dir: ChromaDB 持久化目录，默认 config.CHROMA_DIR
@@ -150,9 +149,24 @@ class VectorStore:
         if collection == "auto":
             # 自动判断：含财务关键词 → 优先表格
             finance_keywords = [
-                "营收", "毛利率", "净利", "资产", "负债", "现金流",
-                "同比", "环比", "增长率", "比率", "ROE", "EPS",
-                "收入", "成本", "费用", "利润", "亏损", "盈利",
+                "营收",
+                "毛利率",
+                "净利",
+                "资产",
+                "负债",
+                "现金流",
+                "同比",
+                "环比",
+                "增长率",
+                "比率",
+                "ROE",
+                "EPS",
+                "收入",
+                "成本",
+                "费用",
+                "利润",
+                "亏损",
+                "盈利",
             ]
             has_finance = any(kw in query for kw in finance_keywords)
             collection = "table" if has_finance else "text"
@@ -242,17 +256,20 @@ class VectorStore:
         dists = raw.get("distances", [[]])[0]
 
         for i in range(len(ids)):
-            results.append({
-                "id": ids[i],
-                "text": docs[i] if i < len(docs) else "",
-                "metadata": metas[i] if i < len(metas) else {},
-                "score": round(1 - dists[i], 4) if i < len(dists) and dists[i] else 1.0,
-            })
+            results.append(
+                {
+                    "id": ids[i],
+                    "text": docs[i] if i < len(docs) else "",
+                    "metadata": metas[i] if i < len(metas) else {},
+                    "score": round(1 - dists[i], 4) if i < len(dists) and dists[i] else 1.0,
+                }
+            )
 
         return results
 
 
 # ── 便捷函数 ──────────────────────────────────────────
+
 
 def get_vector_store() -> VectorStore:
     """获取 VectorStore 实例"""

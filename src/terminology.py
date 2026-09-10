@@ -8,7 +8,7 @@ SiliconDreams — 术语知识图谱管理
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Union, Tuple, List, Dict
+from typing import Optional
 
 from config import TERMINOLOGY_FILE
 
@@ -45,7 +45,7 @@ class TerminologyManager:
             logger.warning(f"术语文件不存在: {filepath}")
             return
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             data = json.load(f)
 
         self._terms = data.get("terms", {})
@@ -59,9 +59,27 @@ class TerminologyManager:
             if en:
                 self._aliases[en.lower()] = name
             # 常见英文缩写
-            if name in ["HBM", "GPU", "ASIC", "NPU", "SoC", "MCU", "EDA", "TSV",
-                         "GaN", "SiC", "IGBT", "MOSFET", "DRAM", "CIS", "CPO",
-                         "ROE", "CAPEX", "EBITDA", "DDR5"]:
+            if name in [
+                "HBM",
+                "GPU",
+                "ASIC",
+                "NPU",
+                "SoC",
+                "MCU",
+                "EDA",
+                "TSV",
+                "GaN",
+                "SiC",
+                "IGBT",
+                "MOSFET",
+                "DRAM",
+                "CIS",
+                "CPO",
+                "ROE",
+                "CAPEX",
+                "EBITDA",
+                "DDR5",
+            ]:
                 self._aliases[name.lower()] = name
 
     # ── 查找 ────────────────────────────────────────
@@ -104,7 +122,7 @@ class TerminologyManager:
 
     def build_context(
         self, query: str, max_terms: int = 5, return_refs: bool = False
-    ) -> Union[str, Tuple[str, List[Dict]]]:
+    ) -> str | tuple[str, list[dict]]:
         """
         为 RAG/LM Prompt 构建术语增强上下文。
 
@@ -155,7 +173,7 @@ class TerminologyManager:
 
     # ── 获取单个术语 ───────────────────────────────
 
-    def get_term(self, name: str) -> Optional[dict]:
+    def get_term(self, name: str) -> dict | None:
         """按名称获取单个术语"""
         return self._terms.get(name)
 
@@ -172,6 +190,7 @@ class TerminologyManager:
 
 
 # ── 便捷函数 ──────────────────────────────────────────
+
 
 def get_terminology() -> TerminologyManager:
     return TerminologyManager()

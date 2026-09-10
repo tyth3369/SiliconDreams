@@ -1,37 +1,37 @@
 """
-SiliconDreams — FastAPI Server (v0.6.0)
+SiliconDreams — FastAPI Server (v0.7.0)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
 """
+
 from __future__ import annotations
 
-import warnings
-warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL")
-
-import json
-import uuid
 import asyncio
+import json
 import logging
 import tempfile
+import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Annotated
 
-from fastapi import FastAPI, Request, Form, UploadFile, File, Cookie, Depends
-from fastapi.responses import HTMLResponse, StreamingResponse, Response
+from fastapi import Cookie, Depends, FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from config import AppConfig, LLMConfig
-from src.i18n import I18n, _ZH, _EN
-from src.llm_client import llm_available, get_llm
+from config import AppConfig
+from src.agent_loop import build_simple_context, run_agent_loop
 from src.citation import CitationTracker
-from src.agent_loop import run_agent_loop, build_simple_context
+from src.financial_data import FinancialDataManager
+from src.i18n import _EN, _ZH, I18n
+from src.llm_client import get_llm, llm_available
+from src.storage import Database
 
 logger = logging.getLogger(__name__)
 
 # ── App setup ──────────────────────────────────────────
-app = FastAPI(title="SiliconDreams", version="0.6.0")
+app = FastAPI(title="SiliconDreams", version=AppConfig.version)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATES = BASE_DIR / "templates"
@@ -46,7 +46,7 @@ jinja = Environment(
 
 
 # ── I18n dependency ────────────────────────────────────
-async def get_lang(lang: Optional[str] = Cookie(default=None)) -> str:
+async def get_lang(lang: str | None = Cookie(default=None)) -> str:
     """Read language preference from cookie, default to 'zh'."""
     if lang in ("zh", "en"):
         return lang
@@ -59,8 +59,9 @@ def get_t(lang: str):
     return i18n.t
 
 
-# ── In-memory storage (single-user) ────────────────────
-_messages: list[dict] = []  # [{role, content, citations}]
+# ── Persistent storage + transient UI state ────────────
+_db = Database()
+FinancialDataManager().sync_to_database(_db)
 _uploaded_pdfs: list[dict] = []  # [{name, size}]
 _kb_stats: dict = {"doc_count": 0, "text_chunks": 0, "table_chunks": 0}
 
@@ -84,6 +85,7 @@ def _update_kb_stats():
     """Refresh KB stats from vector store."""
     try:
         from src.vector_store import VectorStore
+
         store = VectorStore()
         stats = store.get_stats()
         _kb_stats.update(stats)
@@ -91,15 +93,29 @@ def _update_kb_stats():
         pass
 
 
-def _build_session_messages(lang: str) -> list[dict]:
+def _ensure_conversation(conversation_id: str | None, lang: str) -> str:
+    if conversation_id and _db.conversation_exists(conversation_id):
+        return conversation_id
+    return _db.create_conversation(language=lang)
+
+
+def _conversation_messages(conversation_id: str, lang: str) -> list[dict]:
+    messages = _db.list_messages(conversation_id)
+    for message in messages:
+        if message["role"] == "assistant" and message.get("citations"):
+            message["panel_html"] = CitationTracker.format_panel(message["citations"], lang=lang)
+    return messages
+
+
+def _build_session_messages(lang: str, conversation_id: str) -> list[dict]:
     """Build messages list from session history with system prompt."""
     messages = [{"role": "system", "content": AppConfig.get_system_prompt(lang)}]
-    for m in _messages:
+    for m in _db.list_messages(conversation_id):
         messages.append({"role": m["role"], "content": m["content"]})
     return messages
 
 
-def _stream_tokens_with_capture(generator, _messages: list):
+def _stream_tokens_with_capture(generator, conversation_id: str, tracker: CitationTracker):
     """Wrap an SSE generator to capture token events and store final response."""
     full_response = ""
     for sse_str in generator:
@@ -117,22 +133,33 @@ def _stream_tokens_with_capture(generator, _messages: list):
         yield sse_str
 
     if full_response.strip():
-        _messages.append({"role": "assistant", "content": full_response})
+        _db.add_message(
+            conversation_id,
+            "assistant",
+            full_response,
+            citations=tracker.to_list(),
+        )
 
 
 # ═══════════════════════════════════════════════════════
 # Routes
 # ═══════════════════════════════════════════════════════
 
+
 @app.get("/", response_class=HTMLResponse)
-async def index(lang: str = Depends(get_lang)):
+async def index(
+    lang: str = Depends(get_lang),
+    conversation_id: Annotated[str | None, Cookie()] = None,
+):
     """Main page."""
     t = get_t(lang)
     _update_kb_stats()
     online = llm_available()
-    return jinja.get_template("index.html").render(
-        t=t, lang=lang,
-        messages=_messages,
+    active_conversation = _ensure_conversation(conversation_id, lang)
+    content = jinja.get_template("index.html").render(
+        t=t,
+        lang=lang,
+        messages=_conversation_messages(active_conversation, lang),
         uploaded_pdfs=_uploaded_pdfs,
         kb_stats=_kb_stats,
         llm_online=online,
@@ -140,6 +167,16 @@ async def index(lang: str = Depends(get_lang)):
         _ZH=_ZH,
         _EN=_EN,
     )
+    response = HTMLResponse(content)
+    if active_conversation != conversation_id:
+        response.set_cookie(
+            "conversation_id",
+            active_conversation,
+            max_age=365 * 24 * 3600,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 # ── Pending agent configs for SSE streaming ──────────────
@@ -152,12 +189,14 @@ _pending_agent_configs: dict[str, dict] = {}
 async def chat(
     message: str = Form(...),
     lang: str = Depends(get_lang),
+    conversation_id: Annotated[str | None, Cookie()] = None,
 ):
     """Receive a user message, store it, return updated chat HTML + trigger SSE."""
     t = get_t(lang)
     msg_id = str(uuid.uuid4())[:8]
 
-    _messages.append({"role": "user", "content": message, "id": msg_id})
+    active_conversation = _ensure_conversation(conversation_id, lang)
+    _db.add_message(active_conversation, "user", message)
 
     # Initialize citation tracker for this message
     tracker = CitationTracker()
@@ -167,22 +206,34 @@ async def chat(
         "query": message,
         "lang": lang,
         "tracker": tracker,
+        "conversation_id": active_conversation,
     }
 
     # Return the user message HTML + an empty assistant div with SSE trigger
     assistant_id = str(uuid.uuid4())[:8]
-    return jinja.get_template("components.html").render(
+    content = jinja.get_template("components.html").render(
         component="chat_response",
-        t=t, lang=lang,
+        t=t,
+        lang=lang,
         user_msg=message,
         assistant_id=assistant_id,
         msg_id=msg_id,
-        messages=_messages,
+        messages=_db.list_messages(active_conversation),
         uploaded_pdfs=_uploaded_pdfs,
         kb_stats=_kb_stats,
         llm_online=llm_available(),
         preset_prompts=PRESET_PROMPTS,
     )
+    response = HTMLResponse(content)
+    if active_conversation != conversation_id:
+        response.set_cookie(
+            "conversation_id",
+            active_conversation,
+            max_age=365 * 24 * 3600,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 @app.get("/chat/stream/{msg_id}")
@@ -212,9 +263,10 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
             tracker: CitationTracker = agent_config["tracker"]
             query: str = agent_config["query"]
             _lang: str = agent_config["lang"]
+            conversation_id: str = agent_config["conversation_id"]
 
             # Build conversation messages from session history
-            session_messages = _build_session_messages(_lang)
+            session_messages = _build_session_messages(_lang, conversation_id)
 
             # Decide: Agent Loop (V3) or Fallback (R1)
             use_agent = client.model != client.reasoner_model
@@ -227,7 +279,7 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
                     tracker=tracker,
                     lang=_lang,
                 )
-                for sse_str in _stream_tokens_with_capture(agent_gen, _messages):
+                for sse_str in _stream_tokens_with_capture(agent_gen, conversation_id, tracker):
                     yield sse_str
                     await asyncio.sleep(0)
             else:
@@ -244,7 +296,13 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
                     yield f"data: {json.dumps({'token': token})}\n\n"
                     await asyncio.sleep(0)
 
-                _messages.append({"role": "assistant", "content": full_response})
+                if full_response.strip():
+                    _db.add_message(
+                        conversation_id,
+                        "assistant",
+                        full_response,
+                        citations=tracker.to_list(),
+                    )
 
                 # Emit citations BEFORE done (so client processes them before ES close)
                 if not tracker.is_empty():
@@ -272,7 +330,7 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
 
 @app.post("/upload", response_class=HTMLResponse)
 async def upload_pdf(
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File()],
     lang: str = Depends(get_lang),
 ):
     """Handle PDF upload: save → parse → chunk → vectorize."""
@@ -291,21 +349,26 @@ async def upload_pdf(
             tmp_path = tmp.name
 
         from src.pdf_parser import parse_pdf
+
         doc = parse_pdf(tmp_path)
 
         from src.chunker import chunk_document
+
         chunks = chunk_document(doc)
 
         from src.vector_store import VectorStore
+
         store = VectorStore()
         store.add_chunks(chunks)
 
         Path(tmp_path).unlink(missing_ok=True)
 
-        _uploaded_pdfs.append({
-            "name": file.filename,
-            "size": round(len(content) / 1024 / 1024, 1),
-        })
+        _uploaded_pdfs.append(
+            {
+                "name": file.filename,
+                "size": round(len(content) / 1024 / 1024, 1),
+            }
+        )
         _update_kb_stats()
 
     except Exception as e:
@@ -313,7 +376,8 @@ async def upload_pdf(
 
     return jinja.get_template("components.html").render(
         component="sidebar_content",
-        t=t, lang=lang,
+        t=t,
+        lang=lang,
         uploaded_pdfs=_uploaded_pdfs,
         kb_stats=_kb_stats,
         llm_online=llm_available(),
@@ -328,13 +392,18 @@ async def stats(lang: str = Depends(get_lang)):
     _update_kb_stats()
     return jinja.get_template("components.html").render(
         component="kb_stats",
-        t=t, lang=lang,
+        t=t,
+        lang=lang,
         kb_stats=_kb_stats,
     )
 
 
 @app.post("/quick/{action}", response_class=HTMLResponse)
-async def quick_action(action: str, lang: str = Depends(get_lang)):
+async def quick_action(
+    action: str,
+    lang: str = Depends(get_lang),
+    conversation_id: Annotated[str | None, Cookie()] = None,
+):
     """Trigger a quick action preset prompt."""
     t = get_t(lang)
     prompt = PRESET_PROMPTS.get(action, {}).get(lang, "")
@@ -342,7 +411,8 @@ async def quick_action(action: str, lang: str = Depends(get_lang)):
         return ""
 
     msg_id = str(uuid.uuid4())[:8]
-    _messages.append({"role": "user", "content": prompt, "id": msg_id})
+    active_conversation = _ensure_conversation(conversation_id, lang)
+    _db.add_message(active_conversation, "user", prompt)
 
     tracker = CitationTracker()
 
@@ -351,21 +421,33 @@ async def quick_action(action: str, lang: str = Depends(get_lang)):
         "query": prompt,
         "lang": lang,
         "tracker": tracker,
+        "conversation_id": active_conversation,
     }
 
     assistant_id = str(uuid.uuid4())[:8]
-    return jinja.get_template("components.html").render(
+    content = jinja.get_template("components.html").render(
         component="chat_response",
-        t=t, lang=lang,
+        t=t,
+        lang=lang,
         user_msg=prompt,
         assistant_id=assistant_id,
         msg_id=msg_id,
-        messages=_messages,
+        messages=_db.list_messages(active_conversation),
         uploaded_pdfs=_uploaded_pdfs,
         kb_stats=_kb_stats,
         llm_online=llm_available(),
         preset_prompts=PRESET_PROMPTS,
     )
+    response = HTMLResponse(content)
+    if active_conversation != conversation_id:
+        response.set_cookie(
+            "conversation_id",
+            active_conversation,
+            max_age=365 * 24 * 3600,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 @app.post("/theme")
@@ -394,7 +476,8 @@ async def get_sidebar(request: Request):
     t = get_t(lang)
     _update_kb_stats()
     return jinja.get_template("components.html").render(
-        t=t, lang=lang,
+        t=t,
+        lang=lang,
         component="sidebar_content",
         uploaded_pdfs=_uploaded_pdfs,
         kb_stats=_kb_stats,
@@ -404,5 +487,6 @@ async def get_sidebar(request: Request):
 # ── Startup ────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
+
     _update_kb_stats()
     uvicorn.run(app, host="127.0.0.1", port=8000)

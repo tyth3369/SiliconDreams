@@ -95,6 +95,18 @@ function setLang(lang) {
 window._pendingStreams = {};
 window._activeStreams = {};
 
+function renderMarkdownSafe(raw) {
+    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') return null;
+    return DOMPurify.sanitize(marked.parse(raw));
+}
+
+function linkInlineCitations(container) {
+    container.innerHTML = container.innerHTML.replace(
+        /\[(\d+)\]/g,
+        '<sup><a href="#" data-cite-index="$1" class="inline-cite" title="Jump to source $1">[$1]</a></sup>'
+    );
+}
+
 window._startStream = function(msgId, targetId) {
     // Idempotency guard: skip if already streaming this message
     if (window._activeStreams[msgId]) return;
@@ -158,16 +170,15 @@ window._startStream = function(msgId, targetId) {
             statusEl.appendChild(item);
         } else if (data.done) {
             // Convert accumulated markdown to HTML for rich rendering
-            if (typeof marked !== 'undefined' && target.textContent) {
+            if (target.textContent) {
                 var raw = target.textContent;
-                target.innerHTML = marked.parse(raw);
-                // Convert [N] to clickable inline citation links
-                target.innerHTML = target.innerHTML.replace(
-                    /\[(\d+)\]/g,
-                    '<sup><a href="#cite-$1" class="inline-cite" title="Jump to source $1">[$1]</a></sup>'
-                );
-                target.style.whiteSpace = 'normal';
-                target.setAttribute('data-rendered', '1');
+                var safeHtml = renderMarkdownSafe(raw);
+                if (safeHtml !== null) {
+                    target.innerHTML = safeHtml;
+                    linkInlineCitations(target);
+                    target.style.whiteSpace = 'normal';
+                    target.setAttribute('data-rendered', '1');
+                }
             }
             es.close();
             delete window._activeStreams[msgId];
@@ -226,16 +237,12 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
 // ═══════════════════════════════════════════════════════
 
 function renderMarkdownMessages() {
-    if (typeof marked === 'undefined') return;
+    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') return;
     document.querySelectorAll('.msg-content').forEach(function(el) {
         if (el.textContent && !el.hasAttribute('data-rendered')) {
             var raw = el.textContent;
-            el.innerHTML = marked.parse(raw);
-            // Convert [N] to clickable inline citation links
-            el.innerHTML = el.innerHTML.replace(
-                /\[(\d+)\]/g,
-                '<sup><a href="#cite-$1" class="inline-cite" title="Jump to source $1">[$1]</a></sup>'
-            );
+            el.innerHTML = renderMarkdownSafe(raw);
+            linkInlineCitations(el);
             el.style.whiteSpace = 'normal';
             el.setAttribute('data-rendered', '1');
         }
@@ -257,9 +264,11 @@ if (document.readyState === 'loading') {
 document.addEventListener('click', function(e) {
     var link = e.target.closest('.inline-cite');
     if (link) {
-        var targetId = link.getAttribute('href');
-        if (targetId && targetId.startsWith('#cite-')) {
-            var target = document.getElementById(targetId.substring(1));
+        e.preventDefault();
+        var citationIndex = link.getAttribute('data-cite-index');
+        var message = link.closest('.chat-msg.assistant');
+        if (citationIndex && message) {
+            var target = message.querySelector('.citation-item[data-cite-index="' + citationIndex + '"]');
             if (target) {
                 // Highlight the target citation item
                 target.classList.add('citation-highlight');

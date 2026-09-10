@@ -6,8 +6,21 @@ collapsible citation panels for the chat frontend.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Optional
+
+from dataclasses import dataclass
+from html import escape
+from urllib.parse import urlparse
+
+
+def safe_external_url(value: str) -> str:
+    """Allow only absolute HTTP(S) citation links."""
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return ""
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return value
 
 
 @dataclass
@@ -17,12 +30,15 @@ class Citation:
     source: str  # filename, term name, or company name
     source_label: str  # "source" | "term" | "financial"
     source_type: str  # "rag" | "term" | "financial"
-    page: Optional[int] = None  # page number (None for terms/financial)
+    page: int | None = None  # page number (None for terms/financial)
     snippet: str = ""  # truncated excerpt (first 200 chars)
     score: float = 0.0  # relevance score (0-1 for RAG)
     url: str = ""  # web search URL (empty for non-web citations)
     name_en: str = ""  # company English name/ticker (for financial type)
     data_year: str = ""  # data year (for financial type)
+    reference_title: str = ""  # exact filing or release title
+    publisher: str = ""
+    published_at: str = ""
 
     def display_source(self) -> str:
         """Human-readable source identifier."""
@@ -33,9 +49,11 @@ class Citation:
             if self.name_en:
                 parts.append(f" ({self.name_en})")
             if self.data_year:
-                parts.append(f" · FY{self.data_year} 年度财务摘要")
+                parts.append(f" · FY{self.data_year}")
             else:
                 parts.append(" 财务数据")
+            if self.reference_title:
+                parts.append(f" · {self.reference_title}")
             return "".join(parts)
         elif self.source_type == "web":
             return self.source  # title is already descriptive
@@ -67,12 +85,15 @@ class CitationTracker:
         self,
         source: str,
         source_type: str = "rag",
-        page: Optional[int] = None,
+        page: int | None = None,
         snippet: str = "",
         score: float = 0.0,
         url: str = "",
         name_en: str = "",
         data_year: str = "",
+        reference_title: str = "",
+        publisher: str = "",
+        published_at: str = "",
     ) -> None:
         """Add a citation. Duplicates (same source+type+page) are skipped."""
         key = (source_type, source, page or 0)
@@ -91,6 +112,9 @@ class CitationTracker:
             url=url,
             name_en=name_en,
             data_year=data_year,
+            reference_title=reference_title,
+            publisher=publisher,
+            published_at=published_at,
         )
         self._citations.append(citation)
 
@@ -102,9 +126,27 @@ class CitationTracker:
         """Convenience: add a RAG (PDF) citation."""
         self.add(source=source, source_type="rag", page=page, snippet=snippet, score=score)
 
-    def add_financial(self, company: str, name_en: str = "", year: str = "") -> None:
+    def add_financial(
+        self,
+        company: str,
+        name_en: str = "",
+        year: str = "",
+        reference_title: str = "",
+        url: str = "",
+        publisher: str = "",
+        published_at: str = "",
+    ) -> None:
         """Convenience: add a financial data citation."""
-        self.add(source=company, source_type="financial", name_en=name_en, data_year=year)
+        self.add(
+            source=company,
+            source_type="financial",
+            name_en=name_en,
+            data_year=year,
+            reference_title=reference_title,
+            url=url,
+            publisher=publisher,
+            published_at=published_at,
+        )
 
     def add_web(self, title: str, url: str, snippet: str = "") -> None:
         """Convenience: add a web search citation."""
@@ -124,6 +166,9 @@ class CitationTracker:
                 "url": c.url,
                 "name_en": c.name_en,
                 "data_year": c.data_year,
+                "reference_title": c.reference_title,
+                "publisher": c.publisher,
+                "published_at": c.published_at,
             }
             for c in self._citations
         ]
@@ -157,26 +202,41 @@ class CitationTracker:
         for i, c in enumerate(citations, 1):
             snippet_html = ""
             if c.get("snippet"):
-                escaped = c["snippet"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                snippet_html = f'<div class="citation-snippet">"{escaped}"</div>'
+                escaped_snippet = escape(str(c["snippet"]), quote=True)
+                snippet_html = (
+                    f'<div class="citation-snippet">&ldquo;{escaped_snippet}&rdquo;</div>'
+                )
 
-            # Web citations get a clickable link icon
-            if c.get("source_type") == "web" and c.get("url"):
+            escaped_display = escape(str(c.get("display_source", "")), quote=True)
+            citation_url = safe_external_url(str(c.get("url", "")))
+            if citation_url:
                 display = (
-                    f'<a href="{c["url"]}" target="_blank" rel="noopener" '
+                    f'<a href="{escape(citation_url, quote=True)}" target="_blank" '
+                    f'rel="noopener noreferrer" '
                     f'class="citation-web-link" title="Open source in new tab">'
-                    f'{c["display_source"]} ↗</a>'
+                    f'{escaped_display}<span aria-hidden="true"> ↗</span></a>'
                 )
             else:
-                display = c["display_source"]
+                display = escaped_display
+
+            escaped_icon = escape(str(c.get("icon", "SOURCE")), quote=True)
+            metadata = []
+            if c.get("publisher"):
+                metadata.append(escape(str(c["publisher"]), quote=True))
+            if c.get("published_at"):
+                metadata.append(escape(str(c["published_at"]), quote=True))
+            metadata_html = (
+                f'<div class="citation-metadata">{" · ".join(metadata)}</div>' if metadata else ""
+            )
 
             items.append(
-                f'<div class="citation-item" id="cite-{i}">'
+                f'<div class="citation-item" data-cite-index="{i}">'
                 f'<span class="citation-index">[{i}]</span> '
                 f'<span class="citation-source">'
-                f'<span class="citation-icon">{c["icon"]}</span> '
+                f'<span class="citation-icon">{escaped_icon}</span> '
                 f"{display}"
                 f"</span>"
+                f"{metadata_html}"
                 f"{snippet_html}"
                 f"</div>"
             )

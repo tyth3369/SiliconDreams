@@ -14,7 +14,6 @@ import json
 import logging
 import re
 import time
-from typing import Optional, Tuple, List, Dict
 
 from config import SearchConfig
 
@@ -28,7 +27,8 @@ SEARCH_TIMEOUT = 10
 # Tavily Search (Primary)
 # ═══════════════════════════════════════════════════════════
 
-def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dict], str]:
+
+def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict], str]:
     """
     Search via Tavily API. Returns (structured_results, formatted_text).
 
@@ -40,15 +40,17 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dic
 
     try:
         # Use urllib to avoid extra dependencies
-        import urllib.request
         import urllib.error
+        import urllib.request
 
-        payload = json.dumps({
-            "api_key": SearchConfig.api_key,
-            "query": query,
-            "search_depth": SearchConfig.search_depth,
-            "max_results": max_results,
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "api_key": SearchConfig.api_key,
+                "query": query,
+                "search_depth": SearchConfig.search_depth,
+                "max_results": max_results,
+            }
+        ).encode("utf-8")
 
         req = urllib.request.Request(
             SearchConfig.api_url,
@@ -73,15 +75,17 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dic
             content = r.get("content", "")
             if len(content) > 300:
                 content = content[:300] + "..."
-            structured.append({
-                "title": r.get("title", "无标题"),
-                "url": r.get("url", ""),
-                "snippet": content,
-                "score": r.get("score", 0.0),
-            })
+            structured.append(
+                {
+                    "title": r.get("title", "无标题"),
+                    "url": r.get("url", ""),
+                    "snippet": content,
+                    "score": r.get("score", 0.0),
+                }
+            )
 
         # Build formatted text for LLM
-        lines = [f"## Web 搜索结果 (Tavily): \"{query}\"\n"]
+        lines = [f'## Web 搜索结果 (Tavily): "{query}"\n']
         for i, r in enumerate(structured, 1):
             body = r.get("snippet", "")
             lines.append(f"### 结果 {i}: {r['title']}")
@@ -112,7 +116,7 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dic
 DDG_HTML_URL = "https://html.duckduckgo.com/html/"
 
 
-def _search_ddg(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dict], str]:
+def _search_ddg(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict], str]:
     """
     Fallback: DuckDuckGo HTML search via curl_cffi.
 
@@ -154,7 +158,7 @@ def _search_ddg(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dict],
                     return [], f"搜索 '{query}' 未找到相关结果。"
 
                 # Build formatted text
-                lines = [f"## Web 搜索结果 (DuckDuckGo): \"{query}\"\n"]
+                lines = [f'## Web 搜索结果 (DuckDuckGo): "{query}"\n']
                 for i, r in enumerate(results, 1):
                     body = r.get("snippet", "")
                     if len(body) > 300:
@@ -185,31 +189,24 @@ def _search_ddg(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dict],
 def _parse_ddg_html(html: str, max_results: int) -> list[dict]:
     """Parse DuckDuckGo HTML results."""
     results = []
-    blocks = re.findall(
-        r'class="result results_links.*?".*?</div>\s*</div>',
-        html, re.DOTALL
-    )
+    blocks = re.findall(r'class="result results_links.*?".*?</div>\s*</div>', html, re.DOTALL)
 
     for block in blocks[:max_results]:
         title_match = re.search(
-            r'class="result__title"[^>]*>.*?<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
-            block, re.DOTALL
+            r'class="result__title"[^>]*>.*?<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', block, re.DOTALL
         )
         if not title_match:
             continue
 
         url = title_match.group(1).strip()
-        title = re.sub(r'<[^>]+>', '', title_match.group(2)).strip()
-        title = title.replace('&#x27;', "'").replace('&amp;', '&').replace('&quot;', '"')
+        title = re.sub(r"<[^>]+>", "", title_match.group(2)).strip()
+        title = title.replace("&#x27;", "'").replace("&amp;", "&").replace("&quot;", '"')
 
-        snippet_match = re.search(
-            r'class="result__snippet"[^>]*>(.*?)</a>',
-            block, re.DOTALL
-        )
+        snippet_match = re.search(r'class="result__snippet"[^>]*>(.*?)</a>', block, re.DOTALL)
         snippet = ""
         if snippet_match:
-            snippet = re.sub(r'<[^>]+>', '', snippet_match.group(1)).strip()
-            snippet = snippet.replace('&#x27;', "'").replace('&amp;', '&')
+            snippet = re.sub(r"<[^>]+>", "", snippet_match.group(1)).strip()
+            snippet = snippet.replace("&#x27;", "'").replace("&amp;", "&")
 
         if title and url:
             results.append({"title": title, "url": url, "snippet": snippet})
@@ -221,7 +218,8 @@ def _parse_ddg_html(html: str, max_results: int) -> list[dict]:
 # Public API (used by agent_loop.py)
 # ═══════════════════════════════════════════════════════════
 
-def _do_search(query: str, max_results: int = MAX_RESULTS) -> Tuple[List[Dict], str]:
+
+def _do_search(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict], str]:
     """
     Search the web — Tavily first, DDG as fallback.
 

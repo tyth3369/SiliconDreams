@@ -11,7 +11,6 @@ SiliconDreams — LlamaIndex 检索器
 """
 
 import logging
-from typing import Optional
 
 from config import RAGConfig
 from src.vector_store import VectorStore
@@ -29,7 +28,7 @@ class Retriever:
         # results: [{text, metadata, score, source_type}, ...]
     """
 
-    def __init__(self, vector_store: Optional[VectorStore] = None):
+    def __init__(self, vector_store: VectorStore | None = None):
         self.store = vector_store or VectorStore()
         self.text_weight = RAGConfig.hybrid_weight_vector
         self.bm25_weight = RAGConfig.hybrid_weight_bm25
@@ -53,7 +52,7 @@ class Retriever:
         Returns:
             排序后的检索结果
         """
-        logger.info(f"🔍 检索: \"{query[:80]}...\"")
+        logger.info(f'🔍 检索: "{query[:80]}..."')
 
         # Step 1: 查询路由 — 判断优先级
         route = self._route_query(query)
@@ -106,19 +105,56 @@ class Retriever:
         """
         # 财务数据关键词（大概率在表格中）
         finance_indicators = [
-            "毛利率", "净利率", "ROE", "ROA", "EPS", "PE", "PB",
-            "营收", "收入", "成本", "利润", "净利", "毛利",
-            "资产", "负债", "权益", "现金流", "折旧", "摊销",
-            "同比增长", "环比增长", "增长率", "变动率",
-            "资产负债", "流动比率", "速动比率", "周转率",
-            "研发费用", "资本支出", "CAPEX", "EBITDA",
+            "毛利率",
+            "净利率",
+            "ROE",
+            "ROA",
+            "EPS",
+            "PE",
+            "PB",
+            "营收",
+            "收入",
+            "成本",
+            "利润",
+            "净利",
+            "毛利",
+            "资产",
+            "负债",
+            "权益",
+            "现金流",
+            "折旧",
+            "摊销",
+            "同比增长",
+            "环比增长",
+            "增长率",
+            "变动率",
+            "资产负债",
+            "流动比率",
+            "速动比率",
+            "周转率",
+            "研发费用",
+            "资本支出",
+            "CAPEX",
+            "EBITDA",
         ]
 
         # 纯概念/定义关键词
         concept_keywords = [
-            "什么是", "定义", "概念", "原理", "技术",
-            "制程", "工艺", "架构", "封装", "测试",
-            "EDA", "IP", "设计", "制造", "晶圆",
+            "什么是",
+            "定义",
+            "概念",
+            "原理",
+            "技术",
+            "制程",
+            "工艺",
+            "架构",
+            "封装",
+            "测试",
+            "EDA",
+            "IP",
+            "设计",
+            "制造",
+            "晶圆",
         ]
 
         has_finance = any(kw in query for kw in finance_indicators)
@@ -180,6 +216,7 @@ class Retriever:
 
 
 # ── 便捷函数 ──────────────────────────────────────────
+
 
 def get_retriever() -> Retriever:
     return Retriever()

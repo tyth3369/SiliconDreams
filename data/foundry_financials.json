@@ -1,13 +1,23 @@
 {
   "_meta": {
     "description": "晶圆代工企业关键财务数据（2025年度，最新完整财年）",
-    "version": "0.2.0",
-    "last_updated": "2026-07-14",
+    "version": "0.3.0",
+    "last_updated": "2026-09-11",
     "sources": [
-      "TSMC 2025Q4 Earnings Release (2026-01-15)",
-      "SMIC 2025 Annual Report (2026-03-26)",
-      "Bloomberg Terminal",
-      "Wind"
+      {
+        "title": "TSMC 4Q25 Quarterly Management Report",
+        "publisher": "Taiwan Semiconductor Manufacturing Company Limited",
+        "url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/qr/phase4_reports/2026-01/a920e9c2e3879f198dc700d041344229e7ffb438/4Q25%20Management%20Report.pdf",
+        "published_at": "2026-01-15",
+        "trust_tier": 1
+      },
+      {
+        "title": "SMIC 2025 Annual Report",
+        "publisher": "Semiconductor Manufacturing International Corporation / HKEX",
+        "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0326/2026032601294.pdf",
+        "published_at": "2026-03-26",
+        "trust_tier": 1
+      }
     ],
     "disclaimer": "数据基于公开财报整理，四舍五入至0.1%。仅供研究参考，不构成投资建议。"
   },
@@ -16,12 +26,17 @@
       "name_en": "TSMC",
       "ticker": "2330.TW / TSM.N",
       "year": 2025,
-      "currency": "USD 亿美元",
-      "revenue": { "value": 1215.0, "yoy_growth_pct": 35.9, "note": "AI/HPC需求爆发推动营收首次突破千亿美元" },
+      "currency": "USD",
+      "unit": "billion",
+      "source_title": "TSMC 4Q25 Quarterly Management Report",
+      "source_url": "https://investor.tsmc.com/english/encrypt/files/encrypt_file/qr/phase4_reports/2026-01/a920e9c2e3879f198dc700d041344229e7ffb438/4Q25%20Management%20Report.pdf",
+      "source_publisher": "TSMC Investor Relations",
+      "source_published_at": "2026-01-15",
+      "revenue": { "value": 122.42, "yoy_growth_pct": 35.9, "note": "AI/HPC需求推动全年美元营收首次突破千亿美元" },
       "gross_margin": { "value": 59.9, "trend": "同比提升3.7个百分点，3nm/5nm占比达60%推动ASP和毛利率双升" },
-      "net_margin": { "value": 45.3, "trend": "规模效应+高ASP推动净利率突破45%，自由现金流超万亿台币" },
-      "capex": { "value": 409, "intensity_pct": 34, "trend": "2025年CAPEX $409亿，2026年指引$520-560亿（超预期），70-80%用于先进制程" },
-      "rd_expense": { "value": 85, "rd_ratio": 7.0 },
+      "net_margin": { "value": 45.1, "trend": "规模效应与高ASP推动全年净利率超过45%" },
+      "capex": { "value": 40.9, "intensity_pct": 33.4, "trend": "2025年资本支出约409亿美元" },
+      "rd_expense": { "value": 8.5, "rd_ratio": 7.0 },
       "capacity": {
         "monthly_wafer_12inch_equiv": 1700000,
         "utilization_rate": 96.0,
@@ -48,12 +63,17 @@
       "name_en": "SMIC",
       "ticker": "688981.SH / 0981.HK",
       "year": 2025,
-      "currency": "USD 亿美元",
-      "revenue": { "value": 93.3, "yoy_growth_pct": 16.2, "note": "人民币口径673亿元，营收与利润双创历史新高" },
+      "currency": "USD",
+      "unit": "billion",
+      "source_title": "SMIC 2025 Annual Report",
+      "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0326/2026032601294.pdf",
+      "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+      "source_published_at": "2026-03-26",
+      "revenue": { "value": 9.3268, "yoy_growth_pct": 16.2, "note": "全年营收创历史新高" },
       "gross_margin": { "value": 21.0, "trend": "同比提升约3个百分点（2024年为18%水平），产能利用率回升至93.5%是主因" },
       "net_margin": { "value": 7.5, "trend": "净利同比+39%至$6.85亿，扣非净利+56%，经营利润翻倍至$11.1亿" },
-      "capex": { "value": 81.0, "intensity_pct": 87, "trend": "CAPEX $81亿维持高位，2026年指引持平，主要用于成熟制程扩产" },
-      "rd_expense": { "value": 7.7, "rd_ratio": 8.3 },
+      "capex": { "value": 8.1, "intensity_pct": 86.8, "trend": "资本支出约81亿美元，维持高位" },
+      "rd_expense": { "value": 0.77, "rd_ratio": 8.3 },
       "capacity": {
         "monthly_wafer_8inch_equiv": 1059000,
         "utilization_rate": 93.5,

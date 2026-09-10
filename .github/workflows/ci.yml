@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Install Python and dependencies
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check config.py server.py src tests
+      - name: Format check
+        run: uv run ruff format --check config.py server.py src tests
+      - name: Tests
+        run: uv run pytest --cov=src --cov-report=term-missing
+
