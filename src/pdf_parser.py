@@ -52,7 +52,9 @@ class ParsedDocument:
 # ═══════════════════════════════════════════════════
 
 
-def parse_with_pymupdf4llm(filepath: str | Path) -> ParsedDocument:
+def parse_with_pymupdf4llm(
+    filepath: str | Path, original_filename: str | None = None
+) -> ParsedDocument:
     """
     使用 PyMuPDF4LLM 将 PDF 转为 Markdown。
     表格结构由 pymupdf4llm 自动识别并保留为 Markdown 表格格式。
@@ -67,7 +69,8 @@ def parse_with_pymupdf4llm(filepath: str | Path) -> ParsedDocument:
     import pymupdf4llm
 
     filepath = Path(filepath)
-    logger.info(f"🔍 [PyMuPDF4LLM] 开始解析: {filepath.name}")
+    display_name = original_filename or filepath.name
+    logger.info("[PyMuPDF4LLM] 开始解析: %s", display_name)
 
     # 获取 PDF 基本信息
     doc = fitz.open(str(filepath))
@@ -83,35 +86,43 @@ def parse_with_pymupdf4llm(filepath: str | Path) -> ParsedDocument:
     # PyMuPDF4LLM 转换
     try:
         # write_images=False: 不提取图片，减小输出体积
-        full_markdown = pymupdf4llm.to_markdown(
+        page_chunks = pymupdf4llm.to_markdown(
             str(filepath),
             write_images=False,
-            table_strategy="lines",  # 基于线条检测表格
+            table_strategy="lines_strict",
+            page_chunks=True,
+            show_progress=False,
         )
     except Exception as e:
         logger.error(f"PyMuPDF4LLM 解析失败: {e}")
         return ParsedDocument(
-            filename=filepath.name,
+            filename=display_name,
             total_pages=total_pages,
             full_markdown="",
             metadata=metadata,
             parse_errors=[str(e)],
         )
 
-    # 提取表格块
-    tables = _extract_tables_from_markdown(full_markdown)
+    text_sections = []
+    tables = []
+    page_texts = []
+    for index, page_chunk in enumerate(page_chunks, 1):
+        page = int(page_chunk.get("metadata", {}).get("page", index))
+        page_text = str(page_chunk.get("text", ""))
+        page_texts.append(f"<!-- page {page} -->\n{page_text}")
+        text_sections.extend(_split_page_sections(page_text, page))
+        tables.extend(_extract_tables_from_markdown(page_text, page=page))
 
-    # 估算文本分段
-    text_sections = _split_text_sections(full_markdown, total_pages)
+    full_markdown = "\n\n".join(page_texts)
 
     logger.info(
-        f"✅ [PyMuPDF4LLM] 解析完成: "
+        f"[PyMuPDF4LLM] 解析完成: "
         f"{total_pages} 页, {len(full_markdown)} 字符, "
         f"{len(tables)} 个表格, {len(text_sections)} 个文本段"
     )
 
     return ParsedDocument(
-        filename=filepath.name,
+        filename=display_name,
         total_pages=total_pages,
         full_markdown=full_markdown,
         text_sections=text_sections,
@@ -196,7 +207,7 @@ def extract_tables_with_pdfplumber(
 # ═══════════════════════════════════════════════════
 
 
-def parse_pdf(filepath: str | Path) -> ParsedDocument:
+def parse_pdf(filepath: str | Path, original_filename: str | None = None) -> ParsedDocument:
     """
     双引擎 PDF 解析。
 
@@ -217,7 +228,7 @@ def parse_pdf(filepath: str | Path) -> ParsedDocument:
         raise FileNotFoundError(f"PDF 文件不存在: {filepath}")
 
     # Step 1: PyMuPDF4LLM 主力解析
-    doc = parse_with_pymupdf4llm(filepath)
+    doc = parse_with_pymupdf4llm(filepath, original_filename=original_filename)
 
     # Step 2: 检查表格质量 → 决定是否启用 pdfplumber
     tables_need_fix = _check_table_quality(doc.tables)
@@ -240,7 +251,7 @@ def parse_pdf(filepath: str | Path) -> ParsedDocument:
 # ═══════════════════════════════════════════════════
 
 
-def _extract_tables_from_markdown(md_text: str) -> list[TableBlock]:
+def _extract_tables_from_markdown(md_text: str, page: int) -> list[TableBlock]:
     """从 Markdown 文本中提取所有表格块"""
     import re
 
@@ -260,7 +271,7 @@ def _extract_tables_from_markdown(md_text: str) -> list[TableBlock]:
         tables.append(
             TableBlock(
                 markdown=table_md,
-                page=0,  # PyMuPDF4LLM 不提供页码，后续通过 chunk 位置估算
+                page=page,
                 bbox=(0, 0, 0, 0),
                 rows=data_rows,
                 cols=header_cols,
@@ -270,11 +281,8 @@ def _extract_tables_from_markdown(md_text: str) -> list[TableBlock]:
     return tables
 
 
-def _split_text_sections(md_text: str, total_pages: int) -> list[dict]:
-    """
-    按 Markdown 标题将文本分段。
-    估算每段对应的大致页码。
-    """
+def _split_page_sections(md_text: str, page: int) -> list[dict]:
+    """Split one page by Markdown headings while preserving its exact page number."""
     import re
 
     sections = []
@@ -293,7 +301,7 @@ def _split_text_sections(md_text: str, total_pages: int) -> list[dict]:
                     {
                         "text": current_text.strip(),
                         "section": current_section,
-                        "page_estimate": 0,  # 后续通过字符位置/总比例估算
+                        "page": page,
                     }
                 )
             current_section = part.strip("# ").strip()
@@ -306,16 +314,9 @@ def _split_text_sections(md_text: str, total_pages: int) -> list[dict]:
             {
                 "text": current_text.strip(),
                 "section": current_section,
-                "page_estimate": 0,
+                "page": page,
             }
         )
-
-    # 估算页码（按字符位置比例）
-    total_chars = len(md_text) or 1
-    char_pos = 0
-    for sec in sections:
-        sec["page_estimate"] = max(1, int(char_pos / total_chars * total_pages) + 1)
-        char_pos += len(sec["text"])
 
     return sections
 

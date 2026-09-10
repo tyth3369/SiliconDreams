@@ -72,6 +72,29 @@ def test_chunk_insert_populates_fts(database):
     assert results[0]["page"] == 42
 
 
+def test_bm25_search_supports_chinese_without_spaces(database):
+    source_id, document_id = _document(database)
+    database.add_chunk(
+        document_id=document_id,
+        source_id=source_id,
+        page=8,
+        chunk_type="text",
+        text="台积电先进制程推动毛利率持续改善",
+        section="经营回顾",
+    )
+    database.add_chunk(
+        document_id=document_id,
+        source_id=source_id,
+        page=9,
+        chunk_type="text",
+        text="成熟制程产能利用率保持稳定",
+        section="产能",
+    )
+    results = database.search_chunks_bm25("台积电毛利率")
+    assert results[0]["page"] == 8
+    assert results[0]["bm25_score"] > 0
+
+
 def test_chunk_insert_is_idempotent(database):
     source_id, document_id = _document(database)
     kwargs = {

@@ -1,5 +1,7 @@
 import asyncio
+import io
 
+import pymupdf
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -65,3 +67,48 @@ def test_separate_clients_get_separate_conversations():
 
     first_id, second_id = asyncio.run(scenario())
     assert first_id != second_id
+
+
+def test_pdf_upload_persists_document_and_exact_page_chunks(tmp_path, monkeypatch):
+    pdf = pymupdf.open()
+    pdf.new_page().insert_text((72, 72), "TSMC first page revenue")
+    pdf.new_page().insert_text((72, 72), "TSMC second page margin")
+    payload = pdf.tobytes()
+    pdf.close()
+
+    indexed = []
+
+    class FakeVectorStore:
+        def add_chunks(self, chunks):
+            indexed.extend(chunks)
+            return len(chunks)
+
+    monkeypatch.setattr(server, "PDF_DIR", tmp_path / "pdfs")
+    monkeypatch.setattr("src.vector_store.VectorStore", FakeVectorStore)
+
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/upload",
+            files={"file": ("TSMC 2025.PDF", io.BytesIO(payload), "application/pdf")},
+        )
+    )
+    assert response.status_code == 200
+    assert server._db.count("documents") == 1
+    assert server._db.count("chunks") >= 2
+    assert {chunk.page for chunk in indexed} == {1, 2}
+    assert all(chunk.chunk_id.startswith("chk_") for chunk in indexed)
+
+
+def test_pdf_upload_rejects_spoofed_extension(tmp_path, monkeypatch):
+    monkeypatch.setattr(server, "PDF_DIR", tmp_path / "pdfs")
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/upload",
+            files={"file": ("not-really.pdf", b"plain text", "application/pdf")},
+        )
+    )
+    assert response.status_code == 200
+    assert "invalid PDF signature" in response.text
+    assert server._db.count("documents") == 0

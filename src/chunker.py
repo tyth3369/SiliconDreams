@@ -194,7 +194,7 @@ def chunk_document(doc: ParsedDocument) -> list[Chunk]:
         text_chunks = chunk_text(
             text=section["text"],
             source=doc.filename,
-            page=section.get("page_estimate", 0),
+            page=section.get("page", 1),
             section=section.get("section", ""),
         )
         all_chunks.extend(text_chunks)
@@ -245,7 +245,7 @@ def _split_by_sentence(text: str) -> list[str]:
 def _make_chunk(text: str, source: str, page: int, section: str) -> Chunk:
     """创建 Chunk 对象"""
     return Chunk(
-        chunk_id=_gen_id(f"{source}_{page}_{section}_{hash(text) & 0xFFFF}"),
+        chunk_id=_gen_id(f"{source}_{page}_{section}_{hashlib.sha256(text.encode()).hexdigest()}"),
         text=text.strip(),
         chunk_type="text",
         source=source,
