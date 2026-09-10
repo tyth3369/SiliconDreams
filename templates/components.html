@@ -1,0 +1,117 @@
+{#
+   Reusable HTMX components for SiliconDreams.
+   This file is included by index.html and returned by HTMX endpoints.
+#}
+
+{# ── Sidebar Content (stats + files + settings) ── #}
+{% if component == "sidebar_content" or component is not defined %}
+<div id="sidebar-inner">
+    <!-- KB Stats -->
+    <h3>{{ t('sidebar.kb_title') }}</h3>
+    <div class="kb-stats">
+        <span class="kb-stat">{{ t('sidebar.kb_docs') }}: <strong>{{ kb_stats.doc_count }}</strong></span>
+        <span class="kb-sep">|</span>
+        <span class="kb-stat">{{ t('sidebar.kb_text') }}: <strong>{{ kb_stats.text_chunks }}</strong></span>
+        <span class="kb-sep">|</span>
+        <span class="kb-stat">{{ t('sidebar.kb_table') }}: <strong>{{ kb_stats.table_chunks }}</strong></span>
+    </div>
+
+    <!-- Uploaded Files -->
+    {% if uploaded_pdfs %}
+    <div class="uploaded-files">
+        <strong>{{ t('sidebar.kb_uploaded') }}</strong>
+        {% for pdf in uploaded_pdfs[-5:] %}
+        <div class="file-item">&ndash; {{ pdf.name }} ({{ pdf.size }}MB)</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <hr class="divider">
+
+    <!-- Settings -->
+    <h3>{{ t('sidebar.settings_title') }}</h3>
+
+    <div class="setting-row">
+        <label>{{ t('sidebar.settings_language') }}</label>
+        <div class="toggle-group">
+            <button class="toggle-btn {{ 'active' if lang == 'zh' }}"
+                    onclick="setLang('zh')">中文</button>
+            <button class="toggle-btn {{ 'active' if lang == 'en' }}"
+                    onclick="setLang('en')">English</button>
+        </div>
+    </div>
+
+    <div class="setting-row">
+        <label>{{ t('sidebar.settings_theme') }}</label>
+        <div class="toggle-group" id="theme-toggles">
+            <button class="toggle-btn" data-theme="auto" onclick="setTheme('auto')">{{ t('theme.auto') }}</button>
+            <button class="toggle-btn" data-theme="dark" onclick="setTheme('dark')">{{ t('theme.dark') }}</button>
+            <button class="toggle-btn" data-theme="light" onclick="setTheme('light')">{{ t('theme.light') }}</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Chat Response (user msg + empty assistant div) ── #}
+{% if component == "chat_response" %}
+<div class="chat-msg user">
+    <div class="msg-role">USER</div>
+    <div class="msg-content">{{ user_msg }}</div>
+</div>
+<div class="chat-msg assistant" id="msg-{{ assistant_id }}">
+    <div class="msg-role">AI</div>
+    <div class="msg-content" id="stream-{{ assistant_id }}"></div>
+</div>
+<script>
+    // Register pending stream — initStream() in app.js will start it via htmx:afterSwap
+    (function() {
+        var msgId = '{{ msg_id }}';
+        var targetId = 'stream-{{ assistant_id }}';
+        if (window._pendingStreams === undefined) window._pendingStreams = {};
+        window._pendingStreams[msgId] = targetId;
+    })();
+</script>
+{% endif %}
+
+{# ── Citation Panel ── #}
+{% if component == "citation_panel" %}
+{% if citations and citations|length > 0 %}
+<details class="citation-panel">
+    <summary>
+        <span class="citation-heading">{{ t('citation.trace_title') }}（{{ citations|length }}{{ t('citation.source_count') if lang == 'zh' else ' sources' }}）</span>
+        <span class="citation-hint">{{ t('citation.trace_hint') }}</span>
+    </summary>
+    <div class="citation-list">
+        {% for c in citations %}
+        <div class="citation-item">
+            <span class="citation-index">[{{ loop.index }}]</span>
+            <span class="citation-source">
+                <span class="citation-icon">{% if c.source_type == 'term' %}KNOWLEDGE{% elif c.source_type == 'financial' %}FINANCIAL{% elif c.source_type == 'web' %}WEB{% else %}DOCUMENT{% endif %}</span>
+                {% if c.source_type == 'term' %}
+                    {{ c.source }}
+                {% elif c.source_type == 'financial' %}
+                    {{ c.source }} {{ t('citation.financial_label') if lang == 'zh' else 'Financials' }}
+                {% else %}
+                    {{ c.source }}{% if c.page %} · p{{ c.page }}{% endif %}
+                {% endif %}
+            </span>
+            {% if c.snippet %}
+            <div class="citation-snippet">&ldquo;{{ c.snippet }}&rdquo;</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</details>
+{% endif %}
+{% endif %}
+
+{# ── KB Stats partial ── #}
+{% if component == "kb_stats" %}
+<div class="kb-stats" id="kb-stats">
+    <span class="kb-stat">{{ t('sidebar.kb_docs') }}: <strong>{{ kb_stats.doc_count }}</strong></span>
+    <span class="kb-sep">|</span>
+    <span class="kb-stat">{{ t('sidebar.kb_text') }}: <strong>{{ kb_stats.text_chunks }}</strong></span>
+    <span class="kb-sep">|</span>
+    <span class="kb-stat">{{ t('sidebar.kb_table') }}: <strong>{{ kb_stats.table_chunks }}</strong></span>
+</div>
+{% endif %}
