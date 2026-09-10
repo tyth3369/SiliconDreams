@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiliconDreams | AI Semiconductor Research</title>
+    <link rel="stylesheet" href="/static/style.css?v=0.6.8">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // Language-dependent UI text for client-side language switch
+        window._LANG_TEXT = {
+            zh: {
+                tagline: "{{ _ZH['app.tagline'] }}",
+                compare: "{{ _ZH['quick.compare'] }}",
+                tech: "{{ _ZH['quick.tech'] }}",
+                finance: "{{ _ZH['quick.finance'] }}",
+                placeholder: "{{ _ZH['chat.placeholder'] }}",
+            },
+            en: {
+                tagline: "{{ _EN['app.tagline'] }}",
+                compare: "{{ _EN['quick.compare'] }}",
+                tech: "{{ _EN['quick.tech'] }}",
+                finance: "{{ _EN['quick.finance'] }}",
+                placeholder: "{{ _EN['chat.placeholder'] }}",
+            }
+        };
+    </script>
+    <script src="/static/app.js" defer></script>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- ═══ Sidebar ═══ -->
+        <aside class="sidebar">
+            <!-- Brand -->
+            <div class="brand-title">SILICON DREAMS</div>
+            <div class="brand-tagline">{{ t('app.tagline') }}</div>
+
+            <hr class="divider">
+
+            <!-- PDF Upload -->
+            <h3>{{ t('sidebar.upload_title') }}</h3>
+            <form hx-post="/upload" hx-encoding="multipart/form-data"
+                  hx-target="#sidebar-inner" hx-swap="innerHTML">
+                <div class="upload-zone">
+                    <input type="file" name="file" accept=".pdf"
+                           onchange="this.form.dispatchEvent(new Event('submit', {bubbles: true}))">
+                    <span>{{ t('sidebar.upload_hint') }}</span>
+                </div>
+                <p class="hint">{{ t('sidebar.upload_help') }}</p>
+            </form>
+
+            <hr class="divider">
+
+            <!-- Sidebar content (stats + files + settings) -->
+            <div id="sidebar-inner">
+                {% with component="sidebar_content" %}
+                {% include "components.html" %}
+                {% endwith %}
+            </div>
+        </aside>
+
+        <!-- ═══ Main ═══ -->
+        <main class="main-area">
+            <!-- Top bar -->
+            <header class="top-bar">
+                <div class="top-left">
+                    <span class="top-brand">SILICON DREAMS</span>
+                    <span class="top-tagline">{{ t('app.tagline') }}</span>
+                </div>
+                <div class="top-right">
+                    <span class="status-dot {{ 'online' if llm_online else 'offline' }}"></span>
+                    <span class="status-text">{{ t('status.llm_status') }}
+                        {{ t('status.online') if llm_online else t('status.no_key') }}</span>
+                </div>
+            </header>
+
+            <hr class="divider">
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button hx-post="/quick/compare" hx-target="#chat-container" hx-swap="beforeend">
+                    {{ t('quick.compare') }}
+                </button>
+                <button hx-post="/quick/tech_trend" hx-target="#chat-container" hx-swap="beforeend">
+                    {{ t('quick.tech') }}
+                </button>
+                <button hx-post="/quick/finance" hx-target="#chat-container" hx-swap="beforeend">
+                    {{ t('quick.finance') }}
+                </button>
+            </div>
+
+            <!-- Chat Messages -->
+            <div id="chat-container" class="chat-container">
+                {% if messages %}
+                {% for msg in messages %}
+                <div class="chat-msg {{ msg.role }}">
+                    <div class="msg-role">{{ 'USER' if msg.role == 'user' else 'AI' }}</div>
+                    <div class="msg-content">{{ msg.content }}</div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-area">
+                <form id="chat-form" hx-post="/chat" hx-target="#chat-container" hx-swap="beforeend"
+                      hx-on::after-request="this.reset(); initStream();">
+                    <input type="text" name="message"
+                           placeholder="{{ t('chat.placeholder') }}"
+                           autocomplete="off" required>
+                    <input type="hidden" name="lang" value="{{ lang }}">
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">{{ t('app.footer') }}</div>
+</body>
+</html>

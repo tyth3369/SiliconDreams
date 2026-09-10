@@ -1,0 +1,1851 @@
+{
+  "_meta": {
+    "description": "SiliconDreams 半导体行业术语知识图谱",
+    "version": "0.1.0",
+    "total_terms": 100,
+    "domains": [
+      "晶圆代工",
+      "IC设计",
+      "封测",
+      "设备材料",
+      "EDA工具",
+      "前沿技术"
+    ],
+    "last_updated": "2026-07-13"
+  },
+  "terms": {
+    "先进制程": {
+      "name_en": "Advanced Process Node",
+      "definition": "晶体管关键尺寸进入7nm及以下的芯片制造工艺，包括FinFET和GAA晶体管架构。制程越先进，芯片性能越高、功耗越低，但研发和资本支出呈指数级增长。",
+      "generation": "先进制程 (≤7nm)",
+      "business_impact": "先进制程是晶圆代工企业核心竞争力的直接体现。领先企业可获取定价权和超高毛利率(台积电3nm毛利率超60%)，但单厂投资超200亿美元，需大规模量产摊薄成本。制程落后则面临客户流失和ASP下降。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "中芯国际"
+      ],
+      "related_terms": [
+        "FinFET",
+        "GAA",
+        "EUV光刻",
+        "High-NA EUV",
+        "制程节点",
+        "摩尔定律"
+      ]
+    },
+    "FinFET": {
+      "name_en": "Fin Field-Effect Transistor",
+      "definition": "鳍式场效应晶体管，将晶体管栅极做成3D鳍状结构以增强对电流的控制。是16nm到5nm节点的主流晶体管架构。",
+      "generation": "先进制程 (≤7nm)",
+      "business_impact": "FinFET技术的掌握门槛决定了晶圆代工行业的竞争格局。台积电2011年率先量产FinFET后确立了10年以上的技术领先地位，攫取了行业大部分利润。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "联发科"
+      ],
+      "related_terms": [
+        "GAA",
+        "先进制程",
+        "漏电流",
+        "阈值电压"
+      ]
+    },
+    "GAA": {
+      "name_en": "Gate-All-Around Transistor",
+      "definition": "全环绕栅极晶体管，栅极材料完全包裹纳米片/纳米线沟道，实现对电流的极致控制。是3nm及以下节点替代FinFET的关键技术。",
+      "generation": "先进制程 (≤3nm)",
+      "business_impact": "GAA是3nm以下节点的必经之路。三星抢先于3nm导入GAA但良率不佳，台积电选择在2nm导入更成熟的GAA方案。GAA研发投入巨大，直接拉高了先进制程的资本门槛，进一步固化寡头格局。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔"
+      ],
+      "related_terms": [
+        "FinFET",
+        "先进制程",
+        "纳米片",
+        "High-NA EUV"
+      ]
+    },
+    "EUV光刻": {
+      "name_en": "Extreme Ultraviolet Lithography",
+      "definition": "极紫外光刻技术，使用13.5nm波长光源进行芯片光刻，是实现7nm及以下制程的关键设备。由荷兰ASML独家供应。",
+      "generation": "先进制程 (≤7nm)",
+      "business_impact": "EUV光刻机单台售价超2亿美元，是晶圆代工厂最大的单笔资本支出。台积电拥有全球超过50%的EUV装机量，构成强大的产能护城河。ASML的EUV供应瓶颈直接影响全球芯片扩产节奏。",
+      "related_companies": [
+        "ASML",
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "SK海力士"
+      ],
+      "related_terms": [
+        "High-NA EUV",
+        "DUV光刻",
+        "光刻胶",
+        "先进制程"
+      ]
+    },
+    "High-NA EUV": {
+      "name_en": "High Numerical Aperture EUV",
+      "definition": "高数值孔径极紫外光刻，将NA从0.33提升至0.55，可实现更高分辨率的单次曝光，是2nm及以下节点的必备设备。单台售价超4亿美元。",
+      "generation": "先进制程 (≤2nm)",
+      "business_impact": "High-NA EUV的单位成本远超传统EUV，但能减少多次曝光带来的良率损失和周期延长。率先部署的企业将获得2nm以下技术的先发优势，但设备折旧压力巨大，需超大产能摊薄。",
+      "related_companies": [
+        "ASML",
+        "台积电",
+        "英特尔",
+        "三星电子"
+      ],
+      "related_terms": [
+        "EUV光刻",
+        "先进制程",
+        "GAA"
+      ]
+    },
+    "DUV光刻": {
+      "name_en": "Deep Ultraviolet Lithography",
+      "definition": "深紫外光刻技术，使用193nm波长光源。是成熟制程(28nm及以上)和部分先进制程多层曝光的主力设备。",
+      "generation": "成熟制程 (≥28nm)",
+      "business_impact": "DUV设备不受对华出口管制限制(部分例外)，是中国大陆半导体扩产的主要工具。DUV的充足供应支撑了成熟制程的产能扩张，但无法用于7nm以下大规模量产，构成技术天花板。",
+      "related_companies": [
+        "ASML",
+        "尼康",
+        "佳能",
+        "中芯国际",
+        "华虹半导体"
+      ],
+      "related_terms": [
+        "EUV光刻",
+        "成熟制程",
+        "光刻机",
+        "对华出口管制"
+      ]
+    },
+    "制程节点": {
+      "name_en": "Process Node",
+      "definition": "以纳米(nm)为单位的芯片制造工艺代际标识，如28nm、7nm、3nm。数值越小代表晶体管密度越高、性能越强。",
+      "generation": "通用概念",
+      "business_impact": "制程节点直接影响芯片性能、功耗和成本。先进节点(≤7nm)享有高ASP和高毛利，成熟节点(≥28nm)依靠产能规模和成本控制获利。每跨越一代节点，研发投入约翻倍。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "中芯国际"
+      ],
+      "related_terms": [
+        "先进制程",
+        "成熟制程",
+        "摩尔定律",
+        "晶体管密度"
+      ]
+    },
+    "成熟制程": {
+      "name_en": "Mature Process Node",
+      "definition": "28nm及以上的芯片制造工艺。虽然性能不如先进制程，但在电源管理、传感器、MCU、汽车电子等领域需求巨大且稳定。",
+      "generation": "成熟制程 (≥28nm)",
+      "business_impact": "成熟制程是中国大陆半导体扩产的主战场(不受EUV出口限制)。全球成熟制程产能可能出现过剩风险，但车规级和工业级芯片对成熟制程有长期稳定需求。毛利率通常低于先进制程10-20个百分点。",
+      "related_companies": [
+        "中芯国际",
+        "华虹半导体",
+        "联电",
+        "格芯",
+        "世界先进"
+      ],
+      "related_terms": [
+        "先进制程",
+        "DUV光刻",
+        "功率半导体",
+        "车规级芯片"
+      ]
+    },
+    "摩尔定律": {
+      "name_en": "Moore's Law",
+      "definition": "英特尔联合创始人戈登·摩尔1965年的预言：集成电路上可容纳的晶体管数目约每隔两年增加一倍。近年来物理极限逼近，步伐放缓。",
+      "generation": "通用概念",
+      "business_impact": "摩尔定律放缓意味着单纯靠制程微缩提升性能的路径变窄，行业转向先进封装、chiplet、异构集成等'超越摩尔'路径。对设备商是机遇也是挑战。",
+      "related_companies": [
+        "英特尔",
+        "台积电",
+        "AMD",
+        "英伟达"
+      ],
+      "related_terms": [
+        "先进制程",
+        "制程节点",
+        "Chiplet",
+        "先进封装",
+        "超越摩尔"
+      ]
+    },
+    "晶圆": {
+      "name_en": "Wafer",
+      "definition": "半导体制造的基板，通常为高纯度硅圆片。直径以英寸计，主流为12英寸(300mm)，先进制程均使用12英寸晶圆。",
+      "generation": "通用概念",
+      "business_impact": "晶圆尺寸越大，单晶圆可切割芯片数量越多，单位成本越低。12英寸晶圆厂投资远超8英寸，但规模效应显著。全球12英寸晶圆产能集中在台积电、三星等头部代工厂。",
+      "related_companies": [
+        "信越化学",
+        "SUMCO",
+        "环球晶圆",
+        "台积电"
+      ],
+      "related_terms": [
+        "硅片",
+        "晶圆厂",
+        "良率",
+        "CMP"
+      ]
+    },
+    "良率": {
+      "name_en": "Yield Rate",
+      "definition": "一片晶圆上合格芯片数量与总芯片数量的比率。良率是晶圆代工企业盈利能力的核心指标。",
+      "generation": "通用概念",
+      "business_impact": "良率每提升1个百分点，毛利率可提升0.5-1个百分点。新制程初期良率低是亏损主因(如三星3nm GAA良率仅约20-30%)，良率爬坡到80%+后才能实现盈利。良率是代工企业最核心的竞争指标之一。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "中芯国际"
+      ],
+      "related_terms": [
+        "晶圆",
+        "先进制程",
+        "缺陷密度",
+        "毛利率"
+      ]
+    },
+    "晶圆代工": {
+      "name_en": "Wafer Foundry",
+      "definition": "专门为其他芯片设计公司制造芯片的商业模式，不自行设计芯片。台积电是该模式的创立者和全球领导者。",
+      "generation": "商业模式",
+      "business_impact": "晶圆代工模式将芯片设计和制造分离，使Fabless设计公司(如AMD、英伟达)得以快速发展。代工厂的核心壁垒是制程技术、产能规模和良率。行业呈寡头格局，台积电一家占据全球代工市场约60%份额和90%+的先进制程份额。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "联电",
+        "中芯国际",
+        "格芯"
+      ],
+      "related_terms": [
+        "Fabless",
+        "IDM",
+        "先进制程",
+        "产能利用率"
+      ]
+    },
+    "Fabless": {
+      "name_en": "Fabless (无晶圆厂)",
+      "definition": "只做芯片设计、不拥有制造工厂的半导体公司模式。设计完成后交由晶圆代工厂生产。",
+      "generation": "商业模式",
+      "business_impact": "Fabless模式轻资产、高ROE，但高度依赖代工厂的产能和技术。在产能紧缺周期中处于弱势地位，需与代工厂签订长期供货协议锁定产能。成功的Fabless公司毛利率可达50-65%。",
+      "related_companies": [
+        "英伟达",
+        "AMD",
+        "高通",
+        "联发科",
+        "博通"
+      ],
+      "related_terms": [
+        "晶圆代工",
+        "IDM",
+        "芯片设计",
+        "产能紧缺"
+      ]
+    },
+    "IDM": {
+      "name_en": "Integrated Device Manufacturer",
+      "definition": "同时拥有芯片设计和制造能力的垂直整合半导体公司。代表企业为英特尔、三星、意法半导体。",
+      "generation": "商业模式",
+      "business_impact": "IDM模式理论上设计和制造协同更紧密，但重资产运营拖累盈利能力。英特尔近年IDM 2.0战略转型，开放代工服务，但执行力受质疑。IDM向Fab-Lite(轻晶圆厂)模式转型是行业趋势。",
+      "related_companies": [
+        "英特尔",
+        "三星电子",
+        "意法半导体",
+        "德州仪器"
+      ],
+      "related_terms": [
+        "Fabless",
+        "晶圆代工",
+        "Fab-Lite"
+      ]
+    },
+    "产能利用率": {
+      "name_en": "Capacity Utilization Rate",
+      "definition": "晶圆厂实际产出与设计产能的比率。是衡量代工行业景气度的关键先行指标。",
+      "generation": "通用概念",
+      "business_impact": "产能利用率直接影响代工厂的毛利率。利用率每下降10个百分点，毛利率约下降3-5个百分点。利用率低于70%时，多数代工厂面临亏损风险。周期性波动是代工业的固有特征。",
+      "related_companies": [
+        "台积电",
+        "联电",
+        "中芯国际",
+        "世界先进"
+      ],
+      "related_terms": [
+        "晶圆代工",
+        "毛利率",
+        "半导体周期",
+        "CAPEX"
+      ]
+    },
+    "半导体周期": {
+      "name_en": "Semiconductor Cycle",
+      "definition": "全球半导体行业约3-4年一轮的景气循环。上行期产能紧缺、价格上升，下行期产能过剩、库存去化。",
+      "generation": "通用概念",
+      "business_impact": "半导体周期直接影响代工厂产能利用率、芯片ASP和Fabless公司库存水平。2023年是近年最深的行业下行周期之一，2024年开始复苏。穿越周期的关键在于逆周期投资和产品结构多元化。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "美光",
+        "SK海力士"
+      ],
+      "related_terms": [
+        "产能利用率",
+        "库存天数",
+        "硅周期",
+        "CAPEX"
+      ]
+    },
+    "3D IC": {
+      "name_en": "Three-Dimensional Integrated Circuit",
+      "definition": "将多颗芯片垂直堆叠封装在一起的技术，通过硅通孔(TSV)实现层间互联，大幅提升集成度和带宽。",
+      "generation": "先进封装技术",
+      "business_impact": "3D IC是HBM内存的核心使能技术，也是延续摩尔定律的关键路径之一。台积电的SoIC技术在3D堆叠密度上领先。3D IC将带动先进封装、TSV刻蚀、热管理等上下游需求爆发。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "日月光",
+        "安靠"
+      ],
+      "related_terms": [
+        "先进封装",
+        "HBM",
+        "TSV",
+        "Chiplet",
+        "CoWoS"
+      ]
+    },
+    "HBM": {
+      "name_en": "High Bandwidth Memory",
+      "definition": "高带宽内存，通过3D堆叠多层DRAM芯片和TSV互联实现超高带宽，是AI GPU(GPU/NPU)的数据'高速公路'。最新HBM3E带宽超1TB/s。",
+      "generation": "前沿存储技术",
+      "business_impact": "HBM是AI算力芯片最关键的内存方案，每颗AI GPU需搭配多颗HBM。HBM单价为传统DRAM的5-7倍，毛利率高20+个百分点。SK海力士占据HBM市场约50%份额，三星紧随其后。HBM供不应求是2024-2025年AI芯片交付瓶颈之一。",
+      "related_companies": [
+        "SK海力士",
+        "三星电子",
+        "美光",
+        "英伟达",
+        "AMD"
+      ],
+      "related_terms": [
+        "3D IC",
+        "TSV",
+        "AI芯片",
+        "CoWoS",
+        "先进封装"
+      ]
+    },
+    "Chiplet": {
+      "name_en": "Chiplet（小芯片）",
+      "definition": "将一颗大芯片的功能拆分成多个小芯片(裸片)，通过先进封装技术互联。每颗chiplet可用不同制程制造，兼顾性能和成本。",
+      "generation": "前沿技术",
+      "business_impact": "Chiplet架构正在重构芯片设计范式。AMD率先大规模商用(Model 3D V-Cache)，英伟达Blackwell系列也采用chiplet。Chiplet降低了对单一超大芯片的良率依赖，但推高了先进封装需求。UCIe互联标准是chiplet生态的关键基础设施。",
+      "related_companies": [
+        "AMD",
+        "英伟达",
+        "英特尔",
+        "台积电"
+      ],
+      "related_terms": [
+        "先进封装",
+        "UCIe",
+        "3D IC",
+        "CoWoS",
+        "摩尔定律"
+      ]
+    },
+    "先进封装": {
+      "name_en": "Advanced Packaging",
+      "definition": "在芯片封装环节使用2.5D/3D堆叠、硅中介层、晶圆级封装等技术的总称，是延续摩尔定律的关键路径之一。",
+      "generation": "封装技术",
+      "business_impact": "先进封装是AI芯片产能的真正瓶颈——台积电CoWoS产能严重供不应求，扩产速度跟不上AI芯片需求。先进封装相关设备和材料(如ABF基板、硅中介层、临时键合材料)需求爆发，是当前半导体产业链确定性最高的增长点之一。",
+      "related_companies": [
+        "台积电",
+        "日月光",
+        "安靠",
+        "长电科技",
+        "通富微电"
+      ],
+      "related_terms": [
+        "CoWoS",
+        "Chiplet",
+        "3D IC",
+        "HBM",
+        "TSV"
+      ]
+    },
+    "CoWoS": {
+      "name_en": "Chip-on-Wafer-on-Substrate",
+      "definition": "台积电独创的2.5D先进封装技术，将逻辑芯片和HBM内存集成到硅中介层上。是英伟达AI GPU的标配封装方案。",
+      "generation": "先进封装技术",
+      "business_impact": "CoWoS是当前AI芯片产能的最大瓶颈。2024年英伟达H100/B200的交付周期主要在等台积电的CoWoS产能而非逻辑芯片。台积电CoWoS扩产进度是衡量AI产业链供需的最关键指标。CoWoS的供不应求直接推高了台积电先进封装收入增速(年增50%+)。",
+      "related_companies": [
+        "台积电",
+        "英伟达",
+        "AMD",
+        "博通",
+        "日月光"
+      ],
+      "related_terms": [
+        "先进封装",
+        "HBM",
+        "硅中介层",
+        "AI芯片"
+      ]
+    },
+    "TSV": {
+      "name_en": "Through-Silicon Via",
+      "definition": "硅通孔技术，在芯片内部或芯片之间钻出微米级垂直通孔并填充金属，实现垂直方向的电气连接。是3D IC和HBM的核心工艺。",
+      "generation": "先进封装技术",
+      "business_impact": "TSV工艺的精度和良率直接影响HBM和3D IC的成品率和成本。TSV设备(深硅刻蚀/电镀)和临时键合材料是核心受益环节。随着HBM堆叠层数从8层提升到12层甚至16层，TSV需求将继续高速增长。",
+      "related_companies": [
+        "台积电",
+        "应用材料",
+        "泛林半导体",
+        "东京电子"
+      ],
+      "related_terms": [
+        "3D IC",
+        "HBM",
+        "先进封装",
+        "硅中介层"
+      ]
+    },
+    "第三代半导体": {
+      "name_en": "Wide Bandgap Semiconductors / Compound Semiconductors",
+      "definition": "以碳化硅(SiC)和氮化镓(GaN)为代表的宽禁带半导体材料，相比传统硅具备更高耐压、更高频率、更低损耗的特性。",
+      "generation": "前沿材料技术",
+      "business_impact": "SiC在电动汽车主驱逆变器中快速渗透，市场年增速超30%。GaN在快充、数据中心电源等领域发力量产。第三代半导体无需最先进制程(通常在6-8英寸晶圆生产)，但仍需专用设备和衬底材料，相关设备商和衬底供应商显著受益。",
+      "related_companies": [
+        "Wolfspeed",
+        "英飞凌",
+        "意法半导体",
+        "三安光电",
+        "天岳先进"
+      ],
+      "related_terms": [
+        "SiC",
+        "GaN",
+        "功率半导体",
+        "衬底"
+      ]
+    },
+    "SiC": {
+      "name_en": "Silicon Carbide",
+      "definition": "碳化硅，第三代半导体核心材料之一。击穿电场强度是硅的10倍，适合高压高温场景。主要用于电动汽车主驱逆变器和充电桩。",
+      "generation": "第三代半导体",
+      "business_impact": "SiC是电动汽车800V高压平台的核心器件，特斯拉Model 3率先大规模采用。SiC衬底生长难度极高(需2000°C+高温)，全球产能集中在Wolfspeed、II-VI(现Coherent)和天岳先进等少数企业。衬底从6英寸向8英寸过渡是降本关键。",
+      "related_companies": [
+        "Wolfspeed",
+        "Coherent",
+        "天岳先进",
+        "天科合达",
+        "比亚迪"
+      ],
+      "related_terms": [
+        "第三代半导体",
+        "GaN",
+        "功率半导体",
+        "衬底"
+      ]
+    },
+    "GaN": {
+      "name_en": "Gallium Nitride",
+      "definition": "氮化镓，第三代半导体材料。电子迁移率高，适合高频中功率场景。主要用于快充充电头、5G基站功放、数据中心电源。",
+      "generation": "第三代半导体",
+      "business_impact": "GaN快充市场成熟度高于SiC，成本下降速度快。数据中心48V供电架构向GaN迁移是潜在爆发点。GaN的衬底(硅基GaN)成本远低于SiC，更易规模化。纳微半导体、英诺赛科等纯GaN公司值得关注。",
+      "related_companies": [
+        "纳微半导体",
+        "英诺赛科",
+        "英飞凌",
+        "TI",
+        "EPC"
+      ],
+      "related_terms": [
+        "第三代半导体",
+        "SiC",
+        "功率半导体",
+        "快充"
+      ]
+    },
+    "功率半导体": {
+      "name_en": "Power Semiconductor",
+      "definition": "用于电力控制和转换的半导体器件，包括MOSFET、IGBT、SiC/GaN器件等。是电能转换的'开关'。",
+      "generation": "器件类别",
+      "business_impact": "功率半导体是新能源(光伏/风电/储能)和电动汽车的核心器件，单车价值量从传统车的$71飙升至电动车的$450+。市场长期受益于电气化和碳中和趋势，年增速约8-10%。IGBT仍是主力，但SiC在高电压场景加速渗透。",
+      "related_companies": [
+        "英飞凌",
+        "安森美",
+        "意法半导体",
+        "比亚迪半导体",
+        "斯达半导"
+      ],
+      "related_terms": [
+        "MOSFET",
+        "IGBT",
+        "SiC",
+        "GaN",
+        "第三代半导体"
+      ]
+    },
+    "IGBT": {
+      "name_en": "Insulated Gate Bipolar Transistor",
+      "definition": "绝缘栅双极型晶体管，兼有MOSFET的高输入阻抗和BJT的低导通压降优势。是电动车电驱、高铁牵引、新能源发电的核心功率器件。",
+      "generation": "功率半导体",
+      "business_impact": "IGBT是新能源时代的'CPU'，单车IGBT价值量$200-400。中国IGBT自给率在快速提升(比亚迪半导体、斯达半导、士兰微)，但高端产品仍依赖英飞凌。IGBT受SiC替代压力但中低压场景仍有长期竞争力。",
+      "related_companies": [
+        "英飞凌",
+        "比亚迪半导体",
+        "斯达半导",
+        "士兰微",
+        "中车时代"
+      ],
+      "related_terms": [
+        "功率半导体",
+        "MOSFET",
+        "SiC",
+        "电动汽车"
+      ]
+    },
+    "MOSFET": {
+      "name_en": "Metal-Oxide-Semiconductor Field-Effect Transistor",
+      "definition": "金属氧化物半导体场效应晶体管，功率MOSFET是开关电源、DC-DC转换器、电机驱动等场景的必备器件。",
+      "generation": "功率半导体",
+      "business_impact": "功率MOSFET市场巨大但竞争激烈，利润集中于高端车规级和低压大电流产品(如AI服务器电源)。Si MOSFET成熟但增长有限，SiC MOSFET和GaN HEMT是利润增长点。",
+      "related_companies": [
+        "英飞凌",
+        "安森美",
+        "瑞萨",
+        "东芝",
+        "华润微"
+      ],
+      "related_terms": [
+        "功率半导体",
+        "IGBT",
+        "SiC",
+        "GaN"
+      ]
+    },
+    "MCU": {
+      "name_en": "Microcontroller Unit (微控制器)",
+      "definition": "将CPU、内存和外设集成在单一芯片上的微型计算机。是物联网、汽车电子、工业控制的大脑。",
+      "generation": "器件类别",
+      "business_impact": "MCU是半导体行业'大宗商品'，全球市场约$200-300亿。车规级MCU(如瑞萨、英飞凌、NXP)壁垒高、利润丰厚。2020-2022年MCU严重缺货涨价，催生了国产替代浪潮。2023年后供需趋于平衡。",
+      "related_companies": [
+        "瑞萨电子",
+        "英飞凌",
+        "NXP",
+        "意法半导体",
+        "兆易创新"
+      ],
+      "related_terms": [
+        "车规级芯片",
+        "SoC",
+        "RISC-V",
+        "物联网"
+      ]
+    },
+    "SoC": {
+      "name_en": "System-on-Chip (片上系统)",
+      "definition": "将CPU、GPU、NPU、ISP、Modem等多个功能模块集成在单一芯片上。手机AP(应用处理器)是最典型的SoC。",
+      "generation": "器件类别",
+      "business_impact": "SoC是手机芯片的绝对主力形态，高通和联发科双寡头格局。苹果A系列/M系列自研SoC是垂直整合的极致案例。SoC的设计和流片成本极高(5nm流片费用超$3亿)，壁垒极高。",
+      "related_companies": [
+        "高通",
+        "联发科",
+        "苹果",
+        "三星电子"
+      ],
+      "related_terms": [
+        "Fabless",
+        "先进制程",
+        "AP",
+        "NPU"
+      ]
+    },
+    "NPU": {
+      "name_en": "Neural Processing Unit (神经网络处理器)",
+      "definition": "专门为AI推理/训练优化的处理器架构，能高效执行矩阵乘法和卷积运算。手机SoC中的AI引擎即NPU的一种。",
+      "generation": "AI芯片",
+      "business_impact": "NPU是端侧AI(手机/PC)的核心硬件。高通Hexagon NPU、苹果Neural Engine、英特尔NPU各有生态。端侧AI算力竞赛(TOPS)是手机SoC最新竞争焦点。NPU IP授权(Arm、芯原股份)是轻资产获利模式。",
+      "related_companies": [
+        "高通",
+        "苹果",
+        "Arm",
+        "芯原股份",
+        "寒武纪"
+      ],
+      "related_terms": [
+        "AI芯片",
+        "SoC",
+        "GPU",
+        "ASIC"
+      ]
+    },
+    "AI芯片": {
+      "name_en": "AI Chip / AI Accelerator",
+      "definition": "为人工智能训练和推理优化的专用处理器。主流架构包括GPU、FPGA、ASIC、NPU。",
+      "generation": "前沿技术",
+      "business_impact": "AI芯片是2023-2025年半导体行业最大增长引擎。英伟达GPU占据AI训练市场90%+份额，毛利率超70%。云厂商自研AI芯片(谷歌TPU、亚马逊Trainium、微软Maia)试图降低对英伟达的依赖。ASIC方案(博通、Marvell定制化芯片)在推理场景快速渗透。",
+      "related_companies": [
+        "英伟达",
+        "AMD",
+        "博通",
+        "Marvell",
+        "英特尔",
+        "寒武纪"
+      ],
+      "related_terms": [
+        "GPU",
+        "NPU",
+        "ASIC",
+        "FPGA",
+        "HBM"
+      ]
+    },
+    "GPU": {
+      "name_en": "Graphics Processing Unit (图形处理器)",
+      "definition": "原本为图形渲染设计的并行处理器，因其大规模并行计算架构意外成为AI训练的主力芯片。",
+      "generation": "AI芯片",
+      "business_impact": "英伟达GPU垄断AI训练市场，A100/H100/B200系列一代比一代贵(H100单卡$30,000+)。GPU毛利率是传统芯片的2-3倍，英伟达FY2025毛利率预期75%+。AMD MI300X是唯一可挑战英伟达的GPU产品。但云厂商自研芯片长期构成竞争威胁。",
+      "related_companies": [
+        "英伟达",
+        "AMD",
+        "英特尔"
+      ],
+      "related_terms": [
+        "AI芯片",
+        "CUDA",
+        "HBM",
+        "CoWoS",
+        "ASIC"
+      ]
+    },
+    "ASIC": {
+      "name_en": "Application-Specific Integrated Circuit",
+      "definition": "为特定应用场景定制的专用集成电路。AI ASIC是专为某类AI模型推理/训练优化的芯片(如Google TPU)。",
+      "generation": "AI芯片",
+      "business_impact": "ASIC在特定AI任务上的能效比和单位成本优于通用GPU。博通为Google定制TPU、Marvell为Amazon定制Trainium是行业标杆。ASIC是云厂商摆脱英伟达依赖的首选路径，博通和Marvell是定制化AI芯片的最大受益者。但ASIC灵活性不如GPU，不适合快速演进的AI算法。",
+      "related_companies": [
+        "博通",
+        "Marvell",
+        "谷歌",
+        "亚马逊",
+        "阿里巴巴"
+      ],
+      "related_terms": [
+        "AI芯片",
+        "GPU",
+        "NPU",
+        "FPGA"
+      ]
+    },
+    "存储芯片": {
+      "name_en": "Memory Semiconductor",
+      "definition": "用于数据存储的半导体器件，包括DRAM(内存)、NAND Flash(闪存)、NOR Flash等。全球市场规模约$1000-1500亿。",
+      "generation": "器件类别",
+      "business_impact": "存储芯片是半导体行业'大宗商品'，周期性极强。价格波动直接影响三星、SK海力士、美光三大巨头的盈利。HBM和DDR5升级周期是2024-2025年存储行业的主要增长动力。NAND Flash受SSD渗透率见顶影响增速放缓。",
+      "related_companies": [
+        "三星电子",
+        "SK海力士",
+        "美光",
+        "长江存储",
+        "铠侠"
+      ],
+      "related_terms": [
+        "DRAM",
+        "NAND Flash",
+        "HBM",
+        "半导体周期",
+        "DDR5"
+      ]
+    },
+    "DRAM": {
+      "name_en": "Dynamic Random-Access Memory",
+      "definition": "动态随机存取存储器，是计算机主内存的绝对主力。需要周期性刷新以保持数据，掉电后数据消失。",
+      "generation": "存储芯片",
+      "business_impact": "DRAM行业呈三星、SK海力士、美光三寡头格局(CR3>95%)。价格周期性剧烈波动(涨跌幅一年可达50%+)，但不是'成长型'投资逻辑，而是'周期型'。HBM DRAM是DRAM行业当前唯一的'成长型'细分——高附加值+定制化+供不应求。",
+      "related_companies": [
+        "三星电子",
+        "SK海力士",
+        "美光",
+        "南亚科"
+      ],
+      "related_terms": [
+        "存储芯片",
+        "HBM",
+        "DDR5",
+        "NAND Flash",
+        "半导体周期"
+      ]
+    },
+    "NAND Flash": {
+      "name_en": "NAND Flash Memory",
+      "definition": "非易失性闪存，掉电后数据保留。是SSD固态硬盘、手机闪存、SD卡的核心存储介质。",
+      "generation": "存储芯片",
+      "business_impact": "NAND Flash层数竞赛(2xx层→3xx层)是降本核心路径。长江存储的Xtacking 3D架构是国产存储最大突破之一，但受美国制裁影响先进节点推进。NAND行业同样强周期，产能过剩时全行业亏损。",
+      "related_companies": [
+        "三星电子",
+        "铠侠",
+        "西部数据",
+        "SK海力士",
+        "长江存储"
+      ],
+      "related_terms": [
+        "存储芯片",
+        "DRAM",
+        "3D NAND",
+        "SSD"
+      ]
+    },
+    "DDR5": {
+      "name_en": "Double Data Rate 5 SDRAM",
+      "definition": "第五代DDR内存标准，相较DDR4带宽翻倍、电压降低、支持更大容量。2024-2025年是DDR5大规模渗透期。",
+      "generation": "存储芯片",
+      "business_impact": "DDR5渗透率提升是DRAM行业的量价齐升逻辑。DDR5单颗芯片面积比DDR4大约10%，消耗相同晶圆产能时产出减少，推高ASP。AI服务器DDR5需求(高带宽/大容量)是渗透加速的催化剂。",
+      "related_companies": [
+        "三星电子",
+        "SK海力士",
+        "美光",
+        "澜起科技"
+      ],
+      "related_terms": [
+        "DRAM",
+        "HBM",
+        "存储芯片",
+        "服务器"
+      ]
+    },
+    "半导体设备": {
+      "name_en": "Semiconductor Equipment",
+      "definition": "用于芯片制造和封装测试的精密设备总称，包括光刻机、刻蚀机、薄膜沉积、离子注入、CMP、检测量测等。",
+      "generation": "产业链上游",
+      "business_impact": "半导体设备是芯片制造的'铲子'，不管哪家代工厂扩产都需要买设备。设备行业增长确定性强于代工，但受资本开支周期影响。2023-2024年全球设备支出超$1000亿/年。美日荷对华设备出口管制是最大地缘政治变量。",
+      "related_companies": [
+        "应用材料",
+        "ASML",
+        "泛林半导体",
+        "东京电子",
+        "北方华创",
+        "中微公司"
+      ],
+      "related_terms": [
+        "光刻机",
+        "刻蚀机",
+        "薄膜沉积",
+        "CAPEX",
+        "对华出口管制"
+      ]
+    },
+    "刻蚀机": {
+      "name_en": "Etch Equipment",
+      "definition": "在晶圆上精确去除材料的设备，与光刻配合完成芯片图形转移。干法刻蚀是主流技术。",
+      "generation": "半导体设备",
+      "business_impact": "随着3D NAND层数增加和3D IC/TSV普及，刻蚀设备在晶圆厂投资中的占比持续提升(从20%升至~30%)。泛林半导体和应用材料垄断全球约70%市场。中微公司是国内刻蚀设备龙头，3D NAND高深宽比刻蚀达国际水平。",
+      "related_companies": [
+        "泛林半导体",
+        "应用材料",
+        "东京电子",
+        "中微公司"
+      ],
+      "related_terms": [
+        "半导体设备",
+        "薄膜沉积",
+        "光刻机",
+        "3D NAND",
+        "TSV"
+      ]
+    },
+    "薄膜沉积": {
+      "name_en": "Thin Film Deposition",
+      "definition": "在晶圆表面生长或沉积薄膜材料层的工艺，包括CVD(化学气相沉积)、PVD(物理气相沉积)、ALD(原子层沉积)。",
+      "generation": "半导体设备",
+      "business_impact": "ALD是先进制程中最关键的薄膜沉积技术，能以原子级精度控制膜厚。随着GAA和3D NAND对薄膜精度要求提升，ALD设备需求增速显著快于整体设备市场。应用材料和东京电子是双寡头。",
+      "related_companies": [
+        "应用材料",
+        "东京电子",
+        "泛林半导体",
+        "拓荆科技"
+      ],
+      "related_terms": [
+        "半导体设备",
+        "刻蚀机",
+        "ALD",
+        "CVD",
+        "先进制程"
+      ]
+    },
+    "光刻胶": {
+      "name_en": "Photoresist",
+      "definition": "光刻工艺中涂覆在晶圆表面的光敏材料，曝光后发生化学变化形成电路图案。是光刻工艺的核心耗材。",
+      "generation": "半导体材料",
+      "business_impact": "光刻胶是日本企业近乎垄断的细分市场(东京应化、JSR、信越化学、住友化学合计>80%份额)。EUV光刻胶技术壁垒极高。光刻胶国产化是中国半导体产业链最薄弱的环节之一，但南大光电、上海新阳等企业在KrF/ArF光刻胶领域取得突破。",
+      "related_companies": [
+        "东京应化",
+        "JSR",
+        "信越化学",
+        "南大光电",
+        "上海新阳"
+      ],
+      "related_terms": [
+        "EUV光刻",
+        "DUV光刻",
+        "半导体材料",
+        "光刻机"
+      ]
+    },
+    "EDA": {
+      "name_en": "Electronic Design Automation (电子设计自动化)",
+      "definition": "用于芯片设计的软件工具集合，涵盖逻辑综合、布局布线、时序分析、物理验证等全流程。是芯片设计的'画笔和画布'。",
+      "generation": "产业链上游",
+      "business_impact": "EDA是芯片设计的核心工具，全球市场约$150亿，但支撑着$6000亿+的半导体产业。Synopsys、Cadence、Siemens EDA(原Mentor)三寡头合计>70%份额。先进制程(≤5nm)的EDA工具极度稀缺(仅Synopsys和Cadence可提供)。国产EDA(华大九天、概伦电子)在模拟和显示面板领域取得突破但数字全流程差距仍大。",
+      "related_companies": [
+        "Synopsys",
+        "Cadence",
+        "西门子EDA",
+        "华大九天",
+        "概伦电子"
+      ],
+      "related_terms": [
+        "芯片设计",
+        "IP核",
+        "RTL",
+        "先进制程"
+      ]
+    },
+    "IP核": {
+      "name_en": "Semiconductor IP Core",
+      "definition": "可重复使用的芯片设计模块，如CPU核心(Arm Cortex)、GPU核心(Imagination)、接口IP(SerDes/PCIe/DDR控制器)。",
+      "generation": "产业链上游",
+      "business_impact": "IP授权是芯片设计行业的'卖水人'模式——低资本支出、高毛利率(>90%)、稳定性强。Arm的IP授权模式统治了智能手机CPU市场。先进制程(≤5nm)的接口IP是极度稀缺资源，仅Synopsys、Cadence、Alphawave等少数企业可提供。",
+      "related_companies": [
+        "Arm",
+        "Synopsys",
+        "Cadence",
+        "芯原股份",
+        "Alphawave"
+      ],
+      "related_terms": [
+        "EDA",
+        "芯片设计",
+        "RISC-V",
+        "Fabless"
+      ]
+    },
+    "RISC-V": {
+      "name_en": "RISC-V Instruction Set Architecture",
+      "definition": "开源免费的精简指令集架构，任何人都可以基于RISC-V设计处理器无需支付授权费。是Arm指令集的开源替代方案。",
+      "generation": "前沿技术",
+      "business_impact": "RISC-V是中国半导体产业绕过Arm/x86生态封锁的战略路径之一。在IoT/MCU领域替代Arm已开始批量商用。在高性能计算(服务器CPU)领域仍远落后于Arm和x86。RISC-V生态碎片化是最大商业挑战。",
+      "related_companies": [
+        "SiFive",
+        "平头哥(阿里)",
+        "芯来科技",
+        "赛昉科技"
+      ],
+      "related_terms": [
+        "IP核",
+        "Arm",
+        "MCU",
+        "SoC"
+      ]
+    },
+    "CIS": {
+      "name_en": "CMOS Image Sensor (图像传感器)",
+      "definition": "将光信号转为电信号的半导体器件，是智能手机相机、汽车ADAS、安防监控的'数字眼睛'。",
+      "generation": "器件类别",
+      "business_impact": "手机CIS市场增速放缓(多摄趋势见顶)，但汽车CIS(ADAS/自动驾驶)是爆发增长点，单车摄像头数量从2-3颗增至8-12颗+。索尼是CIS绝对龙头(>50%份额)，韦尔股份(豪威科技)居第三。高端CIS(大尺寸/高像素)利润丰厚。",
+      "related_companies": [
+        "索尼",
+        "三星电子",
+        "韦尔股份",
+        "安森美"
+      ],
+      "related_terms": [
+        "ADAS",
+        "自动驾驶",
+        "模拟芯片",
+        "摄像头"
+      ]
+    },
+    "车规级芯片": {
+      "name_en": "Automotive-Grade Semiconductor",
+      "definition": "满足汽车行业AEC-Q100可靠性标准的芯片，需在-40°C到125°C范围内稳定工作，并通过严苛的寿命测试。",
+      "generation": "器件类别",
+      "business_impact": "汽车'新四化'(电动化、智能化、网联化、共享化)是半导体行业除AI外的第二增长曲线。单车半导体价值量从传统车的$500飙升至电动智能车的$1000-3000。车规认证周期长(2-3年)但一旦通过供应关系极稳定，是'长坡厚雪'赛道。",
+      "related_companies": [
+        "英飞凌",
+        "瑞萨",
+        "NXP",
+        "德州仪器",
+        "意法半导体"
+      ],
+      "related_terms": [
+        "MCU",
+        "IGBT",
+        "SiC",
+        "CIS",
+        "ADAS"
+      ]
+    },
+    "模拟芯片": {
+      "name_en": "Analog Semiconductor",
+      "definition": "处理连续信号的半导体器件(放大器、电源管理、数据转换器、接口芯片等)。与数字芯片不同，模拟芯片更依赖工艺经验而非制程节点。",
+      "generation": "器件类别",
+      "business_impact": "模拟芯片是半导体行业'长周期'赛道——不追求最先进制程(很多还在0.18μm-90nm)，但产品生命周期极长(10年+)。德州仪器是全球模拟芯片之王(毛利率~65-70%)。模拟芯片在成熟制程即可生产，中国大陆在电源管理和信号链领域国产替代空间大。",
+      "related_companies": [
+        "德州仪器",
+        "ADI",
+        "思瑞浦",
+        "圣邦股份",
+        "纳芯微"
+      ],
+      "related_terms": [
+        "电源管理IC",
+        "成熟制程",
+        "车规级芯片"
+      ]
+    },
+    "射频前端": {
+      "name_en": "RF Front-End",
+      "definition": "无线通信设备中处理射频信号的核心部件，包括功率放大器(PA)、滤波器、低噪声放大器(LNA)、开关等。",
+      "generation": "器件类别",
+      "business_impact": "5G手机射频前端价值量是4G的2-3倍($10-15升至$25-35)。BAW滤波器(高频段)技术壁垒极高，被博通和Qorvo垄断。国产射频前端(卓胜微、唯捷创芯)在开关和LNA领域取得突破但高端滤波器仍是短板。",
+      "related_companies": [
+        "博通",
+        "Qorvo",
+        "Skyworks",
+        "卓胜微",
+        "唯捷创芯"
+      ],
+      "related_terms": [
+        "5G",
+        "滤波器",
+        "PA",
+        "BAW",
+        "SAW"
+      ]
+    },
+    "硅光": {
+      "name_en": "Silicon Photonics",
+      "definition": "利用硅基CMOS工艺制造光通信器件(光调制器、光探测器等)，将光学和电子学集成在同一硅芯片上。",
+      "generation": "前沿技术",
+      "business_impact": "硅光是AI时代数据中心光互连的关键技术。AI集群从800G向1.6T/3.2T光模块演进，传统InP方案在成本和集成度上遭遇瓶颈，硅光方案在功耗和可扩展性上具备颠覆优势。英特尔和台积电在硅光制造平台各有布局。",
+      "related_companies": [
+        "英特尔",
+        "台积电",
+        "思科",
+        "Lumentum",
+        "光迅科技"
+      ],
+      "related_terms": [
+        "光模块",
+        "CPO",
+        "数据中心",
+        "AI芯片"
+      ]
+    },
+    "CPO": {
+      "name_en": "Co-Packaged Optics",
+      "definition": "将光学引擎和交换芯片/GPU封装在同一个基板上，消除电信号长距离传输损耗。是AI时代超大规模互连的终极方案。",
+      "generation": "前沿技术",
+      "business_impact": "CPO可将数据中心互连功耗降低30-50%，对百万卡级AI集群的经济性至关重要。台积电COUPE平台是CPO制造的关键基础设施。CPO市场处于'产业爆发前夜'，博通、英伟达、英特尔、台积电均在积极布局。",
+      "related_companies": [
+        "博通",
+        "英伟达",
+        "台积电",
+        "英特尔",
+        "中际旭创"
+      ],
+      "related_terms": [
+        "硅光",
+        "光模块",
+        "CoWoS",
+        "AI芯片",
+        "数据中心"
+      ]
+    },
+    "光模块": {
+      "name_en": "Optical Transceiver",
+      "definition": "实现光电信号转换的通信设备，是数据中心内部和数据中心之间高速互连的核心器件。速率从100G向800G/1.6T演进。",
+      "generation": "数据中心基础设施",
+      "business_impact": "光模块是AI数据中心确定性增长赛道——GPU集群规模每扩大一倍，光模块需求不止翻倍(分布式训练网络带宽需求指数增长)。中际旭创是全球800G光模块龙头，深度绑定英伟达和谷歌。光模块行业长期受益于AI算力投资和数据中心升级周期。",
+      "related_companies": [
+        "中际旭创",
+        "新易盛",
+        "天孚通信",
+        "Coherent",
+        "Lumentum"
+      ],
+      "related_terms": [
+        "硅光",
+        "CPO",
+        "数据中心",
+        "AI芯片",
+        "800G"
+      ]
+    },
+    "存算一体": {
+      "name_en": "Compute-in-Memory / Processing-in-Memory",
+      "definition": "将计算单元嵌入存储器内部，打破传统冯·诺依曼架构中'存储墙'瓶颈。是大算力AI推理和端侧AI的低功耗方案。",
+      "generation": "前沿架构",
+      "business_impact": "存算一体可大幅降低AI推理功耗(理论上比传统GPU方案低1-2个数量级)，在端侧AI(手机/可穿戴)和边缘计算场景潜力巨大。但技术尚在早期阶段，大规模商用仍需3-5年。知存科技、后摩智能等是国内存算一体初创代表。",
+      "related_companies": [
+        "知存科技",
+        "后摩智能",
+        "三星电子",
+        "SK海力士",
+        "Mythic"
+      ],
+      "related_terms": [
+        "AI芯片",
+        "NPU",
+        "HBM",
+        "边缘计算"
+      ]
+    },
+    "量子计算": {
+      "name_en": "Quantum Computing",
+      "definition": "利用量子比特(qubit)的叠加和纠缠特性进行计算的新型计算范式，在某些问题上可提供超越经典计算机指数级的加速。",
+      "generation": "前沿技术",
+      "business_impact": "量子计算对半导体行业的直接影响短期可忽略，但长期可能在密码学、材料模拟、药物发现等领域颠覆现有计算范式。超导、离子阱、硅自旋是主要技术路线。IBM、Google、英特尔、Quantinuum是主要玩家。到达实用化仍需10-15年。",
+      "related_companies": [
+        "IBM",
+        "谷歌",
+        "英特尔",
+        "Quantinuum",
+        "本源量子"
+      ],
+      "related_terms": [
+        "先进制程",
+        "AI芯片"
+      ]
+    },
+    "对华出口管制": {
+      "name_en": "US Chip Export Controls to China",
+      "definition": "美国自2022年10月起实施的针对中国大陆先进半导体技术和设备的出口管制政策，涵盖先进制程芯片、EUV/DUV光刻机、EDA工具、AI芯片等。",
+      "generation": "政策/地缘政治",
+      "business_impact": "出口管制是影响中国半导体产业最重大的外部变量。短期内限制了先进制程发展(中芯国际7nm量产能力受限)，但催生了国产设备和材料的加速替代。长期看加速了中国'去美化'的半导体供应链构建，但技术差距仍需5-10年追赶。",
+      "related_companies": [
+        "中芯国际",
+        "华为海思",
+        "长江存储",
+        "北方华创",
+        "ASML"
+      ],
+      "related_terms": [
+        "EUV光刻",
+        "先进制程",
+        "EDA",
+        "AI芯片",
+        "半导体设备"
+      ]
+    },
+    "芯片法案": {
+      "name_en": "CHIPS Act / CHIPS and Science Act",
+      "definition": "美国2022年通过的《芯片与科学法案》，拨款约$527亿补贴在美建设半导体制造设施，并限制接受补贴的企业在中国扩大先进制程产能。",
+      "generation": "政策",
+      "business_impact": "芯片法案推动台积电、三星、英特尔在美建设先进制程晶圆厂，加速'半导体制造回流美国'进程。但美国建厂成本比亚洲高30-50%，可能拖累相关企业的资本回报率。中国大陆无法参与该补贴竞争，需自筹资金发展半导体产业(大基金三期)。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "美光",
+        "格芯"
+      ],
+      "related_terms": [
+        "对华出口管制",
+        "先进制程",
+        "晶圆代工",
+        "大基金"
+      ]
+    },
+    "ROE": {
+      "name_en": "Return on Equity (净资产收益率)",
+      "definition": "净利润与股东权益的比率，衡量企业为股东创造回报的能力。巴菲特最看重的财务指标之一。",
+      "generation": "财务指标",
+      "business_impact": "半导体行业ROE高度分化：Fabless设计公司(如英伟达)ROE可达40-100%+；晶圆代工企业ROE通常在15-30%区间(巨额资本支出拖累)；设备企业ROE较高(20-50%)。分析ROE需结合杜邦分析(净利率×周转率×杠杆倍数)拆解驱动因素。",
+      "related_companies": [
+        "英伟达",
+        "台积电",
+        "德州仪器",
+        "应用材料"
+      ],
+      "related_terms": [
+        "毛利率",
+        "净利率",
+        "ROA",
+        "杜邦分析"
+      ]
+    },
+    "毛利率": {
+      "name_en": "Gross Margin",
+      "definition": "(营业收入-营业成本)/营业收入×100%。反映产品定价权和成本控制能力的核心财务指标。",
+      "generation": "财务指标",
+      "business_impact": "半导体行业毛利率是竞争力的直接反映：英伟达AI GPU毛利率~70-75%(近乎垄断)；台积电先进制程毛利率~55-60%+；成熟制程代工厂毛利率~30-40%；封测企业毛利率~15-25%。毛利率趋势是判断行业竞争格局的先行指标。",
+      "related_companies": [
+        "英伟达",
+        "台积电",
+        "联电",
+        "日月光"
+      ],
+      "related_terms": [
+        "净利率",
+        "ROE",
+        "良率",
+        "ASP",
+        "产能利用率"
+      ]
+    },
+    "研发投入比": {
+      "name_en": "R&D Intensity (研发费用率)",
+      "definition": "研发费用/营业收入×100%。衡量企业技术投入力度的核心指标。半导体行业是研发密度最高的行业之一。",
+      "generation": "财务指标",
+      "business_impact": "半导体企业研发投入比通常在10-25%区间，其中Fabless设计公司和EDA企业最高(20-30%)，代工企业次之(8-15%)。研发投入比下降不一定好(可能吃老本)，但研发投入绝对金额的持续增长是技术跟随力信号。",
+      "related_companies": [
+        "英伟达",
+        "AMD",
+        "Synopsys",
+        "联发科"
+      ],
+      "related_terms": [
+        "CAPEX",
+        "毛利率",
+        "先进制程",
+        "ROE"
+      ]
+    },
+    "CAPEX": {
+      "name_en": "Capital Expenditure (资本支出)",
+      "definition": "企业用于购置固定资产(设备、厂房)的支出。半导体行业的CAPEX主要指晶圆厂建设成本和设备采购。",
+      "generation": "财务指标",
+      "business_impact": "CAPEX是晶圆代工和存储行业最重要的财务指标之一。台积电2024年CAPEX约$280-320亿，中芯国际约$75亿，差距直接反映产能和技术差距。CAPEX/营收比和CAPEX趋势是判断代工企业扩张节奏和行业周期的关键。过高的CAPEX拖累自由现金流和ROE。",
+      "related_companies": [
+        "台积电",
+        "三星电子",
+        "英特尔",
+        "中芯国际",
+        "美光"
+      ],
+      "related_terms": [
+        "半导体设备",
+        "折旧",
+        "晶圆代工",
+        "先进制程",
+        "产能利用率"
+      ]
+    },
+    "库存天数": {
+      "name_en": "Days of Inventory Outstanding (DIO)",
+      "definition": "存货/日均销售成本，衡量企业库存管理效率和行业供需关系。半导体行业DIO通常在60-120天之间波动。",
+      "generation": "财务指标",
+      "business_impact": "DIO上升是半导体周期下行的重要先行指标(如2022年下半年全行业库存暴涨)。Fabless公司DIO过高意味着渠道堵塞，将被迫降价清库存。代工厂DIO相对稳定。2024年全行业库存基本回归正常，但复苏斜率取决于终端需求。",
+      "related_companies": [
+        "英伟达",
+        "高通",
+        "联发科",
+        "德州仪器"
+      ],
+      "related_terms": [
+        "半导体周期",
+        "产能利用率",
+        "毛利率"
+      ]
+    },
+    "EBITDA": {
+      "name_en": "Earnings Before Interest, Taxes, Depreciation, and Amortization",
+      "definition": "息税折旧摊销前利润，剔除折旧(重资产企业折旧影响大)和财务结构的干扰，更能反映半导体企业核心经营能力。",
+      "generation": "财务指标",
+      "business_impact": "对晶圆代工和存储等重资产半导体企业，EBITDA比净利润更具可比性(不同企业的折旧政策差异大)。EV/EBITDA估值倍数更适合跨企业横向比较。EBITDA margin趋势是判断企业定价权和成本控制能力的综合指标。",
+      "related_companies": [
+        "台积电",
+        "美光",
+        "应用材料",
+        "SK海力士"
+      ],
+      "related_terms": [
+        "CAPEX",
+        "折旧",
+        "毛利率",
+        "自由现金流"
+      ]
+    },
+    "背面供电": {
+      "name_en": "Backside Power Delivery Network (BSPDN)",
+      "definition": "将芯片的供电网络移至晶圆背面，与正面的信号网络分离的技术。是2nm及以下节点提升功率密度和降低红外压降（IR Drop）的关键创新。",
+      "generation": "先进制程 (≤2nm)",
+      "business_impact": "背面供电能释放高达30%的正面布线空间，使晶体管密度进一步微缩，是英特尔（PowerVia）和台积电（A16制程）在2nm以下节点竞争的胜负手。该技术将大幅增加化学机械抛光（CMP）和晶圆键合设备的需求。",
+      "related_companies": [
+        "英特尔",
+        "台积电",
+        "三星电子",
+        "应用材料"
+      ],
+      "related_terms": [
+        "先进制程",
+        "GAA",
+        "晶圆键合",
+        "CMP"
+      ]
+    },
+    "硅通孔刻蚀机": {
+      "name_en": "TSV Deep Silicon Etch Equipment",
+      "definition": "利用波osch工艺在硅晶圆上刻蚀出高深宽比（High Aspect Ratio）微米级垂直通孔的专用设备，是实现2.5D/3D先进封装的基础。",
+      "generation": "半导体设备",
+      "business_impact": "随着HBM堆叠层数从8层向12层/16层演进，以及3D IC的普及，TSV刻蚀的步骤数和技术难度指数级上升。泛林半导体在该领域长期垄断，国内中微公司的高深宽比刻蚀机已切入一线客户，是国产替代确定性极高的细分领域。",
+      "related_companies": [
+        "泛林半导体",
+        "中微公司",
+        "东京电子"
+      ],
+      "related_terms": [
+        "TSV",
+        "3D IC",
+        "HBM",
+        "先进封装"
+      ]
+    },
+    "混合键合": {
+      "name_en": "Hybrid Bonding",
+      "definition": "一种无凸点（Bump-less）的晶圆级/芯片级直接键合技术，将铜触点与介质表面同时键合，实现极小引脚间距（<1μm）的垂直互联。",
+      "generation": "先进封装技术",
+      "business_impact": "混合键合是超高性能3D IC（如AMD 3D V-Cache、高阶HBM4）的终极封装方案，互联密度比传统凸点提升10倍以上。其商业壁垒在于极高的颗粒度控制和表面平整度要求，带动晶圆键合设备商（EVG、ASMPT）及CMP材料需求爆发。",
+      "related_companies": [
+        "EV Group",
+        "ASMPT",
+        "台积电",
+        "索尼"
+      ],
+      "related_terms": [
+        "先进封装",
+        "3D IC",
+        "HBM",
+        "晶圆键合"
+      ]
+    },
+    "ABF基板": {
+      "name_en": "Ajinomoto Build-up Film Substrate",
+      "definition": "使用味之素堆积薄膜作为绝缘材料的高阶IC载板，具有高引脚密度、高布线层数和优异的电性能，是高性能CPU/GPU封装的必需品。",
+      "generation": "半导体材料",
+      "business_impact": "ABF基板是大型大算力芯片的严重产能瓶颈之一。随着Chiplet和CoWoS封装尺寸越做越大（单颗芯片消耗更多基板面积），ABF基板需求呈乘数效应增长。行业由中国台湾（欣兴、景硕）及日本企业主导，毛利率和周期波动与大算力芯片出货高度正相关。",
+      "related_companies": [
+        "味之素",
+        "欣兴电子",
+        "南亚电路板",
+        "揖斐电"
+      ],
+      "related_terms": [
+        "先进封装",
+        "Chiplet",
+        "CoWoS",
+        "半导体材料"
+      ]
+    },
+    "临时键合与解键合": {
+      "name_en": "Temporary Bonding and Debonding (TBDB)",
+      "definition": "在制造3D IC或超薄晶圆时，用胶带/胶水将器件晶圆临时固定在承载基板上，待背面工艺（如减薄、TSV）完成后再将其分离的工艺。",
+      "generation": "先进封装技术",
+      "business_impact": "TBDB是HBM和2.5D/3D封装良率控制的核心步骤。随着晶圆厚度被减薄至极极限（如30μm），解键合过程中的热应力和机械应力极易导致晶圆碎裂。该环节的设备和特种化学耗材具有极高的客户粘性和高毛利属性。",
+      "related_companies": [
+        "EV Group",
+        "东京电子",
+        "3M",
+        "华特气体"
+      ],
+      "related_terms": [
+        "先进封装",
+        "HBM",
+        "3D IC",
+        "TSV"
+      ]
+    },
+    "UCIe": {
+      "name_en": "Universal Chiplet Interconnect Express",
+      "definition": "一种通用的开放式Chiplet互联标准，旨在规范小芯片之间的裸片对裸片（Die-to-Die）互联接口，降低异构集成设计成本。",
+      "generation": "前沿技术",
+      "business_impact": "UCIe标准的确立是Chiplet走向大规模产业化的关键。它打破了过去各芯片巨头自建私有协议的壁垒，允许客户像搭积木一样组合不同厂商、不同制程的Chiplet。率先提供符合UCIe标准的接口IP企业将占据产业链核心生态位。",
+      "related_companies": [
+        "英特尔",
+        "AMD",
+        "台积电",
+        "Synopsys",
+        "芯原股份"
+      ],
+      "related_terms": [
+        "Chiplet",
+        "先进封装",
+        "IP核",
+        "异构集成"
+      ]
+    },
+    "大基金": {
+      "name_en": "National Integrated Circuit Industry Investment Fund",
+      "definition": "中国国家集成电路产业投资基金的俗称。通过政府引导、社会资本参与的方式，集中投资中国半导体产业链各核心环节。",
+      "generation": "政策",
+      "business_impact": "大基金是中国半导体产业自主可控的最强资金推手。一期侧重制造，二期侧重设备材料与应用，2024年成立的三期（规模超3000亿人民币）聚焦算力芯片与先进制程突破。大基金的投资风向标直接决定了国内半导体板块的估值与资本流动。",
+      "related_companies": [
+        "中芯国际",
+        "华虹半导体",
+        "北方华创",
+        "长电科技"
+      ],
+      "related_terms": [
+        "对华出口管制",
+        "自主可控",
+        "CAPEX"
+      ]
+    },
+    "自主可控": {
+      "name_en": "Localization / Self-Controllability",
+      "definition": "中国半导体产业链全环节实现国产化替代、摆脱海外（尤其是美国）技术依赖的战略发展目标。",
+      "generation": "政策/地缘政治",
+      "business_impact": "在外部管制常态化背景下，\"自主可控\"是中国半导体企业最核心的成长逻辑之一。国内晶圆厂（如中芯、长存）在采购设备和材料时，会刻意向国产供应商倾斜。这使得国内高端设备材料企业即使在行业下行期，也能逆势实现高营收增速。",
+      "related_companies": [
+        "北方华创",
+        "中微公司",
+        "拓荆科技",
+        "华大九天"
+      ],
+      "related_terms": [
+        "对华出口管制",
+        "大基金",
+        "国产替代"
+      ]
+    },
+    "化学机械抛光机": {
+      "name_en": "Chemical Mechanical Planarization (CMP) Equipment",
+      "definition": "通过化学刻蚀和机械研磨组合工艺，对晶圆表面进行纳米级全局平坦化的精密半导体设备。",
+      "generation": "半导体设备",
+      "business_impact": "先进制程节点越多，所需CMP的步骤呈线性增长（3nm节点需上百道CMP）。CMP设备的平整度直接决定了后续光刻的良率。全球市场被应用材料和日本荏原垄断，国内华海清科已实现主流节点的全面国产替代，盈利能力强劲。",
+      "related_companies": [
+        "应用材料",
+        "荏原制作所",
+        "华海清科"
+      ],
+      "related_terms": [
+        "半导体设备",
+        "抛光液",
+        "抛光垫",
+        "先进制程"
+      ]
+    },
+    "离子注入机": {
+      "name_en": "Ion Implantation Equipment",
+      "definition": "将特定杂质元素电离并加速，高能注入到半导体基体材料中以改变其导电特性的关键芯片制造设备。",
+      "generation": "半导体设备",
+      "business_impact": "离子注入机属于高壁垒的\"冷门\"赛道，需要极高的真空控制和高压电源技术。全球市场近乎被应用材料和Axcelis统治。由于技术垄断性极强，该设备是晶圆厂扩产的绝对刚需，相关企业的ASP和毛利率长期维持在高位。",
+      "related_companies": [
+        "应用材料",
+        "Axcelis Technologies",
+        "万业企业(凯世通)",
+        "中科信"
+      ],
+      "related_terms": [
+        "半导体设备",
+        "掺杂",
+        "晶圆制造"
+      ]
+    },
+    "电子束检测": {
+      "name_en": "E-beam Inspection (EBI)",
+      "definition": "利用电子束作为光源对晶圆进行缺陷检测的技术。相比光学检测，具有更高的分辨率，能够发现纳米级物理和电气缺陷。",
+      "generation": "半导体设备",
+      "business_impact": "在5nm及以下制程，传统光学检测已达到物理极限，EBI成为良率控制的终极守门人。虽然EBI检测速度慢，但单台价值量极高。科磊（KLA）是该领域的绝对王者，垄断全球半导体量测检测超50%份额，拥有极强的溢价能力。",
+      "related_companies": [
+        "KLA (科磊)",
+        "ASML",
+        "应用材料",
+        "精测电子"
+      ],
+      "related_terms": [
+        "半导体设备",
+        "量测检测",
+        "良率"
+      ]
+    },
+    "高纯电子特气": {
+      "name_en": "Electronic Special Gases",
+      "definition": "半导体制造过程中用于外延、刻蚀、掺杂、气相沉积等工艺的特种气体，纯度要求通常在5N（99.999%）至6N以上。",
+      "generation": "半导体材料",
+      "business_impact": "电子特气是半导体制造的\"血液\"，在芯片制造总材料成本中占比仅次于硅片（约13%）。其商业壁垒在于极严苛的纯化、提纯与超长周期的客户认证。由于运输半径限制，本土化供应能力是关键因素，国内华特气体、金宏气体正加速切入一线代工厂。",
+      "related_companies": [
+        "林德气体",
+        "液化空气",
+        "大阳日酸",
+        "华特气体",
+        "金宏气体"
+      ],
+      "related_terms": [
+        "半导体材料",
+        "刻蚀机",
+        "薄膜沉积"
+      ]
+    },
+    "CMP抛光液/抛光垫": {
+      "name_en": "CMP Slurry / Polishing Pad",
+      "definition": "化学机械抛光工艺中使用的核心耗材。抛光液含有纳米级磨料和化学试剂；抛光垫则用于承载抛光液并进行机械研磨。",
+      "generation": "半导体材料",
+      "business_impact": "属于典型的\"长坡厚雪\"耗材赛道，其消耗量与晶圆代工厂的产能利用率直接挂钩，而非仅受CAPEX周期影响。抛光垫市场被杜邦垄断，抛光液被卡博特等垄断。国内安集科技（抛光液）和鼎龙股份（抛光垫）已实现从0到1的突围，毛利率高且抗周期性强。",
+      "related_companies": [
+        "杜邦",
+        "卡博特微电子",
+        "安集科技",
+        "鼎龙股份"
+      ],
+      "related_terms": [
+        "半导体材料",
+        "化学机械抛光机",
+        "耗材"
+      ]
+    },
+    "靶材": {
+      "name_en": "Sputtering Target",
+      "definition": "超高纯度的金属或复合物块体，在PVD（物理气相沉积）工艺中遭受离子轰击，以在晶圆表面沉积形成金属互连导线层。",
+      "generation": "半导体材料",
+      "business_impact": "半导体靶材对纯度要求极高（通常需6N即99.9999%以上）。随着先进制程向铜互连、钴互连及背面供电演进，高阶靶材的市场空间稳步扩张。行业集中在霍尼韦尔、日矿金属等巨头，国内江丰电子在超高纯铝、钛靶材领域已具备全球竞争力。",
+      "related_companies": [
+        "JX金属",
+        "霍尼韦尔",
+        "普莱克斯",
+        "江丰电子",
+        "有研新材"
+      ],
+      "related_terms": [
+        "半导体材料",
+        "薄膜沉积",
+        "PVD"
+      ]
+    },
+    "大硅片": {
+      "name_en": "Silicon Wafer (12-inch)",
+      "definition": "直径为300mm（12英寸）的高纯度单晶硅片，是数字集成电路制造中最主流、面积最大的基底材料。",
+      "generation": "半导体材料",
+      "business_impact": "大硅片是半导体材料中市占率最高的品类（约30%）。其商业模式属于典型的资本密集型与长周期认证，全球前五大厂商垄断了90%以上的份额，掌握绝对定价权。硅片价格走势通常是观察晶圆厂整体库存与终端需求回暖的先行指标。",
+      "related_companies": [
+        "信越化学",
+        "SUMCO",
+        "环球晶圆",
+        "沪硅产业"
+      ],
+      "related_terms": [
+        "晶圆",
+        "半导体材料",
+        "硅片价格"
+      ]
+    },
+    "RISC架构与CISC架构": {
+      "name_en": "RISC vs CISC Architecture",
+      "definition": "精简指令集（RISC）与复杂指令集（CISC）是计算机处理器的两种基础设计理念。RISC强调单周期高效指令，CISC强调单条指令完成复杂任务。",
+      "generation": "通用概念",
+      "business_impact": "这两大架构的技术演进决定了全球计算生态的分水岭。CISC的代表x86架构（Intel/AMD）统治了高算力的服务器与PC市场；而RISC的代表Arm与RISC-V架构则因低功耗特征绝对垄断了移动端与物联网。AI时代端侧AI芯片正加速向RISC架构倾斜。",
+      "related_companies": [
+        "英特尔",
+        "AMD",
+        "Arm",
+        "高通"
+      ],
+      "related_terms": [
+        "RISC-V",
+        "IP核",
+        "芯片设计",
+        "SoC"
+      ]
+    },
+    "UCIe接口IP": {
+      "name_en": "UCIe Interface IP",
+      "definition": "实现小芯片（Chiplet）之间符合UCIe标准的高速、低延迟物理层及协议层数据传输的预设计电路模块。",
+      "generation": "产业链上游",
+      "business_impact": "在Chiplet爆发的浪潮中，接口IP是设计链条中最先受益的环节。随着数据中心芯片全面走向多裸片异构集成，对UCIe IP的需求激增。此类IP技术壁垒极高，研发费用昂贵，通常只有Synopsys等头部巨头能提供全套解决方案，具备极高毛利。",
+      "related_companies": [
+        "Synopsys",
+        "Cadence",
+        "Alphawave Semi",
+        "芯原股份"
+      ],
+      "related_terms": [
+        "UCIe",
+        "Chiplet",
+        "IP核",
+        "EDA"
+      ]
+    },
+    "硬件仿真": {
+      "name_en": "Hardware Emulation",
+      "definition": "利用专用的超大规模并行硬件系统（如专用FPGA阵列）来模拟尚未流片的复杂芯片行为，以进行超前软件开发和全系统验证。",
+      "generation": "产业链上游",
+      "business_impact": "硬件仿真系统是EDA领域价值量最高的单体设备（单台售价可达数百万美元）。在AI芯片流片成本超数亿美元的今天，硬件仿真能显著降低流片失败（Tape-out Failure）的毁灭性风险。该市场几乎被EDA三巨头完全垄断。",
+      "related_companies": [
+        "Synopsys",
+        "Cadence",
+        "西门子EDA"
+      ],
+      "related_terms": [
+        "EDA",
+        "芯片设计",
+        "流片",
+        "FPGA"
+      ]
+    },
+    "光罩 / 掩膜版": {
+      "name_en": "Photomask",
+      "definition": "在光刻工艺中带有芯片电路图像的石英玻璃板。光线穿过光罩后，将图像投影到涂有光刻胶的晶圆上。",
+      "generation": "半导体材料",
+      "business_impact": "光罩是芯片设计走向制造的\"母版\"。一款复杂的先进制程芯片需要几十甚至上百张光罩，光罩制作费用高达数千万美元。大厂通常有自建光罩厂，而中小型Fabless则严重依赖独立光罩代工厂，光罩产能的松紧直接影响新芯片的上市周期。",
+      "related_companies": [
+        "Photronics",
+        "大日本印刷 (DNP)",
+        "凸版印刷 (Toppan)",
+        "台积电"
+      ],
+      "related_terms": [
+        "光刻机",
+        "半导体材料",
+        "芯片设计",
+        "流片"
+      ]
+    },
+    "流片": {
+      "name_en": "Tape-out",
+      "definition": "芯片设计流程的最后一步，指将最终的电路布局图（GDSII格式）发送给晶圆代工厂，正式投入试生产阶段。",
+      "generation": "通用概念",
+      "business_impact": "流片是检验Fabless设计公司研发成果的\"生死大考\"。先进制程（如3nm）的初次流片成本高达数亿美元，一旦由于设计缺陷导致流片失败，不仅面临巨额资金损失，还会错失市场窗口期导致企业出局。流片数量是半导体设计业景气度的风向标。",
+      "related_companies": [
+        "英伟达",
+        "高通",
+        "台积电",
+        "中芯国际"
+      ],
+      "related_terms": [
+        "芯片设计",
+        "Fabless",
+        "光罩",
+        "EDA"
+      ]
+    },
+    "车规MCU": {
+      "name_en": "Automotive MCU",
+      "definition": "专门用于汽车控制（如车身、底盘、动力总成、ADAS）的微控制器，需满足极高零故障率及长达15年的供货生命周期。",
+      "generation": "器件类别",
+      "business_impact": "车规级MCU是汽车芯片中数量最多、壁垒极高的品类。全球市场长期被恩智浦、瑞萨、英飞凌等欧日巨头垄断，毛利率极其稳定。智能化导致车规MCU向高算力（如32位/域控制器架构）升级，国产芯片正通过\"安全认证\"缺口加速切入供应链。",
+      "related_companies": [
+        "恩智浦 (NXP)",
+        "瑞萨电子",
+        "英飞凌",
+        "意法半导体",
+        "兆易创新"
+      ],
+      "related_terms": [
+        "MCU",
+        "车规级芯片",
+        "ADAS"
+      ]
+    },
+    "智能座舱芯片": {
+      "name_en": "Smart Cockpit SoC",
+      "definition": "汽车座舱异构计算中心芯片，集成了CPU、GPU、NPU，用于驱动车载多屏联动、语音识别、人脸识别及车载信息娱乐系统。",
+      "generation": "器件类别",
+      "business_impact": "智能座舱是汽车智能化最快落地的环节，座舱芯片的迭代周期（~2年）正向智能手机靠拢。高通凭借骁龙系列（如SA8155P/SA8295P）几乎垄断了高端智能汽车座舱市场。国内华为、芯擎科技在快速追赶，是消费级Fabless跨界蚕食车规市场的主战场。",
+      "related_companies": [
+        "高通",
+        "华为海思",
+        "芯擎科技",
+        "联发科"
+      ],
+      "related_terms": [
+        "SoC",
+        "车规级芯片",
+        "NPU"
+      ]
+    },
+    "激光雷达芯片": {
+      "name_en": "LiDAR Chip",
+      "definition": "用于激光雷达（LiDAR）系统中的核心半导体器件，包括高功率发光芯片（EEL/VCSEL）和高灵敏度接收芯片（SPAD/SiPM）。",
+      "generation": "前沿技术",
+      "business_impact": "随着高阶自动驾驶（L3+）在新能源汽车中的渗透，激光雷达正从传统的机械式向固态/半固态（芯片化）演进，以大幅降低成本（从数万美元降至数百美元）。发射与接收芯片的集成度直接决定了雷达的探测距离和分辨率，属于典型的高成长赛道。",
+      "related_companies": [
+        "Lumentum",
+        "滨松光子",
+        "禾赛科技",
+        "长光华芯"
+      ],
+      "related_terms": [
+        "自动驾驶",
+        "车规级芯片",
+        "GaAs"
+      ]
+    },
+    "GaN HEMT": {
+      "name_en": "Gallium Nitride High Electron Mobility Transistor",
+      "definition": "氮化镓高电子迁移率晶体管，利用二维电子气（2DEG）实现极高开关速度和低导通电阻的第三代半导体核心功率器件。",
+      "generation": "第三代半导体",
+      "business_impact": "GaN HEMT是消费级PD快充的核心器件，并正在加速向数据中心高功率服务器电源、通信基站及汽车DC-DC转换器渗透。其商业优势在于能显著缩小电源体积并提升转换效率。具备硅基GaN外延量产能力的代工厂盈利增速明显。",
+      "related_companies": [
+        "纳微半导体",
+        "英诺赛科",
+        "英飞凌",
+        "台积电"
+      ],
+      "related_terms": [
+        "第三代半导体",
+        "GaN",
+        "功率半导体"
+      ]
+    },
+    "SiC衬底": {
+      "name_en": "SiC Substrate",
+      "definition": "高纯度碳化硅单晶经过生长、切片、抛光后制成的晶圆片，是制造碳化硅功率器件的基底材料。主流尺寸正由6英寸向8英寸过渡。",
+      "generation": "第三代半导体",
+      "business_impact": "SiC衬底占碳化硅器件总成本的45%左右，是全产业链毛利最高、技术壁垒最坚固的环节。结晶慢、控制难导致良率极低。全球产能长期受限，Wolfspeed与Coherent享有溢价优势。随着国内天岳先进等8英寸衬底量产，行业将迎来降本爆发期。",
+      "related_companies": [
+        "Wolfspeed",
+        "Coherent (原II-VI)",
+        "天岳先进",
+        "天科合达"
+      ],
+      "related_terms": [
+        "第三代半导体",
+        "SiC",
+        "功率半导体",
+        "长晶"
+      ]
+    },
+    "存储墙": {
+      "name_en": "Memory Wall",
+      "definition": "由于内存的带宽和延迟改进速度远落后于处理器（CPU/GPU）算力的提升速度，导致处理器在计算时长期处于等待数据的状态，成为计算系统性能瓶颈。",
+      "generation": "通用概念",
+      "business_impact": "\"存储墙\"是大模型AI计算最大的痛点。解决存储墙的硬需求直接引爆了HBM存储芯片、高级2.5D/3D先进封装、以及CPO（光电共封）技术的万亿级市场机会。未能解决存储墙的AI加速器在商业竞争中会被迅速边缘化。",
+      "related_companies": [
+        "英伟达",
+        "SK海力士",
+        "台积电",
+        "AMD"
+      ],
+      "related_terms": [
+        "HBM",
+        "存算一体",
+        "先进封装",
+        "AI芯片"
+      ]
+    },
+    "异构集成": {
+      "name_en": "Heterogeneous Integration",
+      "definition": "通过先进封装技术，将多个不同功能、不同制程节点、甚至不同材料的芯片（如逻辑、存储、射频、光电）整合在同一个封装体内。",
+      "generation": "前沿技术",
+      "business_impact": "异构集成是后摩尔时代提升系统性能的核心手段。它允许设计公司将昂贵的先进制程仅用于最核心的算力单元，而电源和接口等采用成熟制程，从而优化整芯片的ROI。这导致芯片设计公司与先进封测厂的边界加速模糊。",
+      "related_companies": [
+        "AMD",
+        "英特尔",
+        "台积电",
+        "日月光"
+      ],
+      "related_terms": [
+        "Chiplet",
+        "先进封装",
+        "3D IC",
+        "摩尔定律"
+      ]
+    },
+    "存内计算": {
+      "name_en": "Computing-in-Memory (CIM)",
+      "definition": "利用存储介质本身的物理特性（如阻变存储器RRAM、闪存NAND的电流叠加原理）直接在存储阵列内部完成矩阵乘加等计算，完全消除了数据搬运功耗。",
+      "generation": "前沿架构",
+      "business_impact": "存内计算是打破冯·诺依曼架构瓶颈的颠覆性技术。在端侧AI（如智能穿戴、智能家居、可穿戴算力设备）等对功耗极度敏感的场景下，CIM展现出比传统NPU高数十倍的能效比。目前处于商业化初期，具备技术先发的初创公司易获高估值溢价。",
+      "related_companies": [
+        "知存科技",
+        "后摩智能",
+        "三星电子",
+        "九天睿芯"
+      ],
+      "related_terms": [
+        "存算一体",
+        "AI芯片",
+        "边缘计算",
+        "冯·诺依曼瓶颈"
+      ]
+    },
+    "先进测试": {
+      "name_en": "Advanced Testing",
+      "definition": "针对大算力芯片、HBM、3D IC等复杂异构集成系统实施的晶圆级测试（CP）与成品测试（FT），需处理海量引脚和极高功耗。",
+      "generation": "封测技术",
+      "business_impact": "先进封装将多颗芯片打包，如果其中一颗存在隐性缺陷，封装后整颗高价芯片将全部报废。因此，先进测试的\"前置检测\"重要性大幅提升，测试时间延长，直接推高了测试机（爱德万、泰瑞达）和高端探针卡的市场需求与毛利率。",
+      "related_companies": [
+        "爱德万测试",
+        "泰瑞达",
+        "华峰测控",
+        "长电科技"
+      ],
+      "related_terms": [
+        "先进封装",
+        "封测",
+        "良率"
+      ]
+    },
+    "IDM 2.0": {
+      "name_en": "Intel IDM 2.0 Strategy",
+      "definition": "英特尔提出的垂直整合制造2.0战略：保留自身IDM模式的同时，建立独立的英特尔代工服务（IFS），并扩大利用第三方代工厂生产核心产品。",
+      "generation": "商业模式",
+      "business_impact": "IDM 2.0是全球半导体制造格局的最大变量之一。英特尔试图挑战台积电在晶圆代工领域的垄断地位。然而，代工业务（Foundry）需要极强的服务文化和巨额持续CAPEX，英特尔目前的转型阵痛（巨额亏损与分拆传闻）直接影响其美股估值与市场信心。",
+      "related_companies": [
+        "英特尔",
+        "台积电",
+        "三星电子"
+      ],
+      "related_terms": [
+        "IDM",
+        "晶圆代工",
+        "CAPEX"
+      ]
+    },
+    "Fab-Lite (轻晶圆厂)": {
+      "name_en": "Fab-Lite Mode",
+      "definition": "由传统IDM模式演变而来的一种商业模式。半导体公司保留部分核心工艺制造厂，而将先进制程或非核心产能大量外包给晶圆代工厂。",
+      "generation": "商业模式",
+      "business_impact": "Fab-Lite是模拟芯片和功率半导体巨头优化资产负债表的首选路径（如意法半导体、TI的非核心制程外包）。该模式能显著降低企业的CAPEX压力，提升自由现金流，使其在行业周期下行时具备更强的抗风险能力和更高的ROE。",
+      "related_companies": [
+        "意法半导体",
+        "恩智浦",
+        "德州仪器",
+        "瑞萨电子"
+      ],
+      "related_terms": [
+        "IDM",
+        "Fabless",
+        "晶圆代工",
+        "重资产"
+      ]
+    },
+    "B2B比率 (订单出货比)": {
+      "name_en": "Book-to-Bill Ratio",
+      "definition": "半导体企业在一个周期内新接订单金额与实际出货开票金额的比率。数值大于1表示市场需求大于供应，行业处于扩张期。",
+      "generation": "财务指标/行业指标",
+      "business_impact": "B2B比率是半导体设备商和分销商最重要的周期领先指标。当B2B连续三个月大于1.1时，往往伴随着全产业链的股价暴涨与产能炒作；反之，若跌破1则预示着去库存下行周期将至，是机构投资者调仓的绝对风向标。",
+      "related_companies": [
+        "ASML",
+        "应用材料",
+        "艾睿电子",
+        "大联大"
+      ],
+      "related_terms": [
+        "半导体周期",
+        "库存天数",
+        "CAPEX"
+      ]
+    },
+    "ASP (平均销售价格)": {
+      "name_en": "Average Selling Price",
+      "definition": "某一特定品类半导体产品或晶圆的平均出厂售价（销售收入除以销量）。",
+      "generation": "财务指标",
+      "business_impact": "ASP变动直接反映了产品的市场供需与技术定价权。台积电通过提价（3nm制程晶圆ASP超2万美元）成功转嫁了EUV折旧成本，维持高毛利。而消费级芯片在恶性竞争时ASP持续下滑，是净利润暴跌的前兆。",
+      "related_companies": [
+        "台积电",
+        "高通",
+        "联发科",
+        "兆易创新"
+      ],
+      "related_terms": [
+        "毛利率",
+        "定价权",
+        "半导体周期"
+      ]
+    },
+    "EV/EBITDA": {
+      "name_en": "Enterprise Value to EBITDA",
+      "definition": "企业价值（市值+净负债）与息税折旧摊销前利润的比率。半导体行研中用于评估重资产企业估值水平的常用指标。",
+      "generation": "财务指标",
+      "business_impact": "相较于市盈率（PE），EV/EBITDA能有效剔除晶圆厂因巨额设备折旧（如台积电新厂前期折旧）对净利润的扭曲。在代工业周期底部，当PE因亏损或微利失效时，低EV/EBITDA通常意味着估值见底，具备极高逆周期买入价值。",
+      "related_companies": [
+        "台积电",
+        "中芯国际",
+        "联电",
+        "华虹半导体"
+      ],
+      "related_terms": [
+        "EBITDA",
+        "折旧",
+        "估值倍数",
+        "重资产"
+      ]
+    },
+    "设备折旧年限": {
+      "name_en": "Depreciation Period of Equipment",
+      "definition": "晶圆厂将采购的半导体设备成本分摊到各年度财务报表中的年限，主流代工厂通常设定为5至7年。",
+      "generation": "财务指标",
+      "business_impact": "折旧是晶圆代工厂最大的营业成本（可占总成本50%以上）。新厂投产前三年是\"折旧高峰期\"，会严重压低毛利率。一旦折旧期满（如设备用了6年后），该设备的折旧成本清零，代工厂将迎来\"折旧蜜月期\"，毛利率和现金流会爆发式拉升。",
+      "related_companies": [
+        "台积电",
+        "中芯国际",
+        "华虹半导体"
+      ],
+      "related_terms": [
+        "CAPEX",
+        "毛利率",
+        "EBITDA",
+        "重资产"
+      ]
+    },
+    "自由现金流": {
+      "name_en": "Free Cash Flow (FCF)",
+      "definition": "企业经营活动产生的现金流量净额扣除资本支出（CAPEX）后的资金，反映企业可自由支配的真实财富。",
+      "generation": "财务指标",
+      "business_impact": "半导体制造是著名的\"吞金兽\"。如果一家企业空有高净利润，但CAPEX过大导致FCF长期为负（如部分存储厂或激进扩张的代工厂），其分红能力和抗债务风险能力将极弱。高质量的半导体标的（如ASML、英伟达）往往拥有极其庞大且稳定的FCF。",
+      "related_companies": [
+        "英伟达",
+        "ASML",
+        "台积电",
+        "德州仪器"
+      ],
+      "related_terms": [
+        "CAPEX",
+        "EBITDA",
+        "财务健康度"
+      ]
+    },
+    "存货跌价准备": {
+      "name_en": "Inventory Provision / Write-down",
+      "definition": "当半导体产品市场价跌至成本价以下，或库存产品面临过期滞销时，企业在财务报表中计提的资产损失。",
+      "generation": "财务指标",
+      "business_impact": "这是消费级Fabless芯片公司在周期下行期最大的\"利润杀手\"（如2023年MCU与射频芯片大砍价）。巨额的存货计提会导致当季净利润直接腰斩或转亏。反之，当行业复苏、库存商品以原价卖出时，这部分计提会\"回冲\"变成利润弹性的来源。",
+      "related_companies": [
+        "韦尔股份",
+        "卓胜微",
+        "兆易创新",
+        "美光"
+      ],
+      "related_terms": [
+        "库存天数",
+        "半导体周期",
+        "净利润"
+      ]
+    },
+    "杜邦分析": {
+      "name_en": "DuPont Analysis",
+      "definition": "将企业净资产收益率（ROE）拆解为产品净利润率、资产周转率和权益乘数三者乘积的财务分析框架。",
+      "generation": "财务指标",
+      "business_impact": "半导体分析的核心工具。英伟达的高ROE是由\"高净利润率\"驱动（暴利垄断模式）；分销商（如大联大）的ROE是由\"高资产周转率\"驱动（薄利多销模式）；而部分高杠杆的重资产厂则依赖权益乘数。拆解杜邦指标能一眼看清半导体公司的底层商业驱动力。",
+      "related_companies": [
+        "英伟达",
+        "大联大",
+        "台积电",
+        "环球晶圆"
+      ],
+      "related_terms": [
+        "ROE",
+        "毛利率",
+        "资产周转率",
+        "财务分析"
+      ]
+    }
+  }
+}
