@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import re
 import sqlite3
 import uuid
+from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -284,6 +287,20 @@ class Database:
             )
         return document_id
 
+    def list_documents(self, limit: int = 100) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT d.*, s.title AS source_title
+                FROM documents d
+                JOIN sources s ON s.id = d.source_id
+                ORDER BY d.updated_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def add_chunk(
         self,
         *,
@@ -343,6 +360,73 @@ class Database:
                 (fts_query, limit),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def list_chunks(self, limit: int = 100_000) -> list[dict[str, Any]]:
+        """Return persisted chunks with source metadata for lexical retrieval."""
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT c.*, d.original_filename, s.title AS source_title,
+                       s.url AS source_url, s.publisher, s.published_at,
+                       s.trust_tier
+                FROM chunks c
+                JOIN documents d ON d.id = c.document_id
+                JOIN sources s ON s.id = c.source_id
+                ORDER BY c.created_at, c.id
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def _lexical_tokens(text: str) -> list[str]:
+        """Tokenize English/numbers and overlapping Chinese n-grams deterministically."""
+        normalized = text.lower()
+        tokens = re.findall(r"[a-z0-9]+(?:[._%-][a-z0-9]+)*", normalized)
+        for span in re.findall(r"[\u3400-\u9fff]+", normalized):
+            tokens.append(span)
+            tokens.extend(span[index : index + 2] for index in range(max(0, len(span) - 1)))
+            tokens.extend(span[index : index + 3] for index in range(max(0, len(span) - 2)))
+        return tokens
+
+    def search_chunks_bm25(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+        """Run true BM25 over persisted chunks with Chinese n-gram tokenization."""
+        query_tokens = self._lexical_tokens(query)
+        rows = self.list_chunks()
+        if not query_tokens or not rows:
+            return []
+
+        corpus = [self._lexical_tokens(f"{row['section']} {row['text']}") for row in rows]
+        document_frequency: Counter[str] = Counter()
+        for tokens in corpus:
+            document_frequency.update(set(tokens))
+
+        total_documents = len(corpus)
+        average_length = sum(len(tokens) for tokens in corpus) / total_documents
+        k1, b = 1.5, 0.75
+        scored: list[dict[str, Any]] = []
+        for row, tokens in zip(rows, corpus, strict=True):
+            frequencies = Counter(tokens)
+            document_length = len(tokens)
+            score = 0.0
+            for term in set(query_tokens):
+                frequency = frequencies.get(term, 0)
+                if not frequency:
+                    continue
+                df = document_frequency[term]
+                inverse_document_frequency = math.log(1 + (total_documents - df + 0.5) / (df + 0.5))
+                denominator = frequency + k1 * (
+                    1 - b + b * document_length / max(average_length, 1)
+                )
+                score += inverse_document_frequency * frequency * (k1 + 1) / denominator
+            if score > 0:
+                item = dict(row)
+                item["bm25_score"] = score
+                scored.append(item)
+
+        scored.sort(key=lambda item: item["bm25_score"], reverse=True)
+        return scored[:limit]
 
     def upsert_fact(
         self,

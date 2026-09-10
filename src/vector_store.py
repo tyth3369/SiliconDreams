@@ -49,10 +49,12 @@ class VectorStore:
         self.text_collection = self._client.get_or_create_collection(
             name=RAGConfig.chroma_collection_text,
             metadata={"description": "财报/研报文本块"},
+            configuration={"hnsw": {"space": "cosine"}},
         )
         self.table_collection = self._client.get_or_create_collection(
             name=RAGConfig.chroma_collection_table,
             metadata={"description": "财报表格块（完整不切割）"},
+            configuration={"hnsw": {"space": "cosine"}},
         )
 
         logger.info(
@@ -81,29 +83,30 @@ class VectorStore:
 
         for chunk in chunks:
             item = {
-                "id": chunk.chunk_id,
-                "document": chunk.text,
-                "metadata": {
+                "ids": chunk.chunk_id,
+                "documents": chunk.text,
+                "metadatas": {
                     "source": chunk.source,
                     "page": chunk.page,
                     "section": chunk.section,
                     "char_count": len(chunk.text),
+                    "chunk_type": chunk.chunk_type,
                     **chunk.metadata,
                 },
             }
             if chunk.chunk_type == "table":
-                for key in item:
-                    table_items[key].append(item[key])
+                for key, value in item.items():
+                    table_items[key].append(value)
             else:
-                for key in item:
-                    text_items[key].append(item[key])
+                for key, value in item.items():
+                    text_items[key].append(value)
 
         added = 0
 
         if text_items["ids"]:
             # 批量生成 embedding
             embeddings = self._embed_model.get_embeddings(text_items["documents"])
-            self.text_collection.add(
+            self.text_collection.upsert(
                 ids=text_items["ids"],
                 documents=text_items["documents"],
                 metadatas=text_items["metadatas"],
@@ -114,7 +117,7 @@ class VectorStore:
 
         if table_items["ids"]:
             embeddings = self._embed_model.get_embeddings(table_items["documents"])
-            self.table_collection.add(
+            self.table_collection.upsert(
                 ids=table_items["ids"],
                 documents=table_items["documents"],
                 metadatas=table_items["metadatas"],
@@ -144,8 +147,6 @@ class VectorStore:
         Returns:
             [{id, text, metadata, score}, ...]
         """
-        query_embedding = self._embed_model.get_embedding(query)
-
         if collection == "auto":
             # 自动判断：含财务关键词 → 优先表格
             finance_keywords = [
@@ -172,9 +173,12 @@ class VectorStore:
             collection = "table" if has_finance else "text"
 
         col = self.table_collection if collection == "table" else self.text_collection
+        if col.count() == 0:
+            return []
+        query_embedding = self._embed_model.get_embedding(query)
         results = col.query(
             query_embeddings=[query_embedding],
-            n_results=top_k,
+            n_results=min(top_k, col.count()),
             include=["documents", "metadatas", "distances"],
         )
 
@@ -229,9 +233,11 @@ class VectorStore:
         self._client.delete_collection(RAGConfig.chroma_collection_table)
         self.text_collection = self._client.get_or_create_collection(
             name=RAGConfig.chroma_collection_text,
+            configuration={"hnsw": {"space": "cosine"}},
         )
         self.table_collection = self._client.get_or_create_collection(
             name=RAGConfig.chroma_collection_table,
+            configuration={"hnsw": {"space": "cosine"}},
         )
         logger.warning("⚠️ ChromaDB 已清空所有数据")
 
@@ -261,7 +267,7 @@ class VectorStore:
                     "id": ids[i],
                     "text": docs[i] if i < len(docs) else "",
                     "metadata": metas[i] if i < len(metas) else {},
-                    "score": round(1 - dists[i], 4) if i < len(dists) and dists[i] else 1.0,
+                    "score": round(1 - dists[i], 4) if i < len(dists) else 0.0,
                 }
             )
 

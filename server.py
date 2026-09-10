@@ -8,9 +8,10 @@ FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
-import tempfile
+import re
 import uuid
 from pathlib import Path
 from typing import Annotated
@@ -20,7 +21,7 @@ from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from config import AppConfig
+from config import PDF_DIR, AppConfig
 from src.agent_loop import build_simple_context, run_agent_loop
 from src.citation import CitationTracker
 from src.financial_data import FinancialDataManager
@@ -93,6 +94,20 @@ def _update_kb_stats():
         pass
 
 
+def _refresh_uploaded_pdfs() -> None:
+    _uploaded_pdfs.clear()
+    for document in _db.list_documents(limit=100):
+        path = Path(document["stored_path"])
+        size_mb = round(path.stat().st_size / 1024 / 1024, 1) if path.exists() else 0.0
+        _uploaded_pdfs.append(
+            {
+                "name": document["original_filename"],
+                "size": size_mb,
+                "status": document["parse_status"],
+            }
+        )
+
+
 def _ensure_conversation(conversation_id: str | None, lang: str) -> str:
     if conversation_id and _db.conversation_exists(conversation_id):
         return conversation_id
@@ -154,6 +169,7 @@ async def index(
     """Main page."""
     t = get_t(lang)
     _update_kb_stats()
+    _refresh_uploaded_pdfs()
     online = llm_available()
     active_conversation = _ensure_conversation(conversation_id, lang)
     content = jinja.get_template("index.html").render(
@@ -336,42 +352,88 @@ async def upload_pdf(
     """Handle PDF upload: save → parse → chunk → vectorize."""
     t = get_t(lang)
 
-    if not file.filename or not file.filename.endswith(".pdf"):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         return f"<p>{t('error.pdf_failed')}: not a PDF</p>"
 
-    if file.size and file.size > 50 * 1024 * 1024:
+    max_bytes = AppConfig.max_upload_size_mb * 1024 * 1024
+    content = await file.read(max_bytes + 1)
+    if len(content) > max_bytes:
         return f"<p>{t('sidebar.upload_error_size')}</p>"
+    if not content.startswith(b"%PDF-"):
+        return f"<p>{t('error.pdf_failed')}: invalid PDF signature</p>"
 
+    original_filename = Path(file.filename).name
+    safe_filename = re.sub(r"[^\w. -]", "_", original_filename).strip() or "document.pdf"
+    digest = hashlib.sha256(content).hexdigest()
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+    stored_path = PDF_DIR / f"{digest[:16]}-{safe_filename}"
+    source_id = _db.upsert_source(
+        source_type="document",
+        title=original_filename,
+        content_hash=digest,
+        trust_tier=1,
+        metadata={"upload_type": "user_pdf"},
+    )
+    document_id = _db.upsert_document(
+        source_id=source_id,
+        original_filename=original_filename,
+        stored_path=str(stored_path),
+        sha256=digest,
+        parse_status="pending",
+    )
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            content = await file.read()
-            tmp.write(content)
-            tmp_path = tmp.name
+        stored_path.write_bytes(content)
 
         from src.pdf_parser import parse_pdf
 
-        doc = parse_pdf(tmp_path)
+        doc = parse_pdf(stored_path, original_filename=original_filename)
 
         from src.chunker import chunk_document
 
         chunks = chunk_document(doc)
+
+        for chunk in chunks:
+            database_chunk_id = _db.add_chunk(
+                document_id=document_id,
+                source_id=source_id,
+                page=max(1, chunk.page),
+                chunk_type=chunk.chunk_type,
+                text=chunk.text,
+                section=chunk.section,
+                metadata=chunk.metadata,
+            )
+            chunk.chunk_id = database_chunk_id
+            chunk.metadata.update(
+                {"document_id": document_id, "source_id": source_id, "vector_id": database_chunk_id}
+            )
 
         from src.vector_store import VectorStore
 
         store = VectorStore()
         store.add_chunks(chunks)
 
-        Path(tmp_path).unlink(missing_ok=True)
-
-        _uploaded_pdfs.append(
-            {
-                "name": file.filename,
-                "size": round(len(content) / 1024 / 1024, 1),
-            }
+        _db.upsert_document(
+            source_id=source_id,
+            original_filename=original_filename,
+            stored_path=str(stored_path),
+            sha256=digest,
+            page_count=doc.total_pages,
+            parse_status="ready",
+            parse_error="; ".join(doc.parse_errors) or None,
         )
+        _refresh_uploaded_pdfs()
         _update_kb_stats()
 
     except Exception as e:
+        _db.upsert_document(
+            source_id=source_id,
+            original_filename=original_filename,
+            stored_path=str(stored_path),
+            sha256=digest,
+            parse_status="failed",
+            parse_error=str(e),
+        )
+        logger.exception("PDF ingestion failed: %s", original_filename)
         return f"<p>{t('error.pdf_failed')}: {e}</p>"
 
     return jinja.get_template("components.html").render(
@@ -390,6 +452,7 @@ async def stats(lang: str = Depends(get_lang)):
     """Return KB stats partial."""
     t = get_t(lang)
     _update_kb_stats()
+    _refresh_uploaded_pdfs()
     return jinja.get_template("components.html").render(
         component="kb_stats",
         t=t,
@@ -475,6 +538,7 @@ async def get_sidebar(request: Request):
         lang = request.cookies.get("lang", "zh")
     t = get_t(lang)
     _update_kb_stats()
+    _refresh_uploaded_pdfs()
     return jinja.get_template("components.html").render(
         t=t,
         lang=lang,
