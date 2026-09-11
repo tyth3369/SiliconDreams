@@ -632,6 +632,17 @@ class Database:
             ).fetchone()
         return row is not None
 
+    def get_conversation(
+        self, conversation_id: str, *, include_archived: bool = False
+    ) -> dict[str, Any] | None:
+        archived_clause = "" if include_archived else "AND archived_at IS NULL"
+        with self.connect() as connection:
+            row = connection.execute(
+                f"SELECT * FROM conversations WHERE id=? {archived_clause}",
+                (conversation_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
     def list_conversations(
         self, *, include_archived: bool = False, limit: int = 30
     ) -> list[dict[str, Any]]:

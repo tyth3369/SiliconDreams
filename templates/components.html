@@ -78,8 +78,16 @@
     <!-- Conversations -->
     <div class="conversation-heading">
         <h3>{{ t('conversation.title') }}</h3>
-        <button class="conversation-new" hx-post="/conversations/new"
-                hx-target="#chat-container" hx-swap="innerHTML">{{ t('conversation.new') }}</button>
+        <div class="conversation-heading-actions">
+            {% if active_conversation %}
+            <a class="conversation-export" href="/exports/current.md"
+               title="{{ t('conversation.export_markdown') }}" download>MD</a>
+            <a class="conversation-export" href="/exports/current.pdf"
+               title="{{ t('conversation.export_pdf') }}" download>PDF</a>
+            {% endif %}
+            <button class="conversation-new" hx-post="/conversations/new"
+                    hx-target="#chat-container" hx-swap="innerHTML">{{ t('conversation.new') }}</button>
+        </div>
     </div>
     <div id="conversation-list" class="conversation-list">
         {{ conversation_rows(conversations, active_conversation) }}
