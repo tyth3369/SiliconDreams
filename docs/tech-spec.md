@@ -1,4 +1,4 @@
-# SiliconDreams — 技术规范 v0.7
+# SiliconDreams — 技术规范 v0.8
 
 ## 真实架构
 
@@ -40,9 +40,10 @@ Browser
 
 1. BGE-M3 cosine 稠密召回。
 2. SQLite 文本上的 BM25；英文/数字 token + 中文 2/3-gram。
-3. Weighted reciprocal-rank fusion，财务查询轻度提升表格，概念查询轻度提升文本。
-4. 本地 `mmarco-mMiniLMv2-L12-H384-v1` cross-encoder 对候选重排。
-5. `src/evaluation.py` 计算 Recall@K 和 MRR；真实基准必须由人工核验 PDF 页码。
+3. 原始查询与中英术语扩展分别执行词法召回，再用 best-rank 合并，避免扩展词稀释原始查询。
+4. Weighted reciprocal-rank fusion；财务问题提高精确 BM25 权重，显式公司名约束到匹配报告。
+5. 本地 `mmarco-mMiniLMv2-L12-H384-v1` cross-encoder 重排后，以查询所需指标的证据覆盖度做确定性终排。
+6. `src/evaluation.py` 计算 Recall@K 和 MRR。v0.8 的 12 题中英双语基准来自人工核验的 TSMC/SMIC 2025 官方年报，发布门槛为 Recall@5 ≥ 90%、MRR ≥ 70%。
 
 ## 引用
 
@@ -76,10 +77,10 @@ Browser
 - PDF 后台摄入采用单机 SQLite 队列；多实例部署前需要改为共享任务队列和跨进程锁。
 - 当前身份模型适用于 localhost 单用户，不适合直接公开部署。
 
-## v0.7 首发部署
+## v0.8 部署
 
 - 生产拓扑：Caddy（TLS + Basic Auth）→ 单 worker Uvicorn → SQLite/Chroma 持久目录。
 - Caddy 对 SSE 禁用响应缓冲，自动完成 HTTP 到 HTTPS 跳转与证书续期。
 - BGE-M3 与 Cross-Encoder 位于独立 Docker 命名卷，应用数据绑定到宿主机 `data/`。
 - Basic Auth 仅用于首发访问保护；移除前必须完成正式身份认证、CSRF、限流和审计。
-- 由于 SSE hand-off 仍为进程内状态，v0.7 禁止多 worker 或多实例部署。
+- 由于 SSE hand-off 仍为进程内状态，当前版本禁止多 worker 或多实例部署。

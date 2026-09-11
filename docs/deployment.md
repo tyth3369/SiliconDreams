@@ -102,7 +102,7 @@ tar -czf "silicondreams-data-$(date +%F).tar.gz" data
 
 ```bash
 git log --oneline -10
-git checkout v0.7.0
+git checkout v0.8.0
 docker compose build app
 docker compose up -d
 ```

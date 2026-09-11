@@ -1,16 +1,95 @@
 {
-  "cases": [
+  "dataset": "SiliconDreams official foundry annual-report retrieval benchmark",
+  "reviewed_on": "2026-09-11",
+  "review_method": "Each expected PDF page was text-extracted and visually checked against the official report.",
+  "documents": [
     {
-      "query": "台积电毛利率",
-      "expected": [
-        {"source": "TSMC-2025.pdf", "page": 12, "contains": "gross margin"}
-      ]
+      "source": "TSMC-2025-Annual-Report.pdf",
+      "publisher": "TSMC",
+      "url": "https://investor.tsmc.com/sites/ir/annual-report/2025/2025%20TSMC%20Annual%20Report.E.pdf",
+      "sha256": "3fb7ae4ad972aa2bc6e45bb36635152ad89d52f4a7165f389bcb94eeb54a6abd",
+      "pages": 98
     },
     {
-      "query": "中芯国际资本开支",
-      "expected": [
-        {"source": "SMIC-2025.pdf", "page": 8, "contains": "capital expenditure"}
-      ]
+      "source": "SMIC-2025-Annual-Report.pdf",
+      "publisher": "SMIC",
+      "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0408/2026040801181.pdf",
+      "sha256": "4ce8f7a22e09f5322a3b03621e596b42f941d43f12a58e303183209c279e3111",
+      "pages": 163
+    }
+  ],
+  "cases": [
+    {
+      "id": "tsmc_3nm_mix_zh",
+      "language": "zh",
+      "query": "台积电2025年3纳米制程占晶圆营收多少？",
+      "expected": [{"source": "TSMC-2025-Annual-Report.pdf", "page": 6, "contains": "represented 24%"}]
+    },
+    {
+      "id": "tsmc_n2_ramp_en",
+      "language": "en",
+      "query": "When did TSMC's 2-nanometer technology enter high volume manufacturing?",
+      "expected": [{"source": "TSMC-2025-Annual-Report.pdf", "page": 6, "contains": "high volume manufacturing in 4Q’25"}]
+    },
+    {
+      "id": "tsmc_arizona_zh",
+      "language": "zh",
+      "query": "台积电亚利桑那第一座工厂何时开始量产4nm？",
+      "expected": [{"source": "TSMC-2025-Annual-Report.pdf", "page": 10, "contains": "began volume production of 4nm"}]
+    },
+    {
+      "id": "tsmc_margin_en",
+      "language": "en",
+      "query": "What were TSMC's gross and operating profit margins in 2025?",
+      "expected": [{"source": "TSMC-2025-Annual-Report.pdf", "page": 7, "contains": "Gross profit margin was 59.9 percent"}]
+    },
+    {
+      "id": "tsmc_advanced_mix_zh",
+      "language": "zh",
+      "query": "台积电2025年先进制程占晶圆营收比例是多少？",
+      "expected": [{"source": "TSMC-2025-Annual-Report.pdf", "page": 7, "contains": "accounted for 74 percent"}]
+    },
+    {
+      "id": "tsmc_capacity_en",
+      "language": "en",
+      "query": "What was TSMC's annual manufacturing capacity in 2025?",
+      "expected": [{"source": "TSMC-2025-Annual-Report.pdf", "page": 10, "contains": "exceeded 17 million"}]
+    },
+    {
+      "id": "smic_revenue_zh",
+      "language": "zh",
+      "query": "中芯国际2025年营收及同比增速是多少？",
+      "expected": [{"source": "SMIC-2025-Annual-Report.pdf", "page": 11, "contains": "revenue increased by 16.2%"}]
+    },
+    {
+      "id": "smic_margin_en",
+      "language": "en",
+      "query": "What was SMIC's gross margin in 2025?",
+      "expected": [{"source": "SMIC-2025-Annual-Report.pdf", "page": 11, "contains": "gross margin increased to 21%"}]
+    },
+    {
+      "id": "smic_utilization_zh",
+      "language": "zh",
+      "query": "中芯国际2025年的产能利用率是多少？",
+      "expected": [{"source": "SMIC-2025-Annual-Report.pdf", "page": 11, "contains": "utilisation rate increased"}]
+    },
+    {
+      "id": "smic_capacity_en",
+      "language": "en",
+      "query": "What monthly wafer capacity did SMIC reach by the end of 2025?",
+      "expected": [{"source": "SMIC-2025-Annual-Report.pdf", "page": 71, "contains": "monthly capacity reached 1,058,750"}]
+    },
+    {
+      "id": "smic_rd_zh",
+      "language": "zh",
+      "query": "中芯国际2025年的研发费用是多少？",
+      "expected": [{"source": "SMIC-2025-Annual-Report.pdf", "page": 28, "contains": "Research and development expenses were US$773.6 million"}]
+    },
+    {
+      "id": "smic_shipments_en",
+      "language": "en",
+      "query": "How many wafers did SMIC ship in 2025?",
+      "expected": [{"source": "SMIC-2025-Annual-Report.pdf", "page": 71, "contains": "shipments were 9,697 thousand"}]
     }
   ]
 }

@@ -443,10 +443,15 @@ class Database:
             tokens.extend(span[index : index + 3] for index in range(max(0, len(span) - 2)))
         return tokens
 
-    def search_chunks_bm25(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+    def search_chunks_bm25(
+        self, query: str, limit: int = 20, sources: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Run true BM25 over persisted chunks with Chinese n-gram tokenization."""
         query_tokens = self._lexical_tokens(query)
         rows = self.list_chunks()
+        if sources:
+            allowed_sources = set(sources)
+            rows = [row for row in rows if row.get("original_filename") in allowed_sources]
         if not query_tokens or not rows:
             return []
 

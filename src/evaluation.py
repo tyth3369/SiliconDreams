@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -20,7 +21,9 @@ def _matches(result: dict[str, Any], expected: dict[str, Any]) -> bool:
     if expected.get("page") is not None and int(metadata.get("page") or 0) != int(expected["page"]):
         return False
     contains = expected.get("contains")
-    if contains and str(contains).lower() not in str(result.get("text", "")).lower():
+    normalized_expected = re.sub(r"\s+", " ", str(contains)).strip().lower()
+    normalized_text = re.sub(r"\s+", " ", str(result.get("text", ""))).strip().lower()
+    if contains and normalized_expected not in normalized_text:
         return False
     return any(key in expected for key in ("id", "source", "page", "contains"))
 

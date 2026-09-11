@@ -75,10 +75,10 @@ docker compose up -d
 uv run ruff check .
 uv run pytest
 uv run pytest --cov=src --cov-report=term-missing
-uv run python scripts/evaluate_retrieval.py path/to/reviewed-cases.json
+uv run python scripts/run_official_retrieval_benchmark.py
 ```
 
-检索评估格式见 `tests/fixtures/retrieval_golden.json`。正式数据集应由人工核对真实 PDF 后填写来源名、页码和关键文本，不应使用示例数据冒充质量结论。
+正式检索基准由 TSMC 与 SMIC 2025 官方年报、6 个中文问题和 6 个英文问题组成；每个答案页码和关键文本均人工核验，PDF 以 SHA-256 锁定。v0.8 实测 Recall@5 为 **100%**、MRR 为 **84.03%**，高于 90% / 70% 发布门槛。脚本会下载并隔离索引官方年报，低于门槛时返回失败状态。
 
 ## 关键目录
 
