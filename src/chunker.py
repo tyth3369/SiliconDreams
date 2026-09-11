@@ -212,7 +212,7 @@ def chunk_document(doc: ParsedDocument) -> list[Chunk]:
     all_chunks.extend(table_chunks)
 
     logger.info(
-        f"📦 文档分块完成: {doc.filename} → "
+        f"文档分块完成: {doc.filename} → "
         f"{len(all_chunks)} 个 Chunk "
         f"(文本: {len(all_chunks) - len(table_chunks)}, 表格: {len(table_chunks)})"
     )

@@ -39,6 +39,7 @@ class Citation:
     reference_title: str = ""  # exact filing or release title
     publisher: str = ""
     published_at: str = ""
+    trust_tier: int = 3
 
     def display_source(self) -> str:
         """Human-readable source identifier."""
@@ -94,6 +95,7 @@ class CitationTracker:
         reference_title: str = "",
         publisher: str = "",
         published_at: str = "",
+        trust_tier: int = 3,
     ) -> None:
         """Add a citation. Duplicates (same source+type+page) are skipped."""
         key = (source_type, source, page or 0)
@@ -115,6 +117,7 @@ class CitationTracker:
             reference_title=reference_title,
             publisher=publisher,
             published_at=published_at,
+            trust_tier=trust_tier,
         )
         self._citations.append(citation)
 
@@ -148,9 +151,25 @@ class CitationTracker:
             published_at=published_at,
         )
 
-    def add_web(self, title: str, url: str, snippet: str = "") -> None:
+    def add_web(
+        self,
+        title: str,
+        url: str,
+        snippet: str = "",
+        publisher: str = "",
+        published_at: str = "",
+        trust_tier: int = 3,
+    ) -> None:
         """Convenience: add a web search citation."""
-        self.add(source=title, source_type="web", snippet=snippet, url=url)
+        self.add(
+            source=title,
+            source_type="web",
+            snippet=snippet,
+            url=url,
+            publisher=publisher,
+            published_at=published_at,
+            trust_tier=trust_tier,
+        )
 
     def to_list(self) -> list[dict]:
         """Export citations as serializable dicts for SSE transmission."""
@@ -169,12 +188,31 @@ class CitationTracker:
                 "reference_title": c.reference_title,
                 "publisher": c.publisher,
                 "published_at": c.published_at,
+                "trust_tier": c.trust_tier,
             }
             for c in self._citations
         ]
 
     def is_empty(self) -> bool:
         return len(self._citations) == 0
+
+    def merge(self, other: CitationTracker) -> None:
+        """Merge another tracker while preserving this tracker's stable order."""
+        for citation in other._citations:
+            self.add(
+                source=citation.source,
+                source_type=citation.source_type,
+                page=citation.page,
+                snippet=citation.snippet,
+                score=citation.score,
+                url=citation.url,
+                name_en=citation.name_en,
+                data_year=citation.data_year,
+                reference_title=citation.reference_title,
+                publisher=citation.publisher,
+                published_at=citation.published_at,
+                trust_tier=citation.trust_tier,
+            )
 
     @staticmethod
     def format_panel(citations: list[dict], lang: str = "zh") -> str:
@@ -225,6 +263,13 @@ class CitationTracker:
                 metadata.append(escape(str(c["publisher"]), quote=True))
             if c.get("published_at"):
                 metadata.append(escape(str(c["published_at"]), quote=True))
+            if c.get("source_type") == "web" and c.get("trust_tier"):
+                tier_label = {
+                    1: "Tier 1 · Official",
+                    2: "Tier 2 · Reputable reporting",
+                    3: "Tier 3 · Web source",
+                }.get(int(c["trust_tier"]), f"Tier {int(c['trust_tier'])}")
+                metadata.append(tier_label)
             metadata_html = (
                 f'<div class="citation-metadata">{" · ".join(metadata)}</div>' if metadata else ""
             )

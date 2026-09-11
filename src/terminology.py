@@ -50,7 +50,7 @@ class TerminologyManager:
 
         self._terms = data.get("terms", {})
         self._build_aliases()
-        logger.info(f"📚 术语库加载完成: {len(self._terms)} 条")
+        logger.info("术语库加载完成: %d 条", len(self._terms))
 
     def _build_aliases(self):
         """构建别名索引（英文名→中文标准名）"""

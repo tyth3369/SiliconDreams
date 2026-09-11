@@ -12,22 +12,34 @@
         // Language-dependent UI text for client-side language switch
         window._LANG_TEXT = {
             zh: {
-                tagline: "{{ _ZH['app.tagline'] }}",
-                compare: "{{ _ZH['quick.compare'] }}",
-                tech: "{{ _ZH['quick.tech'] }}",
-                finance: "{{ _ZH['quick.finance'] }}",
-                placeholder: "{{ _ZH['chat.placeholder'] }}",
+                tagline: {{ _ZH['app.tagline'] | tojson }},
+                compare: {{ _ZH['quick.compare'] | tojson }},
+                tech: {{ _ZH['quick.tech'] | tojson }},
+                finance: {{ _ZH['quick.finance'] | tojson }},
+                placeholder: {{ _ZH['chat.placeholder'] | tojson }},
+                uploadTitle: {{ _ZH['sidebar.upload_title'] | tojson }},
+                uploadHint: {{ _ZH['sidebar.upload_hint'] | tojson }},
+                uploadHelp: {{ _ZH['sidebar.upload_help'] | tojson }},
+                citationHeading: {{ _ZH['citation.trace_title'] | tojson }},
+                citationHint: {{ _ZH['citation.trace_hint'] | tojson }},
+                citationCount: {{ _ZH['citation.source_count'] | tojson }},
             },
             en: {
-                tagline: "{{ _EN['app.tagline'] }}",
-                compare: "{{ _EN['quick.compare'] }}",
-                tech: "{{ _EN['quick.tech'] }}",
-                finance: "{{ _EN['quick.finance'] }}",
-                placeholder: "{{ _EN['chat.placeholder'] }}",
+                tagline: {{ _EN['app.tagline'] | tojson }},
+                compare: {{ _EN['quick.compare'] | tojson }},
+                tech: {{ _EN['quick.tech'] | tojson }},
+                finance: {{ _EN['quick.finance'] | tojson }},
+                placeholder: {{ _EN['chat.placeholder'] | tojson }},
+                uploadTitle: {{ _EN['sidebar.upload_title'] | tojson }},
+                uploadHint: {{ _EN['sidebar.upload_hint'] | tojson }},
+                uploadHelp: {{ _EN['sidebar.upload_help'] | tojson }},
+                citationHeading: {{ _EN['citation.trace_title'] | tojson }},
+                citationHint: {{ _EN['citation.trace_hint'] | tojson }},
+                citationCount: {{ _EN['citation.source_count'] | tojson }},
             }
         };
     </script>
-    <script src="/static/app.js" defer></script>
+    <script src="/static/app.js?v=20260911-2" defer></script>
 </head>
 <body>
     <div class="app-layout">
@@ -40,15 +52,15 @@
             <hr class="divider">
 
             <!-- PDF Upload -->
-            <h3>{{ t('sidebar.upload_title') }}</h3>
+            <h3 class="sidebar-upload-title">{{ t('sidebar.upload_title') }}</h3>
             <form hx-post="/upload" hx-encoding="multipart/form-data"
                   hx-target="#sidebar-inner" hx-swap="innerHTML">
                 <div class="upload-zone">
                     <input type="file" name="file" accept=".pdf"
                            onchange="this.form.dispatchEvent(new Event('submit', {bubbles: true}))">
-                    <span>{{ t('sidebar.upload_hint') }}</span>
+                    <span class="sidebar-upload-hint">{{ t('sidebar.upload_hint') }}</span>
                 </div>
-                <p class="hint">{{ t('sidebar.upload_help') }}</p>
+                <p class="hint sidebar-upload-help">{{ t('sidebar.upload_help') }}</p>
             </form>
 
             <hr class="divider">

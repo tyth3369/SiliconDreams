@@ -15,9 +15,8 @@ jobs:
       - name: Install Python and dependencies
         run: uv sync --locked
       - name: Lint
-        run: uv run ruff check config.py server.py src tests
+        run: uv run ruff check .
       - name: Format check
-        run: uv run ruff format --check config.py server.py src tests
+        run: uv run ruff format --check .
       - name: Tests
         run: uv run pytest --cov=src --cov-report=term-missing
-

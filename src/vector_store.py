@@ -200,7 +200,8 @@ class VectorStore:
         """
         混合检索：从文本和表格两个 Collection 各取 top_k 条 → 合并去重 → 重排序。
 
-        当前实现：简单合并（完整 BM25 + Re-rank 留在 retriever.py 中由 LlamaIndex 完成）。
+        当前实现：合并两个 Chroma collection 的稠密检索结果；
+        BM25、RRF 融合与 Cross-Encoder 重排由 retriever.py 完成。
         """
         text_results = self.search_texts(query, top_k=top_k)
         table_results = self.search_tables(query, top_k=top_k)
@@ -239,7 +240,7 @@ class VectorStore:
             name=RAGConfig.chroma_collection_table,
             configuration={"hnsw": {"space": "cosine"}},
         )
-        logger.warning("⚠️ ChromaDB 已清空所有数据")
+        logger.warning("ChromaDB 已清空所有数据")
 
     def _list_unique_sources(self) -> list[str]:
         """列出所有已索引的文档（去重）"""

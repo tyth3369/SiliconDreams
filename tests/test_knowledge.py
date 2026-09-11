@@ -43,6 +43,12 @@ def test_financial_reference_points_to_official_source():
     assert "Management Report" in refs[0]["source_title"]
 
 
+def test_financial_context_excludes_unsourced_analyst_narrative():
+    context, _ = FinancialDataManager().build_context("台积电财务数据")
+    assert "核心优势" not in context
+    assert "关键风险" not in context
+
+
 def test_financial_summaries_sync_to_fact_store(tmp_path):
     database = Database(tmp_path / "facts.db")
     count = FinancialDataManager().sync_to_database(database)

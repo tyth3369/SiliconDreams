@@ -1202,7 +1202,7 @@
     },
     "硅通孔刻蚀机": {
       "name_en": "TSV Deep Silicon Etch Equipment",
-      "definition": "利用波osch工艺在硅晶圆上刻蚀出高深宽比（High Aspect Ratio）微米级垂直通孔的专用设备，是实现2.5D/3D先进封装的基础。",
+      "definition": "利用 Bosch 工艺在硅晶圆上刻蚀出高深宽比（High Aspect Ratio）微米级垂直通孔的专用设备，是实现2.5D/3D先进封装的基础。",
       "generation": "半导体设备",
       "business_impact": "随着HBM堆叠层数从8层向12层/16层演进，以及3D IC的普及，TSV刻蚀的步骤数和技术难度指数级上升。泛林半导体在该领域长期垄断，国内中微公司的高深宽比刻蚀机已切入一线客户，是国产替代确定性极高的细分领域。",
       "related_companies": [
@@ -1257,7 +1257,7 @@
       "name_en": "Temporary Bonding and Debonding (TBDB)",
       "definition": "在制造3D IC或超薄晶圆时，用胶带/胶水将器件晶圆临时固定在承载基板上，待背面工艺（如减薄、TSV）完成后再将其分离的工艺。",
       "generation": "先进封装技术",
-      "business_impact": "TBDB是HBM和2.5D/3D封装良率控制的核心步骤。随着晶圆厚度被减薄至极极限（如30μm），解键合过程中的热应力和机械应力极易导致晶圆碎裂。该环节的设备和特种化学耗材具有极高的客户粘性和高毛利属性。",
+      "business_impact": "TBDB是HBM和2.5D/3D封装良率控制的核心步骤。随着晶圆厚度被减薄至极限（如30μm），解键合过程中的热应力和机械应力极易导致晶圆碎裂。该环节的设备和特种化学耗材具有极高的客户粘性和高毛利属性。",
       "related_companies": [
         "EV Group",
         "东京电子",

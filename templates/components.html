@@ -5,7 +5,7 @@
 
 {# ── Sidebar Content (stats + files + settings) ── #}
 {% if component == "sidebar_content" or component is not defined %}
-<div id="sidebar-inner">
+<div class="sidebar-content">
     <!-- KB Stats -->
     <h3>{{ t('sidebar.kb_title') }}</h3>
     <div class="kb-stats">
@@ -71,38 +71,6 @@
         window._pendingStreams[msgId] = targetId;
     })();
 </script>
-{% endif %}
-
-{# ── Citation Panel ── #}
-{% if component == "citation_panel" %}
-{% if citations and citations|length > 0 %}
-<details class="citation-panel">
-    <summary>
-        <span class="citation-heading">{{ t('citation.trace_title') }}（{{ citations|length }}{{ t('citation.source_count') if lang == 'zh' else ' sources' }}）</span>
-        <span class="citation-hint">{{ t('citation.trace_hint') }}</span>
-    </summary>
-    <div class="citation-list">
-        {% for c in citations %}
-        <div class="citation-item">
-            <span class="citation-index">[{{ loop.index }}]</span>
-            <span class="citation-source">
-                <span class="citation-icon">{% if c.source_type == 'term' %}KNOWLEDGE{% elif c.source_type == 'financial' %}FINANCIAL{% elif c.source_type == 'web' %}WEB{% else %}DOCUMENT{% endif %}</span>
-                {% if c.source_type == 'term' %}
-                    {{ c.source }}
-                {% elif c.source_type == 'financial' %}
-                    {{ c.source }} {{ t('citation.financial_label') if lang == 'zh' else 'Financials' }}
-                {% else %}
-                    {{ c.source }}{% if c.page %} · p{{ c.page }}{% endif %}
-                {% endif %}
-            </span>
-            {% if c.snippet %}
-            <div class="citation-snippet">&ldquo;{{ c.snippet }}&rdquo;</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-</details>
-{% endif %}
 {% endif %}
 
 {# ── KB Stats partial ── #}

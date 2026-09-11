@@ -87,7 +87,7 @@ def main():
     os.makedirs(CACHE_DIR, exist_ok=True)
     os.makedirs(os.path.join(CACHE_DIR, "1_Pooling"), exist_ok=True)
 
-    print(f"📥 Downloading BGE-M3 from {mirror}")
+    print(f"Downloading BGE-M3 from {mirror}")
     print(f"   Target: {CACHE_DIR}\n")
 
     success = True
@@ -101,12 +101,12 @@ def main():
             continue
 
         if not download_file(url, filepath, filename):
-            print(f"\n❌ Failed to download: {filename}")
+            print(f"\nFailed to download: {filename}")
             success = False
             break
 
     if not success:
-        print("\n💡 Re-run this script to resume. Already-cached files will be skipped.")
+        print("\nRe-run this script to resume. Already-cached files will be skipped.")
         sys.exit(1)
 
     total = 0
@@ -115,7 +115,7 @@ def main():
         if os.path.isfile(fp):
             total += os.path.getsize(fp)
 
-    print(f"\n✅ BGE-M3 model ready at {CACHE_DIR}")
+    print(f"\nBGE-M3 model ready at {CACHE_DIR}")
     print(f"   Total size: {total / 1e9:.1f} GB")
 
 

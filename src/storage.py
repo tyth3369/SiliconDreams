@@ -553,10 +553,14 @@ class Database:
             rows = connection.execute(
                 """
                 SELECT id, role, content, citations_json, created_at
-                FROM messages
-                WHERE conversation_id=?
-                ORDER BY rowid ASC
-                LIMIT ?
+                FROM (
+                    SELECT rowid AS ordinal, id, role, content, citations_json, created_at
+                    FROM messages
+                    WHERE conversation_id=?
+                    ORDER BY rowid DESC
+                    LIMIT ?
+                )
+                ORDER BY ordinal ASC
                 """,
                 (conversation_id, limit),
             ).fetchall()
