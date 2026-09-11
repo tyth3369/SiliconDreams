@@ -239,3 +239,50 @@
     <script type="application/json" id="analytics-data">{{ analytics | tojson }}</script>
 </div>
 {% endif %}
+
+{# ── Persistent company watchlist + official event timeline ── #}
+{% if component == "watchlist" %}
+<div class="analytics-workbench watchlist-workbench">
+    <header class="analytics-header">
+        <div>
+            <h2>{{ t('watchlist.title') }}</h2>
+            <p>{{ t('watchlist.subtitle') }}</p>
+        </div>
+        <button class="analytics-close" type="button" data-close-analytics
+                aria-label="{{ t('analytics.close') }}">{{ t('analytics.close') }}</button>
+    </header>
+    <div class="watchlist-controls" role="group" aria-label="{{ t('watchlist.title') }}">
+        {% for company in timeline.supported %}
+        {% set is_watched = company in timeline.watched %}
+        <form hx-post="/watchlist/{{ company }}/toggle"
+              hx-target="#analytics-panel" hx-swap="innerHTML">
+            <input type="hidden" name="watched" value="{{ 'false' if is_watched else 'true' }}">
+            <input type="hidden" name="lang" value="{{ lang }}">
+            <button class="watchlist-toggle {{ 'active' if is_watched }}" type="submit"
+                    aria-pressed="{{ 'true' if is_watched else 'false' }}">
+                <span>{{ company }}</span>
+                <small>{{ t('watchlist.following') if is_watched else t('watchlist.follow') }}</small>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+    {% if timeline.events %}
+    <ol class="event-timeline">
+        {% for event in timeline.events %}
+        <li>
+            <time datetime="{{ event.date }}">{{ event.date }}</time>
+            <div class="event-body">
+                <strong>{{ event.title }}</strong>
+                <span>{{ event.summary }}</span>
+                <a href="{{ event.source_url }}" target="_blank" rel="noopener noreferrer">
+                    {{ event.source_title }} · {{ t('watchlist.source') }}
+                </a>
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="watchlist-empty">{{ t('watchlist.empty') }}</p>
+    {% endif %}
+</div>
+{% endif %}

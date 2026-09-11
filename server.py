@@ -28,7 +28,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from config import PDF_DIR, AppConfig, SearchConfig
 from src.agent_loop import run_agent_loop
 from src.analysis_templates import default_foundry_comparison_prompt
-from src.analytics import load_analytics_payload
+from src.analytics import build_watchlist_timeline, load_analytics_payload
 from src.citation import CitationTracker
 from src.exporter import build_markdown_export, build_pdf_export, export_filename
 from src.financial_data import FinancialDataManager
@@ -659,6 +659,34 @@ async def analytics(request: Request):
         lang=lang,
         analytics=load_analytics_payload(),
     )
+
+
+def _render_watchlist(lang: str) -> str:
+    watched = _db.list_watchlist()
+    return jinja.get_template("components.html").render(
+        component="watchlist",
+        t=get_t(lang),
+        lang=lang,
+        timeline=build_watchlist_timeline(watched, lang=lang),
+    )
+
+
+@app.get("/watchlist", response_class=HTMLResponse)
+async def watchlist(request: Request):
+    """Return the persistent company watchlist and official event timeline."""
+    lang = request.query_params.get("lang")
+    if lang not in ("zh", "en"):
+        lang = request.cookies.get("lang", "zh")
+    return _render_watchlist(lang)
+
+
+@app.post("/watchlist/{company}/toggle", response_class=HTMLResponse)
+async def toggle_watchlist(company: str, watched: bool = Form(...), lang: str = Form("zh")):
+    """Toggle a supported company and return the refreshed timeline."""
+    if FinancialDataManager().get_company(company) is None:
+        return Response(status_code=404)
+    _db.set_watchlist(company, watched=watched)
+    return _render_watchlist(lang if lang in ("zh", "en") else "zh")
 
 
 @app.post("/quick/{action}", response_class=HTMLResponse)

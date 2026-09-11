@@ -5,7 +5,7 @@ import re
 from httpx import ASGITransport, AsyncClient
 
 import server
-from src.analytics import load_analytics_payload
+from src.analytics import build_watchlist_timeline, load_analytics_payload
 
 
 def test_payload_uses_reported_values_and_exact_sources():
@@ -34,6 +34,15 @@ def test_process_mix_preserves_approximation_flag():
     smic = payload["process_mix"][1]
     assert all(segment["approximate"] for segment in smic["segments"])
     assert sum(segment["value"] for segment in smic["segments"]) == 100
+
+
+def test_watchlist_timeline_is_recent_source_backed_and_localized():
+    timeline = build_watchlist_timeline(["台积电", "中芯国际"], lang="en", limit=3)
+    assert len(timeline["events"]) == 3
+    assert timeline["events"][0]["date"] >= timeline["events"][1]["date"]
+    assert "gross margin" in timeline["events"][0]["summary"]
+    assert timeline["events"][0]["source_url"].startswith("https://")
+    assert build_watchlist_timeline([], lang="zh")["events"] == []
 
 
 def test_analytics_fragment_contains_safe_json_and_local_renderer():
