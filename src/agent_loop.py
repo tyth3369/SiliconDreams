@@ -18,6 +18,7 @@ from src.agent_tools import (
     validate_arguments,
 )
 from src.citation import CitationTracker
+from src.evidence_policy import build_answer_evidence_instruction
 
 logger = logging.getLogger(__name__)
 MAX_PLANNED_TOOLS = 6
@@ -265,6 +266,8 @@ def run_agent_loop(
             quality = ""
             if citation.get("source_type") == "web":
                 quality = f" · Tier {citation.get('trust_tier', 3)}"
+            elif citation.get("source_type") == "financial":
+                quality = f" · Tier {citation.get('trust_tier', 1)}"
             if citation.get("published_at"):
                 quality += f" · {citation['published_at']}"
             source_lines.append(
@@ -277,6 +280,9 @@ def run_agent_loop(
             if lang == "zh"
             else "Answer only from supplied evidence. Cite every verifiable claim with [1], [2], etc., matching this source index. Preserve evidence units unless a calculator result explicitly converts them."
         )
+        evidence_instruction = build_answer_evidence_instruction(user_query, citations, lang)
+        if evidence_instruction:
+            citation_instruction = f"{citation_instruction}\n{evidence_instruction}"
         working_messages.append(
             {"role": "user", "content": f"{citation_instruction}\n\n{source_index}"}
         )

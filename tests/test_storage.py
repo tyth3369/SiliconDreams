@@ -148,6 +148,46 @@ def test_fact_upsert_is_idempotent(database):
     assert database.count("facts") == 1
 
 
+def test_fact_conflicts_require_same_scope_and_distinct_normalized_values(database):
+    first = database.upsert_source(
+        source_type="official",
+        title="Official Q4",
+        url="https://example.com/official",
+        trust_tier=1,
+    )
+    second = database.upsert_source(
+        source_type="web", title="News Q4", url="https://example.com/news", trust_tier=2
+    )
+    for source_id, value in ((first, "33.10"), (second, "33.1")):
+        database.upsert_fact(
+            source_id=source_id,
+            company="TSMC",
+            metric="revenue",
+            period="2025 Q4",
+            value=value,
+            unit="billion",
+            currency="USD",
+        )
+    assert database.find_fact_conflicts(company="TSMC") == []
+
+    database.upsert_fact(
+        source_id=second,
+        company="TSMC",
+        metric="revenue",
+        period="2025 Q4",
+        value="34.0",
+        unit="billion",
+        currency="USD",
+    )
+    conflicts = database.find_fact_conflicts(company="TSMC", period="2025 Q4")
+    assert len(conflicts) == 1
+    assert conflicts[0]["metric"] == "revenue"
+    assert {fact["source_title"] for fact in conflicts[0]["facts"]} == {
+        "Official Q4",
+        "News Q4",
+    }
+
+
 def test_conversation_messages_persist(database):
     conversation_id = database.create_conversation(language="zh", title="TSMC")
     database.add_message(conversation_id, "user", "台积电毛利率？")

@@ -1,4 +1,5 @@
-from src.tools.web_search import source_trust_tier
+from src.evidence_policy import WebEvidenceAssessment
+from src.tools.web_search import _format_results, source_trust_tier
 
 
 def test_official_subdomains_are_tier_one():
@@ -8,8 +9,32 @@ def test_official_subdomains_are_tier_one():
 
 def test_reputable_reporting_is_tier_two():
     assert source_trust_tier("https://www.reuters.com/technology/chips/") == 2
+    assert source_trust_tier("https://www.bbc.com/news/articles/example") == 2
+    assert source_trust_tier("https://www.trendforce.com/news/example") == 2
 
 
 def test_unknown_and_deceptive_domains_are_not_promoted():
     assert source_trust_tier("https://example.com/post") == 3
     assert source_trust_tier("https://tsmc.com.attacker.example/post") == 3
+
+
+def test_formatted_results_expose_date_trust_and_policy():
+    text = _format_results(
+        "最新进展",
+        "Tavily",
+        [
+            {
+                "title": "Official update",
+                "url": "https://tsmc.com/update",
+                "publisher": "tsmc.com",
+                "published_at": "2026-09-01",
+                "trust_tier": 1,
+                "date_status": "dated",
+                "snippet": "Update",
+            }
+        ],
+        WebEvidenceAssessment(True, 0, 0, 0),
+    )
+    assert "发布日期: 2026-09-01" in text
+    assert "来源等级: Tier 1" in text
+    assert "Tier 1 官方披露" in text

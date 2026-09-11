@@ -33,7 +33,7 @@ def test_homepage_smoke():
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.8.0-dev.1"}
+    assert response.json() == {"status": "ok", "version": "0.8.0-dev.2"}
 
 
 def test_stats_smoke():
