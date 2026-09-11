@@ -140,7 +140,79 @@
         "expansion": "月产能突破105.9万片（8英寸等效），全年出货约970万片（+20.9%），北京/上海/深圳/天津四地同步扩产",
         "note": "2025年末成为全球首个月产能突破百万片的纯晶圆代工厂"
       },
-      "evidence_scope": "仅包含上述由 FY2025 官方年报整理的结构化年度指标；不提供无逐项来源的优势、风险或预测。"
+      "evidence_scope": "包含 FY2025 年度汇总，以及港交所发布的中芯国际 2024 Q1 至 2026 Q2 未经审核季度实际值。季度共同可比口径为美元营收和毛利率；中芯国际披露营业利润金额而非营业利润率，后者必须由 financial_calculator 派生。",
+      "quarterly": {
+        "2024 Q1": {
+          "source_title": "SMIC 1Q24 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2024/0509/2024050900924.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2024-05-09",
+          "metrics": { "revenue_usd_billion": 1.750176, "gross_margin_pct": 13.7, "operating_profit_usd_billion": 0.002406 }
+        },
+        "2024 Q2": {
+          "source_title": "SMIC 2Q24 Unaudited Results",
+          "source_url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0808/2024080800616.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2024-08-08",
+          "metrics": { "revenue_usd_billion": 1.901276, "gross_margin_pct": 13.9, "operating_profit_usd_billion": 0.087140 }
+        },
+        "2024 Q3": {
+          "source_title": "SMIC 3Q24 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2024/1107/2024110700994.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2024-11-07",
+          "metrics": { "revenue_usd_billion": 2.171188, "gross_margin_pct": 20.5, "operating_profit_usd_billion": 0.169887 }
+        },
+        "2024 Q4": {
+          "source_title": "SMIC 4Q24 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2025/0211/2025021100441.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2025-02-11",
+          "metrics": { "revenue_usd_billion": 2.207281, "gross_margin_pct": 22.6, "operating_profit_usd_billion": 0.214467 }
+        },
+        "2025 Q1": {
+          "source_title": "SMIC 1Q25 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2025/0508/2025050801531.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2025-05-08",
+          "metrics": { "revenue_usd_billion": 2.247201, "gross_margin_pct": 22.5, "operating_profit_usd_billion": 0.309571 }
+        },
+        "2025 Q2": {
+          "source_title": "SMIC 2Q25 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2025/0807/2025080700636.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2025-08-07",
+          "metrics": { "revenue_usd_billion": 2.209066, "gross_margin_pct": 20.4, "operating_profit_usd_billion": 0.150677 }
+        },
+        "2025 Q3": {
+          "source_title": "SMIC 3Q25 Unaudited Results",
+          "source_url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/1113/2025111300757.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2025-11-13",
+          "metrics": { "revenue_usd_billion": 2.381822, "gross_margin_pct": 22.0, "operating_profit_usd_billion": 0.351069 }
+        },
+        "2025 Q4": {
+          "source_title": "SMIC 4Q25 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0210/2026021000518.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2026-02-10",
+          "metrics": { "revenue_usd_billion": 2.488710, "gross_margin_pct": 19.2, "operating_profit_usd_billion": 0.298620 }
+        },
+        "2026 Q1": {
+          "source_title": "SMIC 1Q26 Unaudited Results",
+          "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0514/2026051400908.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2026-05-14",
+          "metrics": { "revenue_usd_billion": 2.505487, "gross_margin_pct": 20.1, "operating_profit_usd_billion": 0.247792 }
+        },
+        "2026 Q2": {
+          "source_title": "SMIC 2Q26 Unaudited Results",
+          "source_url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0813/2026081300353.pdf",
+          "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
+          "source_published_at": "2026-08-13",
+          "metrics": { "revenue_usd_billion": 3.005588, "gross_margin_pct": 25.3, "operating_profit_usd_billion": 0.534179 }
+        }
+      }
     }
   }
 }

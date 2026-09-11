@@ -55,7 +55,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_company_data",
-            "description": "获取台积电或中芯国际的官方结构化财务数据。台积电支持 FY2025 及 2024 Q1 至 2026 Q2；查询季度时必须在 periods 中列出所需期间。中芯国际当前支持 FY2025。",
+            "description": "获取台积电或中芯国际的官方结构化财务数据。两家公司均支持 FY2025 及 2024 Q1 至 2026 Q2；查询季度时必须在 periods 中列出所需期间。共同直接披露口径为美元营收和毛利率；营业利润口径存在差异。",
             "parameters": {
                 "type": "object",
                 "properties": {

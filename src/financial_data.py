@@ -19,6 +19,36 @@ logger = logging.getLogger(__name__)
 
 FOUNDRY_FILE = DATA_DIR / "foundry_financials.json"
 
+QUARTERLY_METRICS = (
+    ("revenue_usd_billion", "营收", "revenue", "billion", "USD"),
+    ("gross_margin_pct", "毛利率", "gross_margin", "percent", None),
+    ("operating_margin_pct", "营业利润率", "operating_margin", "percent", None),
+    (
+        "operating_profit_usd_billion",
+        "营业利润",
+        "operating_profit",
+        "billion",
+        "USD",
+    ),
+    (
+        "usd_ntd_exchange_rate",
+        "平均汇率（1 USD 对 NTD）",
+        "usd_ntd_exchange_rate",
+        "NTD_per_USD",
+        None,
+    ),
+)
+
+
+def _format_quarterly_metric(key: str, value: float) -> str:
+    if key.endswith("_pct"):
+        return f"{value:.1f}%"
+    if key.endswith("_usd_billion"):
+        return f"{value:.6g} USD billion"
+    if key == "usd_ntd_exchange_rate":
+        return f"{value:.2f} NTD per USD"
+    return str(value)
+
 
 class FinancialDataManager:
     """
@@ -182,6 +212,8 @@ class FinancialDataManager:
 
             if selected_quarters:
                 parts.append(f"### {key} ({c['name_en']}) [{c['ticker']}] — 季度实际值")
+                if c.get("evidence_scope"):
+                    parts.append(f"- 证据口径: {c['evidence_scope']}")
                 for period in selected_quarters:
                     quarter = quarterly[period]
                     metrics = quarter["metrics"]
@@ -196,13 +228,14 @@ class FinancialDataManager:
                             "source_published_at": quarter.get("source_published_at", ""),
                         }
                     )
+                    parts.append(f"#### {period}")
+                    for metric_key, label, _fact_metric, _unit, _currency in QUARTERLY_METRICS:
+                        if metric_key in metrics:
+                            parts.append(
+                                f"- {label}: {_format_quarterly_metric(metric_key, metrics[metric_key])}"
+                            )
                     parts.extend(
                         [
-                            f"#### {period}",
-                            f"- 营收: {metrics['revenue_usd_billion']:.2f} USD billion",
-                            f"- 毛利率: {metrics['gross_margin_pct']:.1f}%",
-                            f"- 营业利润率: {metrics['operating_margin_pct']:.1f}%",
-                            f"- 平均汇率: 1 USD = {metrics['usd_ntd_exchange_rate']:.2f} NTD",
                             f"- 官方来源: {quarter['source_title']} ({quarter['source_published_at']})",
                             f"  {quarter['source_url']}",
                         ]
@@ -323,24 +356,15 @@ class FinancialDataManager:
                     metadata={"company": company, "report_period": period},
                 )
                 metrics = quarter["metrics"]
-                quarterly_facts = (
-                    ("revenue", metrics["revenue_usd_billion"], "billion", "USD"),
-                    ("gross_margin", metrics["gross_margin_pct"], "percent", None),
-                    ("operating_margin", metrics["operating_margin_pct"], "percent", None),
-                    (
-                        "usd_ntd_exchange_rate",
-                        metrics["usd_ntd_exchange_rate"],
-                        "NTD_per_USD",
-                        None,
-                    ),
-                )
-                for metric, value, fact_unit, currency in quarterly_facts:
+                for metric_key, _label, metric, fact_unit, currency in QUARTERLY_METRICS:
+                    if metric_key not in metrics:
+                        continue
                     db.upsert_fact(
                         source_id=quarter_source_id,
                         company=data["name_en"],
                         metric=metric,
                         period=period,
-                        value=value,
+                        value=metrics[metric_key],
                         unit=fact_unit,
                         currency=currency,
                         metadata={"period_type": "quarterly", "actual": True},
