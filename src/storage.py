@@ -18,7 +18,7 @@ from typing import Any
 from config import DATABASE_FILE
 from src.evidence_policy import canonical_fact_value
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def utc_now() -> str:
@@ -157,6 +157,11 @@ CREATE TABLE IF NOT EXISTS jobs (
     error TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS watchlist (
+    company TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL
 );
 """
 
@@ -737,6 +742,29 @@ class Database:
             )
         return message_id
 
+    def list_watchlist(self) -> list[str]:
+        """Return watched company keys in insertion order."""
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT company FROM watchlist ORDER BY created_at, rowid"
+            ).fetchall()
+        return [str(row["company"]) for row in rows]
+
+    def set_watchlist(self, company: str, *, watched: bool) -> bool:
+        """Idempotently add or remove a normalized company key."""
+        normalized = " ".join(company.split()).strip()[:80]
+        if not normalized:
+            return False
+        with self.connect() as connection:
+            if watched:
+                connection.execute(
+                    "INSERT OR IGNORE INTO watchlist(company, created_at) VALUES (?, ?)",
+                    (normalized, utc_now()),
+                )
+            else:
+                connection.execute("DELETE FROM watchlist WHERE company=?", (normalized,))
+        return True
+
     def list_messages(self, conversation_id: str, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as connection:
             rows = connection.execute(
@@ -933,7 +961,16 @@ class Database:
             )
 
     def count(self, table: str) -> int:
-        allowed = {"sources", "documents", "chunks", "facts", "conversations", "messages", "jobs"}
+        allowed = {
+            "sources",
+            "documents",
+            "chunks",
+            "facts",
+            "conversations",
+            "messages",
+            "jobs",
+            "watchlist",
+        }
         if table not in allowed:
             raise ValueError(f"Unsupported table: {table}")
         with self.connect() as connection:

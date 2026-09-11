@@ -1,5 +1,5 @@
 /* =========================================================
-   SiliconDreams — Bloomberg Terminal Theme (v0.9.0-dev.2)
+   SiliconDreams — Bloomberg Terminal Theme (v0.9.0-dev.3)
    Pure CSS with no frontend framework overrides.
    ========================================================= */
 
@@ -1169,7 +1169,109 @@ button:active {
 .analytics-sources a span { color: var(--text-secondary); }
 .analytics-sources a:hover strong { color: var(--accent-primary); }
 
+.watchlist-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.watchlist-controls form { flex: 1; }
+
+.watchlist-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+.watchlist-toggle small {
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.watchlist-toggle.active {
+    color: var(--toggle-active-text);
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.event-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 102px;
+}
+
+.event-timeline li {
+    position: relative;
+    min-height: 78px;
+    padding: 0 0 18px 24px;
+    border-left: 1px solid var(--border-color);
+}
+
+.event-timeline li::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: -4px;
+    width: 7px;
+    height: 7px;
+    background: var(--accent-primary);
+    box-shadow: var(--shadow-glow);
+}
+
+.event-timeline time {
+    position: absolute;
+    left: -102px;
+    top: 0;
+    width: 84px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-align: right;
+}
+
+.event-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.event-body strong {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.event-body span {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.event-body a {
+    width: fit-content;
+    color: var(--accent-primary);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-decoration: none;
+    border-bottom: 1px dotted var(--accent-dim);
+}
+
+.event-body a:hover { border-bottom-style: solid; }
+
+.watchlist-empty {
+    padding: 36px 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-align: center;
+    border: 1px dashed var(--border-color);
+}
+
 @media (max-width: 900px) {
     .analytics-grid { grid-template-columns: 1fr; }
     .analytics-workbench { max-height: 58vh; }
+    .event-timeline { padding-left: 84px; }
+    .event-timeline time { left: -84px; width: 68px; }
 }

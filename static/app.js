@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v0.9.0-dev.2)
+ * SiliconDreams — Client-side JS (v0.9.0-dev.3)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
@@ -73,16 +73,19 @@ function setLang(lang) {
         if (tagline) tagline.textContent = txt.tagline;
 
         var btns = document.querySelectorAll('.quick-actions button');
-        if (btns.length >= 4) {
+        if (btns.length >= 5) {
             btns[0].textContent = txt.compare;
             btns[1].textContent = txt.tech;
             btns[2].textContent = txt.finance;
             btns[3].textContent = txt.analytics;
+            btns[4].textContent = txt.watchlist;
         }
 
         var analyticsPanel = document.getElementById('analytics-panel');
         if (analyticsPanel && analyticsPanel.children.length) {
-            htmx.ajax('GET', '/analytics?lang=' + lang, {
+            var workbenchPath = analyticsPanel.querySelector('.watchlist-workbench')
+                ? '/watchlist' : '/analytics';
+            htmx.ajax('GET', workbenchPath + '?lang=' + lang, {
                 target: '#analytics-panel',
                 swap: 'innerHTML'
             });

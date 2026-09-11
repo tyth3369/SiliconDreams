@@ -14,7 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.9.0-dev.2 | (c) 2026",
+    "app.footer": "SiliconDreams v0.9.0-dev.3 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -70,6 +70,7 @@ _ZH = {
     "quick.tech": "技术趋势",
     "quick.finance": "财务分析",
     "quick.analytics": "数据图表",
+    "quick.watchlist": "关注列表",
     "analytics.title": "代工财务仪表盘",
     "analytics.subtitle": "官方披露数据 · 数据点可点击溯源",
     "analytics.close": "关闭",
@@ -82,6 +83,12 @@ _ZH = {
     "analytics.approximate": "中芯国际制程结构为近似披露口径",
     "analytics.sources": "年度数据来源",
     "analytics.open_source": "打开官方来源",
+    "watchlist.title": "公司关注列表",
+    "watchlist.subtitle": "持久关注 · 官方披露事件时间线",
+    "watchlist.follow": "关注",
+    "watchlist.following": "已关注",
+    "watchlist.empty": "选择公司后，最近官方披露将在这里形成时间线。",
+    "watchlist.source": "打开披露原文",
     # -- Chat --
     "chat.placeholder": "请输入您的问题",
     # -- Errors --
@@ -111,7 +118,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.9.0-dev.2 | (c) 2026",
+    "app.footer": "SiliconDreams v0.9.0-dev.3 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",
@@ -167,6 +174,7 @@ _EN = {
     "quick.tech": "Tech Trends",
     "quick.finance": "Financial Analysis",
     "quick.analytics": "Data Charts",
+    "quick.watchlist": "Watchlist",
     "analytics.title": "Foundry Financial Analytics",
     "analytics.subtitle": "Official disclosures · select a data point to trace its source",
     "analytics.close": "Close",
@@ -179,6 +187,12 @@ _EN = {
     "analytics.approximate": "SMIC process mix uses approximate disclosed groupings",
     "analytics.sources": "Annual data sources",
     "analytics.open_source": "Open official source",
+    "watchlist.title": "Company Watchlist",
+    "watchlist.subtitle": "Persistent tracking · official disclosure timeline",
+    "watchlist.follow": "Follow",
+    "watchlist.following": "Following",
+    "watchlist.empty": "Select a company to build a timeline of its latest official disclosures.",
+    "watchlist.source": "Open filing",
     # -- Chat --
     "chat.placeholder": "Please enter your question",
     # -- Errors --

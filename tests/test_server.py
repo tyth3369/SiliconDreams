@@ -37,12 +37,34 @@ def test_homepage_smoke():
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.9.0-dev.2"}
+    assert response.json() == {"status": "ok", "version": "0.9.0-dev.3"}
 
 
 def test_stats_smoke():
     response = asyncio.run(_request("GET", "/stats"))
     assert response.status_code == 200
+
+
+def test_watchlist_toggle_persists_and_renders_official_timeline():
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            empty = await client.get("/watchlist?lang=en")
+            followed = await client.post(
+                "/watchlist/台积电/toggle", data={"watched": "true", "lang": "en"}
+            )
+            reloaded = await client.get("/watchlist?lang=en")
+            invalid = await client.post(
+                "/watchlist/unknown/toggle", data={"watched": "true", "lang": "en"}
+            )
+            return empty, followed, reloaded, invalid
+
+    empty, followed, reloaded, invalid = asyncio.run(scenario())
+    assert "Select a company" in empty.text
+    assert "TSMC 2026 Q2 results" in followed.text
+    assert "TSMC 2Q26 Quarterly Results" in followed.text
+    assert "TSMC 2026 Q2 results" in reloaded.text
+    assert invalid.status_code == 404
 
 
 def test_english_sidebar_smoke():

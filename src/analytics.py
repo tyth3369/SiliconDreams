@@ -91,3 +91,49 @@ def load_analytics_payload(path: Path = FINANCIALS_FILE) -> dict:
         "annual_sources": annual_sources,
         "disclaimer": raw["_meta"]["disclaimer"],
     }
+
+
+def build_watchlist_timeline(watched: list[str], lang: str = "zh", limit: int = 12) -> dict:
+    """Build a recent official-disclosure timeline for watched companies."""
+    payload = load_analytics_payload()
+    selected = [key for key in COMPANY_KEYS if key in watched]
+    company_names = {
+        series["company"]: series["company_en"]
+        for series in payload["quarterly"]["revenue_usd_billion"]
+    }
+    events: list[dict] = []
+    revenue_series = {
+        series["company"]: series["points"]
+        for series in payload["quarterly"]["revenue_usd_billion"]
+    }
+    margin_series = {
+        series["company"]: series["points"] for series in payload["quarterly"]["gross_margin_pct"]
+    }
+
+    for company in selected:
+        margins = {point["period"]: point for point in margin_series[company]}
+        for revenue in revenue_series[company]:
+            margin = margins[revenue["period"]]
+            if lang == "en":
+                summary = (
+                    f"Revenue USD {revenue['value']:.2f}bn · gross margin {margin['value']:.1f}%"
+                )
+                title = f"{company_names[company]} {revenue['period']} results"
+            else:
+                summary = f"营收 {revenue['value']:.2f} 十亿美元 · 毛利率 {margin['value']:.1f}%"
+                title = f"{company} {revenue['period']} 业绩"
+            events.append(
+                {
+                    "company": company,
+                    "company_en": company_names[company],
+                    "period": revenue["period"],
+                    "date": revenue["published_at"],
+                    "title": title,
+                    "summary": summary,
+                    "source_title": revenue["source_title"],
+                    "source_url": revenue["source_url"],
+                }
+            )
+
+    events.sort(key=lambda event: (event["date"], event["company"]), reverse=True)
+    return {"watched": selected, "events": events[:limit], "supported": list(COMPANY_KEYS)}

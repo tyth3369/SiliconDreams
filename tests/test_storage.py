@@ -250,7 +250,19 @@ def test_schema_v1_database_migrates_archived_at_column(tmp_path):
             "SELECT value FROM schema_meta WHERE key='version'"
         ).fetchone()["value"]
     assert "archived_at" in columns
-    assert version == "2"
+    assert version == "3"
+
+
+def test_watchlist_is_persistent_and_idempotent(database):
+    assert database.list_watchlist() == []
+    assert database.set_watchlist("台积电", watched=True) is True
+    assert database.set_watchlist("台积电", watched=True) is True
+    assert database.set_watchlist("中芯国际", watched=True) is True
+    assert database.list_watchlist() == ["台积电", "中芯国际"]
+    assert database.count("watchlist") == 2
+    assert database.set_watchlist("台积电", watched=False) is True
+    assert database.list_watchlist() == ["中芯国际"]
+    assert database.set_watchlist("  ", watched=True) is False
 
 
 def test_message_limit_returns_most_recent_items_in_conversation_order(database):
