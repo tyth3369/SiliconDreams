@@ -4,6 +4,7 @@
 
 - Python `3.12.x`（`.python-version`）
 - uv 管理环境与锁文件（`uv.lock`）
+- 生产部署使用 Docker Engine、Compose v2 与 Caddy 2
 - 直接依赖唯一来源：`pyproject.toml`
 - `requirements.txt` 是兼容传统工具的自动导出文件，不应手工编辑
 
@@ -17,6 +18,8 @@
 | PDF | PyMuPDF, PyMuPDF4LLM, pdfplumber, tabulate |
 | Data | pandas, Pydantic |
 | Dev | pytest, pytest-cov, Ruff, httpx |
+
+Docker 与 Caddy 属于部署基础设施，不是 Python 运行时依赖，因此不写入 `pyproject.toml`。
 
 LangChain、LlamaIndex 和 Streamlit 已从活跃依赖中删除。
 

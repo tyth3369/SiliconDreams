@@ -4,6 +4,7 @@
 .env
 .env.local
 .env.production
+.env.caddy
 
 # GitHub Token
 .github_token
