@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from config import DATABASE_FILE
+from src.evidence_policy import canonical_fact_value
 
 SCHEMA_VERSION = 1
 
@@ -494,7 +495,7 @@ class Database:
         with self.connect() as connection:
             rows = connection.execute(
                 f"""
-                SELECT f.*, s.title AS source_title, s.url AS source_url,
+                SELECT f.*, s.source_type, s.title AS source_title, s.url AS source_url,
                        s.publisher AS source_publisher, s.trust_tier
                 FROM facts f
                 JOIN sources s ON s.id = f.source_id
@@ -504,6 +505,62 @@ class Database:
                 params,
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def find_fact_conflicts(
+        self,
+        company: str | None = None,
+        metric: str | None = None,
+        period: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Find same-company/metric/period facts with incompatible same-unit values."""
+        clauses = []
+        params: list[Any] = []
+        for column, value in (("f.company", company), ("f.metric", metric), ("f.period", period)):
+            if value:
+                clauses.append(f"{column} = ?")
+                params.append(value)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT f.*, s.title AS source_title, s.url AS source_url,
+                       s.publisher AS source_publisher, s.published_at,
+                       s.trust_tier
+                FROM facts f
+                JOIN sources s ON s.id = f.source_id
+                {where}
+                ORDER BY f.company, f.metric, f.period, s.trust_tier, s.title
+                """,
+                params,
+            ).fetchall()
+
+        groups: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = {}
+        for row in rows:
+            item = dict(row)
+            key = (
+                item["company"],
+                item["metric"],
+                item["period"],
+                str(item["unit"]).casefold(),
+                str(item.get("currency") or "").casefold(),
+            )
+            groups.setdefault(key, []).append(item)
+
+        conflicts = []
+        for key, facts in groups.items():
+            values = {canonical_fact_value(fact["value"]) for fact in facts}
+            if len(values) > 1:
+                conflicts.append(
+                    {
+                        "company": key[0],
+                        "metric": key[1],
+                        "period": key[2],
+                        "unit": facts[0]["unit"],
+                        "currency": facts[0].get("currency"),
+                        "facts": facts,
+                    }
+                )
+        return conflicts
 
     def create_conversation(self, language: str = "zh", title: str = "") -> str:
         conversation_id = f"conv_{uuid.uuid4().hex}"

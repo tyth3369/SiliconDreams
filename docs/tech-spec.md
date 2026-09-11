@@ -31,6 +31,7 @@ Browser
 - PyMuPDF4LLM 使用 page chunks 和 `lines_strict`；pdfplumber 处理复杂表格回退。
 - 文件以 SHA-256 内容寻址保存。
 - SQLite：`sources -> documents -> chunks/facts`；每条证据保留来源、页码、时间、可信等级和原文。
+- `src/evidence_policy.py`：对网页证据执行可信等级、发布日期和时效评估；未来日期结果在进入模型前被剔除。对结构化 facts 只在公司、指标、期间、单位和币种均相同时检测数值冲突，避免把口径差异误报为冲突。
 - Chroma 的 vector ID 与 SQLite chunk ID 一致，upsert 保持幂等。
 - 结构化公司事实区分 `FY2025` 与 `YYYY QN`；台积电季度实际值逐季绑定官方 IR 页面，未收录季度不得退回年度数据冒充。
 
@@ -45,6 +46,8 @@ Browser
 ## 引用
 
 `CitationTracker` 按来源类型、名称和页码去重。网页 URL 只允许绝对 HTTP(S)，所有文本 HTML escape。前端用 marked 渲染 Markdown、DOMPurify 消毒，再将 `[N]` 绑定到同一消息的引用条目。
+
+时效性查询使用 Tavily `news` topic 并把当前日期作为 `end_date`；普通知识查询使用 `general`。网页结果进入上下文前按相关度、Tier 和时效状态重排。Tier 1 是公司/监管官方域名；Tier 2 仅由显式白名单中的国际主流媒体和半导体专业媒体构成；其余均为 Tier 3。引用面板显示发布者、日期、Tier，以及“日期未知/较旧背景来源”标签。最终回答提示包含本次实际来源构成，并要求低等级来源不得无说明覆盖官方披露。
 
 ## 持久化与并发
 

@@ -14,9 +14,15 @@ import json
 import logging
 import re
 import time
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 from config import SearchConfig
+from src.evidence_policy import (
+    WebEvidenceAssessment,
+    assess_web_results,
+    is_time_sensitive_query,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +44,20 @@ OFFICIAL_DOMAINS = {
     "micron.com",
     "skhynix.com",
 }
-REPUTABLE_NEWS_DOMAINS = {"reuters.com", "bloomberg.com", "ft.com", "wsj.com"}
+REPUTABLE_NEWS_DOMAINS = {
+    "reuters.com",
+    "bloomberg.com",
+    "ft.com",
+    "wsj.com",
+    "apnews.com",
+    "bbc.com",
+    "cnbc.com",
+    "nikkei.com",
+    "rfi.fr",
+    "digitimes.com",
+    "tomshardware.com",
+    "trendforce.com",
+}
 
 
 def _hostname(url: str) -> str:
@@ -82,14 +101,16 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dic
         import urllib.error
         import urllib.request
 
-        payload = json.dumps(
-            {
-                "api_key": SearchConfig.api_key,
-                "query": query,
-                "search_depth": SearchConfig.search_depth,
-                "max_results": max_results,
-            }
-        ).encode("utf-8")
+        request_body = {
+            "api_key": SearchConfig.api_key,
+            "query": query,
+            "search_depth": SearchConfig.search_depth,
+            "max_results": max_results,
+            "topic": "news" if is_time_sensitive_query(query) else "general",
+        }
+        if is_time_sensitive_query(query):
+            request_body["end_date"] = datetime.now(UTC).date().isoformat()
+        payload = json.dumps(request_body).encode("utf-8")
 
         req = urllib.request.Request(
             SearchConfig.api_url,
@@ -126,28 +147,7 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dic
                 }
             )
 
-        # Preserve relevance while giving first-party and regulated disclosures
-        # a modest deterministic advantage over summaries and aggregators.
-        structured.sort(
-            key=lambda item: (
-                float(item.get("score", 0.0))
-                + {1: 0.20, 2: 0.08}.get(int(item.get("trust_tier", 3)), 0.0)
-            ),
-            reverse=True,
-        )
-
-        # Build formatted text for LLM
-        lines = [f'## Web 搜索结果 (Tavily): "{query}"\n']
-        for i, r in enumerate(structured, 1):
-            body = r.get("snippet", "")
-            lines.append(f"### 结果 {i}: {r['title']}")
-            lines.append(f"来源: {r['url']}")
-            lines.append(f"来源等级: Tier {r['trust_tier']} ({r['publisher'] or 'unknown'})")
-            if body:
-                lines.append(f"摘要: {body}")
-            lines.append("")
-
-        return structured, "\n".join(lines)
+        return structured, "Tavily"
 
     except ImportError:
         logger.warning("urllib 不可用")
@@ -210,19 +210,7 @@ def _search_ddg(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict],
                 if not results:
                     return [], f"搜索 '{query}' 未找到相关结果。"
 
-                # Build formatted text
-                lines = [f'## Web 搜索结果 (DuckDuckGo): "{query}"\n']
-                for i, r in enumerate(results, 1):
-                    body = r.get("snippet", "")
-                    if len(body) > 300:
-                        body = body[:300] + "..."
-                    lines.append(f"### 结果 {i}: {r['title']}")
-                    lines.append(f"来源: {r['url']}")
-                    if body:
-                        lines.append(f"摘要: {body}")
-                    lines.append("")
-
-                return results, "\n".join(lines)
+                return results, "DuckDuckGo"
 
             except Exception as e:
                 if attempt < 1:
@@ -290,14 +278,48 @@ def _do_search(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict], 
     """
     # Primary: Tavily (AI-agent-friendly, reliable)
     if SearchConfig.is_configured():
-        results, text = _search_tavily(query, max_results)
+        results, backend = _search_tavily(query, max_results)
         if results:
-            return results, text
+            assessed, assessment = assess_web_results(query, results)
+            if assessed:
+                return assessed, _format_results(query, backend, assessed, assessment)
+            logger.warning("Tavily results rejected by evidence-date policy; trying DDG")
         # Tavily failed → log and fall through to DDG
-        logger.warning(f"Tavily 搜索失败，尝试 DDG fallback: {text}")
+        logger.warning(f"Tavily 搜索失败，尝试 DDG fallback: {backend}")
 
     # Fallback: DuckDuckGo (free, rate-limited)
-    return _search_ddg(query, max_results)
+    results, backend = _search_ddg(query, max_results)
+    if not results:
+        return results, backend
+    assessed, assessment = assess_web_results(query, results)
+    return assessed, _format_results(query, backend, assessed, assessment)
+
+
+def _format_results(
+    query: str,
+    backend: str,
+    results: list[dict],
+    assessment: WebEvidenceAssessment,
+) -> str:
+    """Format only policy-approved results for the model."""
+    lines = [f'## Web 搜索结果 ({backend}): "{query}"', assessment.instruction("zh"), ""]
+    for index, result in enumerate(results, 1):
+        body = str(result.get("snippet", ""))[:300]
+        published_at = result.get("published_at") or "日期未知"
+        lines.extend(
+            [
+                f"### 结果 {index}: {result['title']}",
+                f"来源: {result['url']}",
+                f"发布者: {result.get('publisher') or 'unknown'}",
+                f"发布日期: {published_at}",
+                f"来源等级: Tier {result.get('trust_tier', 3)}",
+                f"时效状态: {result.get('date_status', 'undated')}",
+            ]
+        )
+        if body:
+            lines.append(f"摘要: {body}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def web_search(query: str, max_results: int = MAX_RESULTS) -> str:

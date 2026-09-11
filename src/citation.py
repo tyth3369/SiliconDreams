@@ -40,6 +40,7 @@ class Citation:
     publisher: str = ""
     published_at: str = ""
     trust_tier: int = 3
+    date_status: str = ""
 
     def display_source(self) -> str:
         """Human-readable source identifier."""
@@ -100,6 +101,7 @@ class CitationTracker:
         publisher: str = "",
         published_at: str = "",
         trust_tier: int = 3,
+        date_status: str = "",
     ) -> None:
         """Add a citation. Duplicates (same source+type+page) are skipped."""
         key = (
@@ -128,6 +130,7 @@ class CitationTracker:
             publisher=publisher,
             published_at=published_at,
             trust_tier=trust_tier,
+            date_status=date_status,
         )
         self._citations.append(citation)
 
@@ -148,6 +151,7 @@ class CitationTracker:
         url: str = "",
         publisher: str = "",
         published_at: str = "",
+        trust_tier: int = 1,
     ) -> None:
         """Convenience: add a financial data citation."""
         self.add(
@@ -159,6 +163,7 @@ class CitationTracker:
             url=url,
             publisher=publisher,
             published_at=published_at,
+            trust_tier=trust_tier,
         )
 
     def add_web(
@@ -169,6 +174,7 @@ class CitationTracker:
         publisher: str = "",
         published_at: str = "",
         trust_tier: int = 3,
+        date_status: str = "",
     ) -> None:
         """Convenience: add a web search citation."""
         self.add(
@@ -179,6 +185,7 @@ class CitationTracker:
             publisher=publisher,
             published_at=published_at,
             trust_tier=trust_tier,
+            date_status=date_status,
         )
 
     def to_list(self) -> list[dict]:
@@ -199,6 +206,7 @@ class CitationTracker:
                 "publisher": c.publisher,
                 "published_at": c.published_at,
                 "trust_tier": c.trust_tier,
+                "date_status": c.date_status,
             }
             for c in self._citations
         ]
@@ -222,6 +230,7 @@ class CitationTracker:
                 publisher=citation.publisher,
                 published_at=citation.published_at,
                 trust_tier=citation.trust_tier,
+                date_status=citation.date_status,
             )
 
     @staticmethod
@@ -273,13 +282,18 @@ class CitationTracker:
                 metadata.append(escape(str(c["publisher"]), quote=True))
             if c.get("published_at"):
                 metadata.append(escape(str(c["published_at"]), quote=True))
-            if c.get("source_type") == "web" and c.get("trust_tier"):
+            if c.get("source_type") in {"web", "financial"} and c.get("trust_tier"):
                 tier_label = {
                     1: "Tier 1 · Official",
                     2: "Tier 2 · Reputable reporting",
                     3: "Tier 3 · Web source",
                 }.get(int(c["trust_tier"]), f"Tier {int(c['trust_tier'])}")
                 metadata.append(tier_label)
+            if c.get("source_type") == "web":
+                if c.get("date_status") == "undated":
+                    metadata.append("Date unknown" if lang == "en" else "发布日期未知")
+                elif c.get("date_status") == "stale":
+                    metadata.append("Background source" if lang == "en" else "较旧背景来源")
             metadata_html = (
                 f'<div class="citation-metadata">{" · ".join(metadata)}</div>' if metadata else ""
             )

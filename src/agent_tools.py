@@ -188,6 +188,7 @@ def _web_search(arguments: dict, tracker: CitationTracker) -> str:
             publisher=result.get("publisher", ""),
             published_at=result.get("published_at", ""),
             trust_tier=int(result.get("trust_tier", 3)),
+            date_status=result.get("date_status", ""),
         )
     return f"{text}\n（共找到 {len(results)} 条结果）" if results else text
 
@@ -227,6 +228,7 @@ def _lookup_terms(arguments: dict, tracker: CitationTracker) -> str:
 
 def _get_company_data(arguments: dict, tracker: CitationTracker) -> str:
     from src.financial_data import FinancialDataManager
+    from src.storage import Database
 
     manager = FinancialDataManager()
     context, references = manager.build_context(
@@ -241,6 +243,47 @@ def _get_company_data(arguments: dict, tracker: CitationTracker) -> str:
             url=reference.get("source_url", ""),
             publisher=reference.get("source_publisher", ""),
             published_at=reference.get("source_published_at", ""),
+            trust_tier=1,
+        )
+
+    conflict_lines = []
+    database = Database()
+    seen_conflicts = set()
+    for reference in references:
+        period = str(reference.get("period") or reference.get("year") or "")
+        if period and not period.startswith("FY") and " Q" not in period:
+            period = f"FY{period}"
+        for conflict in database.find_fact_conflicts(
+            company=reference.get("name_en") or None,
+            period=period or None,
+        ):
+            key = (conflict["company"], conflict["metric"], conflict["period"])
+            if key in seen_conflicts:
+                continue
+            seen_conflicts.add(key)
+            variants = "; ".join(
+                f"{fact['value']} {fact['unit']} ({fact['source_title']}, Tier {fact['trust_tier']})"
+                for fact in conflict["facts"]
+            )
+            conflict_lines.append(
+                f"- CONFLICT {conflict['company']} {conflict['metric']} {conflict['period']}: {variants}"
+            )
+            for fact in conflict["facts"]:
+                tracker.add_financial(
+                    reference.get("name") or conflict["company"],
+                    name_en=conflict["company"],
+                    year=conflict["period"],
+                    reference_title=fact["source_title"],
+                    url=fact.get("source_url") or "",
+                    publisher=fact.get("source_publisher") or "",
+                    published_at=fact.get("published_at") or "",
+                    trust_tier=int(fact.get("trust_tier", 3)),
+                )
+    if conflict_lines:
+        context = (
+            f"{context}\n\n## 结构化事实冲突警告\n"
+            "以下同口径事实存在不同数值。回答时不得静默选取，必须说明分歧并引用来源：\n"
+            + "\n".join(conflict_lines)
         )
     return context or f"未找到 {arguments['company']} 的结构化财务数据。"
 

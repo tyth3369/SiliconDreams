@@ -9,6 +9,7 @@
 - DeepSeek V4 Flash / Pro Provider 抽象与 SSE 流式输出
 - 确定性 Agent：一次检索规划、并发取证、至多一次计算规划，无开放式循环
 - Tavily 实时网页搜索，DuckDuckGo 仅作降级备用
+- 网页来源可信度/发布日期策略：未来日期过滤、最新问题陈旧性标记、官方来源优先
 - PDF 双引擎解析，保留原始文件名与精确页码
 - BGE-M3 稠密检索 + 中文 BM25 + RRF 融合 + 多语言 Cross-encoder 重排
 - SQLite 证据、事实、文档和会话持久化；ChromaDB 存储向量

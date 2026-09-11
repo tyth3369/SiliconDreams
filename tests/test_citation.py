@@ -16,6 +16,20 @@ def test_web_citation_preserves_url():
     assert citation["source_type"] == "web"
 
 
+def test_web_citation_preserves_freshness_status():
+    tracker = CitationTracker()
+    tracker.add_web(
+        "Undated source",
+        "https://example.com/source",
+        published_at="",
+        trust_tier=3,
+        date_status="undated",
+    )
+    citation = tracker.to_list()[0]
+    assert citation["date_status"] == "undated"
+    assert "发布日期未知" in CitationTracker.format_panel([citation], lang="zh")
+
+
 def test_financial_citation_is_descriptive():
     tracker = CitationTracker()
     tracker.add_financial(
@@ -28,6 +42,7 @@ def test_financial_citation_is_descriptive():
     display = tracker.to_list()[0]["display_source"]
     assert "FY2025" in display
     assert "Quarterly Management Report" in display
+    assert tracker.to_list()[0]["trust_tier"] == 1
 
 
 def test_quarterly_financial_citations_are_not_deduplicated_across_periods():
