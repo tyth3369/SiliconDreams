@@ -1,5 +1,6 @@
 import asyncio
 import io
+import time
 
 import pymupdf
 import pytest
@@ -11,8 +12,11 @@ from src.storage import Database
 
 @pytest.fixture(autouse=True)
 def isolated_database(tmp_path, monkeypatch):
+    server._ingestion_worker.stop()
     monkeypatch.setattr(server, "_db", Database(tmp_path / "server-test.db"))
     server._pending_agent_configs.clear()
+    yield
+    server._ingestion_worker.stop()
 
 
 async def _request(method: str, path: str, **kwargs):
@@ -33,7 +37,7 @@ def test_homepage_smoke():
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.8.0-dev.3"}
+    assert response.json() == {"status": "ok", "version": "0.8.0-dev.4"}
 
 
 def test_stats_smoke():
@@ -104,9 +108,56 @@ def test_pdf_upload_persists_document_and_exact_page_chunks(tmp_path, monkeypatc
     )
     assert response.status_code == 200
     assert server._db.count("documents") == 1
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        jobs = server._db.list_jobs(job_type="pdf_ingest")
+        if jobs and jobs[0]["status"] in {"succeeded", "failed"}:
+            break
+        time.sleep(0.02)
+    assert jobs[0]["status"] == "succeeded"
     assert server._db.count("chunks") >= 2
     assert {chunk.page for chunk in indexed} == {1, 2}
     assert all(chunk.chunk_id.startswith("chk_") for chunk in indexed)
+
+    job_response = asyncio.run(_request("GET", f"/jobs/{jobs[0]['id']}"))
+    assert job_response.json()["stage"] == "completed"
+    assert job_response.json()["progress"] == 100
+
+
+def test_pdf_upload_returns_after_persisting_background_job(tmp_path, monkeypatch):
+    pdf = pymupdf.open()
+    pdf.new_page().insert_text((72, 72), "Queued report")
+    payload = pdf.tobytes()
+    pdf.close()
+
+    class SleepingWorker:
+        awakened = False
+
+        def wake(self):
+            self.awakened = True
+
+        def stop(self):
+            pass
+
+    worker = SleepingWorker()
+    monkeypatch.setattr(server, "PDF_DIR", tmp_path / "pdfs")
+    monkeypatch.setattr(server, "_ingestion_worker", worker)
+
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/upload",
+            files={"file": ("queued.pdf", io.BytesIO(payload), "application/pdf")},
+        )
+    )
+
+    assert response.status_code == 200
+    assert worker.awakened is True
+    assert server._db.list_documents()[0]["parse_status"] == "pending"
+    job = server._db.list_jobs(job_type="pdf_ingest")[0]
+    assert job["status"] == "pending"
+    assert job["result"] == {"stage": "queued", "progress": 0}
+    assert 'data-job-active="true"' in response.text
 
 
 def test_pdf_upload_rejects_spoofed_extension(tmp_path, monkeypatch):

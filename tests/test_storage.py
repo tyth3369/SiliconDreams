@@ -222,3 +222,37 @@ def test_foreign_keys_are_enforced(database):
 def test_count_rejects_arbitrary_table_name(database):
     with pytest.raises(ValueError):
         database.count("sqlite_master; DROP TABLE sources")
+
+
+def test_persistent_job_lifecycle_and_idempotency(database):
+    payload = {"document_id": "doc_1", "stored_path": "/tmp/report.pdf"}
+    job_id = database.enqueue_job("pdf_ingest", payload, dedupe_key="doc_1")
+    assert database.enqueue_job("pdf_ingest", payload, dedupe_key="doc_1") == job_id
+    assert database.count("jobs") == 1
+
+    claimed = database.claim_next_job("pdf_ingest")
+    assert claimed["id"] == job_id
+    assert claimed["status"] == "running"
+    assert database.claim_next_job("pdf_ingest") is None
+
+    database.update_job_progress(job_id, stage="indexing", progress=73)
+    assert database.get_job(job_id)["result"] == {"stage": "indexing", "progress": 73}
+
+    database.finish_job(
+        job_id,
+        result={"stage": "completed", "progress": 100, "chunk_count": 12},
+    )
+    finished = database.get_job(job_id)
+    assert finished["status"] == "succeeded"
+    assert finished["result"]["chunk_count"] == 12
+
+
+def test_running_jobs_are_requeued_after_restart(database):
+    job_id = database.enqueue_job(
+        "pdf_ingest", {"document_id": "doc_restart"}, dedupe_key="doc_restart"
+    )
+    assert database.claim_next_job("pdf_ingest")["status"] == "running"
+    assert database.requeue_running_jobs("pdf_ingest") == 1
+    recovered = database.get_job(job_id)
+    assert recovered["status"] == "pending"
+    assert recovered["result"] == {"stage": "queued", "progress": 0}

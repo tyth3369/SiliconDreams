@@ -1,5 +1,5 @@
 /* =========================================================
-   SiliconDreams — Bloomberg Terminal Theme (v0.4.0)
+   SiliconDreams — Bloomberg Terminal Theme (v0.8.0-dev.4)
    Pure CSS with no frontend framework overrides.
    ========================================================= */
 
@@ -21,6 +21,7 @@
     --accent-primary: #ffb000;
     --accent-dim: #cc8c00;
     --accent-secondary: #ffd000;
+    --error: #ff5f56;
 
     --text-primary: #e8e8e8;
     --text-secondary: #888888;
@@ -57,6 +58,7 @@
     --accent-primary: #003d80;
     --accent-dim: #002d60;
     --accent-secondary: #005aaa;
+    --error: #b42318;
 
     --text-primary: #1a1a1a;
     --text-secondary: #666666;
@@ -275,9 +277,48 @@ html, body {
 }
 
 .file-item {
-    padding: 2px 0;
+    padding: 5px 0;
     font-size: 10px;
     color: var(--text-dim);
+}
+
+.file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-status {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 3px 0;
+    color: var(--text-secondary);
+}
+
+.file-status.failed {
+    color: var(--error);
+}
+
+.job-progress {
+    height: 2px;
+    overflow: hidden;
+    background: var(--border-subtle);
+}
+
+.job-progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent-primary);
+    transition: width 250ms ease;
+}
+
+.file-error {
+    margin-top: 3px;
+    color: var(--error);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ═══════════════════════════════════════════════════════

@@ -121,7 +121,7 @@ class AppConfig:
     """应用配置"""
 
     name: str = "SiliconDreams"
-    version: str = "0.8.0-dev.3"
+    version: str = "0.8.0-dev.4"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]

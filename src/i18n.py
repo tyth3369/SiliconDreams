@@ -14,7 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.8.0-dev.3 | (c) 2026",
+    "app.footer": "SiliconDreams v0.8.0-dev.4 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -22,6 +22,16 @@ _ZH = {
     "sidebar.upload_error_size": "文件超过 50MB 限制",
     "sidebar.upload_error_duplicate": "此文件已上传过",
     "sidebar.upload_success": "上传并索引完成",
+    "job.stage.queued": "等待处理",
+    "job.stage.pending": "等待处理",
+    "job.stage.starting": "正在启动",
+    "job.stage.parsing": "正在解析",
+    "job.stage.chunking": "正在分块",
+    "job.stage.persisting": "正在保存证据",
+    "job.stage.indexing": "正在建立索引",
+    "job.stage.completed": "索引完成",
+    "job.stage.ready": "索引完成",
+    "job.stage.failed": "处理失败",
     "sidebar.kb_title": "知识库状态",
     "sidebar.kb_docs": "文档",
     "sidebar.kb_text": "文本",
@@ -78,7 +88,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.8.0-dev.3 | (c) 2026",
+    "app.footer": "SiliconDreams v0.8.0-dev.4 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",
@@ -86,6 +96,16 @@ _EN = {
     "sidebar.upload_error_size": "File exceeds 50MB limit",
     "sidebar.upload_error_duplicate": "This file has already been uploaded",
     "sidebar.upload_success": "uploaded and indexed successfully",
+    "job.stage.queued": "Queued",
+    "job.stage.pending": "Queued",
+    "job.stage.starting": "Starting",
+    "job.stage.parsing": "Parsing",
+    "job.stage.chunking": "Chunking",
+    "job.stage.persisting": "Saving evidence",
+    "job.stage.indexing": "Building index",
+    "job.stage.completed": "Indexed",
+    "job.stage.ready": "Indexed",
+    "job.stage.failed": "Failed",
     "sidebar.kb_title": "Knowledge Base",
     "sidebar.kb_docs": "Docs",
     "sidebar.kb_text": "Text",

@@ -53,6 +53,8 @@ Browser
 ## 持久化与并发
 
 - SQLite WAL 保存来源、事实、文档、会话和消息。
+- PDF 摄入任务保存在 SQLite `jobs` 表；单后台 worker 原子领取任务，记录阶段与进度，并在进程重启时把中断任务重新排队。
+- 上传接口只负责校验、内容寻址落盘和入队；侧栏每秒拉取一次任务状态，任务结束后自动停止轮询。
 - conversation cookie 为 HttpOnly、SameSite=Lax。
 - SSE hand-off 有 60 秒 TTL 和 128 条上限。
 - 同步 LLM/RAG generator 通过 worker thread 逐步推进，避免冻结 FastAPI event loop。
@@ -69,7 +71,7 @@ Browser
 ## 已知边界
 
 - CSP 暂时允许 inline script，以兼容现有 HTMX fragment 和本地化数据；公网部署前应改 nonce 或移除 inline script。
-- 上传仍为单请求工作流，虽不阻塞 Agent SSE，但尚无持久后台队列与百分比进度。
+- PDF 后台摄入采用单机 SQLite 队列；多实例部署前需要改为共享任务队列和跨进程锁。
 - 当前身份模型适用于 localhost 单用户，不适合直接公开部署。
 
 ## v0.7 首发部署
