@@ -50,7 +50,11 @@ class Citation:
             if self.name_en:
                 parts.append(f" ({self.name_en})")
             if self.data_year:
-                parts.append(f" · FY{self.data_year}")
+                period = self.data_year
+                if period.startswith("FY") or " Q" in period:
+                    parts.append(f" · {period}")
+                else:
+                    parts.append(f" · FY{period}")
             else:
                 parts.append(" 财务数据")
             if self.reference_title:
@@ -98,7 +102,13 @@ class CitationTracker:
         trust_tier: int = 3,
     ) -> None:
         """Add a citation. Duplicates (same source+type+page) are skipped."""
-        key = (source_type, source, page or 0)
+        key = (
+            source_type,
+            source,
+            page or 0,
+            data_year if source_type == "financial" else "",
+            reference_title if source_type == "financial" else "",
+        )
         if key in self._seen:
             return
         self._seen.add(key)

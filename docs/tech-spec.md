@@ -32,6 +32,7 @@ Browser
 - 文件以 SHA-256 内容寻址保存。
 - SQLite：`sources -> documents -> chunks/facts`；每条证据保留来源、页码、时间、可信等级和原文。
 - Chroma 的 vector ID 与 SQLite chunk ID 一致，upsert 保持幂等。
+- 结构化公司事实区分 `FY2025` 与 `YYYY QN`；台积电季度实际值逐季绑定官方 IR 页面，未收录季度不得退回年度数据冒充。
 
 ## 检索
 

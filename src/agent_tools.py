@@ -55,10 +55,18 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_company_data",
-            "description": "获取台积电或中芯国际 FY2025 官方年报结构化数据；不包含季度或月度明细。",
+            "description": "获取台积电或中芯国际的官方结构化财务数据。台积电支持 FY2025 及 2024 Q1 至 2026 Q2；查询季度时必须在 periods 中列出所需期间。中芯国际当前支持 FY2025。",
             "parameters": {
                 "type": "object",
-                "properties": {"company": {"type": "string"}},
+                "properties": {
+                    "company": {"type": "string"},
+                    "periods": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "maxItems": 12,
+                        "description": "例如 ['2025 Q3', '2025 Q4']；年度使用 ['FY2025']。",
+                    },
+                },
                 "required": ["company"],
                 "additionalProperties": False,
             },
@@ -131,6 +139,7 @@ class QueryArguments(BaseModel):
 class CompanyArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
     company: str = Field(min_length=1, max_length=100)
+    periods: list[str] = Field(default_factory=list, max_length=12)
 
 
 def validate_arguments(name: str, arguments: dict) -> dict:
@@ -220,12 +229,14 @@ def _get_company_data(arguments: dict, tracker: CitationTracker) -> str:
     from src.financial_data import FinancialDataManager
 
     manager = FinancialDataManager()
-    context, references = manager.build_context(arguments["company"], max_companies=1)
+    context, references = manager.build_context(
+        arguments["company"], max_companies=1, periods=arguments.get("periods")
+    )
     for reference in references:
         tracker.add_financial(
             reference["name"],
             name_en=reference.get("name_en", ""),
-            year=str(reference.get("year", "")),
+            year=str(reference.get("period") or reference.get("year", "")),
             reference_title=reference.get("source_title", ""),
             url=reference.get("source_url", ""),
             publisher=reference.get("source_publisher", ""),

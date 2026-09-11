@@ -121,7 +121,7 @@ class AppConfig:
     """应用配置"""
 
     name: str = "SiliconDreams"
-    version: str = "0.7.0"
+    version: str = "0.8.0-dev.1"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]
@@ -149,6 +149,7 @@ class AppConfig:
             "- 不得编造来源中没有的数字、日期、客户、产能、因果关系或预测\n"
             "- 证据不足或相互冲突时必须明确说明，不得用模型记忆补齐事实\n"
             "- 计算结果必须来自 financial_calculator；不要自行心算\n\n"
+            "- 保持来源中的数值单位，未经计算器处理不得自行换算单位\n\n"
             "## 风格\n"
             "- 回答使用中文，专业术语可保留英文\n"
             "- 不使用 emoji\n"
@@ -176,6 +177,7 @@ class AppConfig:
             "- Never invent figures, dates, customers, capacity, causality, or forecasts absent from sources\n"
             "- Explicitly state when evidence is insufficient or conflicting; do not fill factual gaps from memory\n"
             "- All arithmetic must come from financial_calculator; do not calculate mentally\n\n"
+            "- Preserve source units; do not convert units without a calculator result\n\n"
             "## Style\n"
             "- Respond in English; technical terms may retain their original language\n"
             "- Do not use emoji\n"

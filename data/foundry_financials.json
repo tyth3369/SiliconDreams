@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "晶圆代工企业关键财务数据（2025年度，最新完整财年）",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "last_updated": "2026-09-11",
     "sources": [
       {
@@ -44,7 +44,79 @@
         "overseas": "亚利桑那Fab 21A（4nm量产）+ 熊本Fab 23（28/22nm量产）+ 德累斯顿Fab 24（在建）",
         "advanced_packaging": "CoWoS产能2025年翻倍至每月7万片，仍供不应求"
       },
-      "evidence_scope": "仅包含上述由 FY2025 官方管理报告整理的结构化年度指标；不提供无逐项来源的优势、风险或预测。"
+      "evidence_scope": "包含 FY2025 年度汇总，以及台积电投资者关系网站披露的 2024 Q1 至 2026 Q2 季度实际值；不提供无逐项来源的优势、风险或预测。",
+      "quarterly": {
+        "2024 Q1": {
+          "source_title": "TSMC 1Q24 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2024/q1",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2024-04-18",
+          "metrics": { "revenue_usd_billion": 18.87, "gross_margin_pct": 53.1, "operating_margin_pct": 42.0, "usd_ntd_exchange_rate": 31.40 }
+        },
+        "2024 Q2": {
+          "source_title": "TSMC 2Q24 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2024/q2",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2024-07-18",
+          "metrics": { "revenue_usd_billion": 20.82, "gross_margin_pct": 53.2, "operating_margin_pct": 42.5, "usd_ntd_exchange_rate": 32.35 }
+        },
+        "2024 Q3": {
+          "source_title": "TSMC 3Q24 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2024/q3",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2024-10-17",
+          "metrics": { "revenue_usd_billion": 23.50, "gross_margin_pct": 57.8, "operating_margin_pct": 47.5, "usd_ntd_exchange_rate": 32.32 }
+        },
+        "2024 Q4": {
+          "source_title": "TSMC 4Q24 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2024/q4",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2025-01-16",
+          "metrics": { "revenue_usd_billion": 26.88, "gross_margin_pct": 59.0, "operating_margin_pct": 49.0, "usd_ntd_exchange_rate": 32.30 }
+        },
+        "2025 Q1": {
+          "source_title": "TSMC 1Q25 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2025/q1",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2025-04-17",
+          "metrics": { "revenue_usd_billion": 25.53, "gross_margin_pct": 58.8, "operating_margin_pct": 48.5, "usd_ntd_exchange_rate": 32.88 }
+        },
+        "2025 Q2": {
+          "source_title": "TSMC 2Q25 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2025/q2",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2025-07-17",
+          "metrics": { "revenue_usd_billion": 30.07, "gross_margin_pct": 58.6, "operating_margin_pct": 49.6, "usd_ntd_exchange_rate": 31.05 }
+        },
+        "2025 Q3": {
+          "source_title": "TSMC 3Q25 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2025/q3",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2025-10-16",
+          "metrics": { "revenue_usd_billion": 33.10, "gross_margin_pct": 59.5, "operating_margin_pct": 50.6, "usd_ntd_exchange_rate": 29.91 }
+        },
+        "2025 Q4": {
+          "source_title": "TSMC 4Q25 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2025/q4",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2026-01-15",
+          "metrics": { "revenue_usd_billion": 33.73, "gross_margin_pct": 62.3, "operating_margin_pct": 54.0, "usd_ntd_exchange_rate": 31.01 }
+        },
+        "2026 Q1": {
+          "source_title": "TSMC 1Q26 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2026/q1",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2026-04-16",
+          "metrics": { "revenue_usd_billion": 35.90, "gross_margin_pct": 66.2, "operating_margin_pct": 58.1, "usd_ntd_exchange_rate": 31.59 }
+        },
+        "2026 Q2": {
+          "source_title": "TSMC 2Q26 Quarterly Results",
+          "source_url": "https://investor.tsmc.com/english/quarterly-results/2026/q2",
+          "source_publisher": "TSMC Investor Relations",
+          "source_published_at": "2026-07-16",
+          "metrics": { "revenue_usd_billion": 40.20, "gross_margin_pct": 67.7, "operating_margin_pct": 60.3, "usd_ntd_exchange_rate": 31.60 }
+        }
+      }
     },
     "中芯国际": {
       "name_en": "SMIC",

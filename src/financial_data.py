@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 from config import DATA_DIR
 
@@ -97,7 +98,65 @@ class FinancialDataManager:
 
     # ── Context Builder ───────────────────────────────
 
-    def build_context(self, query: str, max_companies: int = 2) -> tuple[str, list[dict]]:
+    @staticmethod
+    def _normalize_period(value: str) -> str:
+        """Normalize common Chinese/English quarter spellings to ``YYYY QN``."""
+        cleaned = re.sub(r"\s+", " ", value.strip().upper())
+        patterns = (
+            r"(20\d{2})\s*(?:年|[-/])?\s*Q([1-4])",
+            r"Q([1-4])\s*[-/]?\s*(20\d{2})",
+            r"([1-4])Q\s*[-/]?\s*(20\d{2})",
+        )
+        for index, pattern in enumerate(patterns):
+            match = re.fullmatch(pattern, cleaned)
+            if match:
+                first, second = match.groups()
+                year, quarter = (first, second) if index == 0 else (second, first)
+                return f"{year} Q{quarter}"
+
+        chinese = re.fullmatch(r"(20\d{2})\s*年?\s*第?([一二三四1-4])\s*季度", cleaned)
+        if chinese:
+            quarter = {"一": "1", "二": "2", "三": "3", "四": "4"}.get(
+                chinese.group(2), chinese.group(2)
+            )
+            return f"{chinese.group(1)} Q{quarter}"
+        if re.fullmatch(r"FY20\d{2}", cleaned):
+            return cleaned
+        if re.fullmatch(r"20\d{2}", cleaned):
+            return f"FY{cleaned}"
+        return cleaned
+
+    @classmethod
+    def _periods_from_query(cls, query: str, available: set[str]) -> list[str]:
+        """Extract explicit quarters, or all quarters for requested years."""
+        normalized_query = query.upper()
+        years = list(dict.fromkeys(re.findall(r"20\d{2}", normalized_query)))
+        wants_all = any(
+            marker in normalized_query
+            for marker in ("各季度", "所有季度", "逐季", "QUARTERS", "QUARTERLY")
+        )
+        if wants_all and years:
+            return sorted(period for period in available if period[:4] in years)
+
+        candidates: list[str] = []
+        for match in re.finditer(r"(20\d{2})\s*(?:年|[-/])?\s*Q([1-4])", normalized_query):
+            candidates.append(f"{match.group(1)} Q{match.group(2)}")
+        for match in re.finditer(r"Q([1-4])\s*[-/]?\s*(20\d{2})", normalized_query):
+            candidates.append(f"{match.group(2)} Q{match.group(1)}")
+        for match in re.finditer(r"(20\d{2})\s*年?\s*第?([一二三四1-4])\s*季度", query):
+            quarter = {"一": "1", "二": "2", "三": "3", "四": "4"}.get(
+                match.group(2), match.group(2)
+            )
+            candidates.append(f"{match.group(1)} Q{quarter}")
+
+        return list(dict.fromkeys(period for period in candidates if period in available))
+
+    def build_context(
+        self,
+        query: str,
+        max_companies: int = 2,
+        periods: list[str] | None = None,
+    ) -> tuple[str, list[dict]]:
         """
         Build financial context string and citation refs for detected companies.
 
@@ -111,10 +170,65 @@ class FinancialDataManager:
 
         selected = company_keys[:max_companies]
         refs = []
-        parts = [f"## 晶圆代工企业关键财务数据 ({self._meta_year()})\n"]
+        parts = ["## 晶圆代工企业官方结构化财务数据\n"]
 
         for key in selected:
             c = self._companies[key]
+            quarterly = c.get("quarterly", {})
+            requested = [self._normalize_period(period) for period in (periods or [])]
+            if not requested:
+                requested = self._periods_from_query(query, set(quarterly))
+            selected_quarters = [period for period in requested if period in quarterly]
+
+            if selected_quarters:
+                parts.append(f"### {key} ({c['name_en']}) [{c['ticker']}] — 季度实际值")
+                for period in selected_quarters:
+                    quarter = quarterly[period]
+                    metrics = quarter["metrics"]
+                    refs.append(
+                        {
+                            "name": key,
+                            "name_en": c.get("name_en", ""),
+                            "period": period,
+                            "source_title": quarter["source_title"],
+                            "source_url": quarter["source_url"],
+                            "source_publisher": quarter.get("source_publisher", ""),
+                            "source_published_at": quarter.get("source_published_at", ""),
+                        }
+                    )
+                    parts.extend(
+                        [
+                            f"#### {period}",
+                            f"- 营收: {metrics['revenue_usd_billion']:.2f} USD billion",
+                            f"- 毛利率: {metrics['gross_margin_pct']:.1f}%",
+                            f"- 营业利润率: {metrics['operating_margin_pct']:.1f}%",
+                            f"- 平均汇率: 1 USD = {metrics['usd_ntd_exchange_rate']:.2f} NTD",
+                            f"- 官方来源: {quarter['source_title']} ({quarter['source_published_at']})",
+                            f"  {quarter['source_url']}",
+                        ]
+                    )
+                parts.append(
+                    "- 数据口径说明: 表内均为公司披露的季度实际值；增长率或差额须另由 financial_calculator 计算。"
+                )
+                missing = [period for period in requested if period not in quarterly]
+                if missing:
+                    parts.append(f"- 缺失期间: {', '.join(missing)}（结构化数据尚未收录）")
+                parts.append("")
+                continue
+
+            if requested:
+                available = ", ".join(sorted(quarterly)) or "无"
+                parts.extend(
+                    [
+                        f"### {key} ({c['name_en']}) [{c['ticker']}]",
+                        f"- 请求期间: {', '.join(requested)}",
+                        "- 结果: 结构化季度数据尚未收录；不得用年度数据替代季度数据。",
+                        f"- 当前可用季度: {available}",
+                        "",
+                    ]
+                )
+                continue
+
             refs.append(
                 {
                     "name": key,
@@ -197,6 +311,41 @@ class FinancialDataManager:
             for metric, value, fact_unit in facts:
                 db.upsert_fact(metric=metric, value=value, unit=fact_unit, **common)
                 inserted += 1
+
+            for period, quarter in data.get("quarterly", {}).items():
+                quarter_source_id = db.upsert_source(
+                    source_type="official",
+                    title=quarter["source_title"],
+                    url=quarter["source_url"],
+                    publisher=quarter.get("source_publisher"),
+                    published_at=quarter.get("source_published_at"),
+                    trust_tier=1,
+                    metadata={"company": company, "report_period": period},
+                )
+                metrics = quarter["metrics"]
+                quarterly_facts = (
+                    ("revenue", metrics["revenue_usd_billion"], "billion", "USD"),
+                    ("gross_margin", metrics["gross_margin_pct"], "percent", None),
+                    ("operating_margin", metrics["operating_margin_pct"], "percent", None),
+                    (
+                        "usd_ntd_exchange_rate",
+                        metrics["usd_ntd_exchange_rate"],
+                        "NTD_per_USD",
+                        None,
+                    ),
+                )
+                for metric, value, fact_unit, currency in quarterly_facts:
+                    db.upsert_fact(
+                        source_id=quarter_source_id,
+                        company=data["name_en"],
+                        metric=metric,
+                        period=period,
+                        value=value,
+                        unit=fact_unit,
+                        currency=currency,
+                        metadata={"period_type": "quarterly", "actual": True},
+                    )
+                    inserted += 1
         return inserted
 
     def _meta_year(self) -> str:

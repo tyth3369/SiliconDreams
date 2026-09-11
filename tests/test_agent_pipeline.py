@@ -1,6 +1,6 @@
 import json
 
-from src.agent_loop import run_agent_loop
+from src.agent_loop import _format_duration, run_agent_loop
 from src.citation import CitationTracker
 
 
@@ -10,6 +10,10 @@ def _events(generator):
         assert event.startswith("data: ")
         parsed.append(json.loads(event.removeprefix("data: ").strip()))
     return parsed
+
+
+def test_submillisecond_duration_is_not_rendered_as_zero():
+    assert _format_duration(0.0004) == "<1ms"
 
 
 class BoundedClient:
@@ -27,7 +31,10 @@ class BoundedClient:
                     {
                         "id": "company-1",
                         "name": "get_company_data",
-                        "arguments": {"company": "TSMC"},
+                        "arguments": {
+                            "company": "TSMC",
+                            "periods": ["2025 Q3", "2025 Q4"],
+                        },
                     },
                 ]
             }
