@@ -1,5 +1,5 @@
 /* =========================================================
-   SiliconDreams — Bloomberg Terminal Theme (v0.8.0-dev.5)
+   SiliconDreams — Bloomberg Terminal Theme (v0.8.0-dev.6)
    Pure CSS with no frontend framework overrides.
    ========================================================= */
 
@@ -336,8 +336,15 @@ html, body {
     margin-right: auto;
 }
 
+.conversation-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .conversation-new,
-.conversation-action {
+.conversation-action,
+.conversation-export {
     border: 1px solid var(--border-subtle);
     border-radius: 2px;
     background: transparent;
@@ -348,12 +355,22 @@ html, body {
     cursor: pointer;
 }
 
+.conversation-export {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 2px 6px;
+    text-decoration: none;
+}
+
 .conversation-new {
     padding: 3px 6px;
 }
 
 .conversation-new:hover,
-.conversation-action:hover {
+.conversation-action:hover,
+.conversation-export:hover {
     border-color: var(--accent-primary);
     color: var(--accent-primary);
 }

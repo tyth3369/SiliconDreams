@@ -14,7 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.8.0-dev.5 | (c) 2026",
+    "app.footer": "SiliconDreams v0.8.0-dev.6 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -45,6 +45,8 @@ _ZH = {
     "conversation.archive_confirm": "归档此会话？内容仍保存在数据库中。",
     "conversation.archived": "已归档",
     "conversation.restore": "恢复",
+    "conversation.export_markdown": "下载 Markdown",
+    "conversation.export_pdf": "下载 PDF",
     "sidebar.settings_title": "设置",
     "sidebar.settings_model": "LLM 模型",
     "sidebar.settings_model_help": "V4 Flash 适合日常分析，V4 Pro 适合复杂研究",
@@ -96,7 +98,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.8.0-dev.5 | (c) 2026",
+    "app.footer": "SiliconDreams v0.8.0-dev.6 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",
@@ -127,6 +129,8 @@ _EN = {
     "conversation.archive_confirm": "Archive this session? Its content remains in the database.",
     "conversation.archived": "Archived",
     "conversation.restore": "Restore",
+    "conversation.export_markdown": "Download Markdown",
+    "conversation.export_pdf": "Download PDF",
     "sidebar.settings_title": "Settings",
     "sidebar.settings_model": "LLM Model",
     "sidebar.settings_model_help": "V4 Flash for daily analysis, V4 Pro for complex research",

@@ -18,6 +18,7 @@
 - 显式保留披露口径差异：中芯国际营业利润率只能由官方营业利润金额经计算器派生
 - `[1]` 行内引用、原文片段、网页/官方报告链接与点击定位
 - 中英文界面、自动/深色/浅色主题；研究会话可新建、命名、切换、归档和恢复
+- 当前研究会话可下载为完整 Markdown 或带嵌入中文字体、表格和来源链接的 PDF
 
 ## 架构
 
@@ -88,11 +89,13 @@ src/agent_loop.py             有界编排管线
 src/agent_tools.py            工具 Schema、校验与执行
 src/providers/                LLM Provider 抽象与 DeepSeek 实现
 src/storage.py                SQLite 证据/事实/会话模型
+src/exporter.py               Markdown/PDF 研究记录导出
 src/retriever.py              混合检索与重排
 src/tools/calculator.py       唯一财务计算实现
 data/terminology.json         半导体术语库
 data/foundry_financials.json  官方来源结构化数据
 templates/ + static/          Bloomberg Terminal 风格 UI
+assets/fonts/                 PDF 使用的 OFL 中文字体及许可证
 tests/                        回归测试
 ```
 

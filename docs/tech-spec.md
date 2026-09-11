@@ -60,6 +60,7 @@ Browser
 - SSE hand-off 有 60 秒 TTL 和 128 条上限。
 - 同步 LLM/RAG generator 通过 worker thread 逐步推进，避免冻结 FastAPI event loop。
 - 模型上下文只取最近 24 条消息，UI/数据库仍保留更长历史。
+- 导出器直接读取 SQLite 中的完整会话；Markdown 保留原始内容与来源链接，PDF 使用内嵌 Noto Sans SC、分页表格和可点击网页来源，避免依赖查看设备字体。
 
 ## 安全
 

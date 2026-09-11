@@ -41,6 +41,7 @@ cffi==2.1.1
 charset-normalizer==3.5.1
     # via
     #   pdfminer-six
+    #   reportlab
     #   requests
 chromadb==1.5.9
     # via silicondreams
@@ -244,7 +245,9 @@ pdfminer-six==20260107
 pdfplumber==0.11.10
     # via silicondreams
 pillow==12.3.0
-    # via pdfplumber
+    # via
+    #   pdfplumber
+    #   reportlab
 propcache==0.5.2
     # via
     #   aiohttp
@@ -309,6 +312,8 @@ referencing==0.37.0
     #   jsonschema-specifications
 regex==2026.9.10
     # via transformers
+reportlab==4.5.1
+    # via silicondreams
 requests==2.34.2
     # via
     #   kubernetes

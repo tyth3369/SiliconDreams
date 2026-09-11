@@ -37,7 +37,7 @@ def test_homepage_smoke():
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.8.0-dev.5"}
+    assert response.json() == {"status": "ok", "version": "0.8.0-dev.6"}
 
 
 def test_stats_smoke():
@@ -121,6 +121,45 @@ def test_conversation_create_rename_switch_and_archive():
     assert restored.status_code == 200
     assert cookies["conversation_id"] == first_id
     assert server._db.conversation_exists(first_id) is True
+
+
+def test_current_conversation_markdown_and_pdf_exports():
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            await client.get("/")
+            conversation_id = client.cookies["conversation_id"]
+            server._db.add_message(conversation_id, "user", "Quarterly export")
+            server._db.add_message(
+                conversation_id,
+                "assistant",
+                "| Metric | Value |\n| --- | ---: |\n| Revenue | 33.7 |",
+                citations=[
+                    {
+                        "icon": "WEB",
+                        "display_source": "TSMC Results",
+                        "url": "https://investor.tsmc.com/",
+                        "source_type": "web",
+                    }
+                ],
+            )
+            markdown = await client.get("/exports/current.md")
+            pdf = await client.get("/exports/current.pdf")
+            return markdown, pdf
+
+    markdown, pdf = asyncio.run(scenario())
+    assert markdown.status_code == 200
+    assert markdown.headers["content-type"].startswith("text/markdown")
+    assert "attachment;" in markdown.headers["content-disposition"]
+    assert "Quarterly export" in markdown.text
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.content.startswith(b"%PDF")
+
+
+def test_current_export_requires_a_selected_conversation():
+    response = asyncio.run(_request("GET", "/exports/current.md"))
+    assert response.status_code == 404
 
 
 def test_pdf_upload_persists_document_and_exact_page_chunks(tmp_path, monkeypatch):

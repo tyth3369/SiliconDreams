@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v0.8.0-dev.5)
+SiliconDreams — FastAPI Server (v0.8.0-dev.6)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -18,6 +18,7 @@ from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import Cookie, Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response, StreamingResponse
@@ -27,6 +28,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from config import PDF_DIR, AppConfig, SearchConfig
 from src.agent_loop import run_agent_loop
 from src.citation import CitationTracker
+from src.exporter import build_markdown_export, build_pdf_export, export_filename
 from src.financial_data import FinancialDataManager
 from src.i18n import _EN, _ZH, I18n
 from src.ingestion_jobs import IngestionWorker
@@ -794,6 +796,67 @@ async def restore_conversation(conversation_id: str, lang: str = Depends(get_lan
     if not _db.restore_conversation(conversation_id):
         return HTMLResponse("", status_code=404)
     return _conversation_switch_response(conversation_id, lang)
+
+
+def _export_response(content: bytes, filename: str, media_type: str) -> Response:
+    """Build a download response with portable ASCII and UTF-8 filenames."""
+    extension = filename.rsplit(".", 1)[-1]
+    ascii_name = f"silicondreams-research.{extension}"
+    disposition = f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": disposition},
+    )
+
+
+@app.get("/conversations/{conversation_id}/export.md")
+async def export_conversation_markdown(conversation_id: str, lang: str = Depends(get_lang)):
+    """Download one active conversation as portable Markdown."""
+    conversation = _db.get_conversation(conversation_id)
+    if conversation is None:
+        return Response(status_code=404)
+    content = build_markdown_export(conversation, _db.list_messages(conversation_id), lang)
+    return _export_response(
+        content.encode("utf-8"),
+        export_filename(conversation, "md"),
+        "text/markdown; charset=utf-8",
+    )
+
+
+@app.get("/conversations/{conversation_id}/export.pdf")
+async def export_conversation_pdf(conversation_id: str, lang: str = Depends(get_lang)):
+    """Download one active conversation as a paginated research PDF."""
+    conversation = _db.get_conversation(conversation_id)
+    if conversation is None:
+        return Response(status_code=404)
+    return _export_response(
+        build_pdf_export(conversation, _db.list_messages(conversation_id), lang),
+        export_filename(conversation, "pdf"),
+        "application/pdf",
+    )
+
+
+@app.get("/exports/current.md")
+async def export_current_conversation_markdown(
+    conversation_id: Annotated[str | None, Cookie()] = None,
+    lang: str = Depends(get_lang),
+):
+    """Download the browser's selected conversation as Markdown."""
+    if not conversation_id:
+        return Response(status_code=404)
+    return await export_conversation_markdown(conversation_id, lang)
+
+
+@app.get("/exports/current.pdf")
+async def export_current_conversation_pdf(
+    conversation_id: Annotated[str | None, Cookie()] = None,
+    lang: str = Depends(get_lang),
+):
+    """Download the browser's selected conversation as PDF."""
+    if not conversation_id:
+        return Response(status_code=404)
+    return await export_conversation_pdf(conversation_id, lang)
 
 
 @app.get("/sidebar", response_class=HTMLResponse)
