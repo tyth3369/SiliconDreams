@@ -1,5 +1,5 @@
 /* =========================================================
-   SiliconDreams — Bloomberg Terminal Theme (v0.8.0-dev.4)
+   SiliconDreams — Bloomberg Terminal Theme (v0.8.0-dev.5)
    Pure CSS with no frontend framework overrides.
    ========================================================= */
 
@@ -319,6 +319,127 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Research Sessions
+   ═══════════════════════════════════════════════════════ */
+
+.conversation-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.conversation-heading h3 {
+    margin-right: auto;
+}
+
+.conversation-new,
+.conversation-action {
+    border: 1px solid var(--border-subtle);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+}
+
+.conversation-new {
+    padding: 3px 6px;
+}
+
+.conversation-new:hover,
+.conversation-action:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.conversation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.conversation-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: stretch;
+    border-left: 2px solid transparent;
+}
+
+.conversation-row.active {
+    border-left-color: var(--accent-primary);
+    background: var(--accent-primary);
+}
+
+.conversation-select {
+    min-width: 0;
+    padding: 5px 5px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.conversation-row.active .conversation-select {
+    color: var(--toggle-active-text);
+}
+
+.conversation-row.active .conversation-action {
+    color: var(--toggle-active-text);
+    border-color: color-mix(in srgb, var(--toggle-active-text) 35%, transparent);
+}
+
+.conversation-select:hover {
+    color: var(--accent-primary);
+}
+
+.conversation-action {
+    width: 28px;
+    margin: 3px 1px;
+}
+
+.conversation-row.archived {
+    grid-template-columns: minmax(0, 1fr) auto;
+    opacity: 0.72;
+}
+
+.conversation-restore {
+    margin: 3px 1px;
+    padding: 0 5px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    cursor: pointer;
+}
+
+.conversation-restore:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.archived-conversations summary {
+    padding: 5px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
 }
 
 /* ═══════════════════════════════════════════════════════

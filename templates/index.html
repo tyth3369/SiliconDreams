@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiliconDreams | AI Semiconductor Research</title>
-    <link rel="stylesheet" href="/static/style.css?v=0.8.0-dev.4">
+    <link rel="stylesheet" href="/static/style.css?v=0.8.0-dev.5">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
@@ -23,6 +23,7 @@
                 citationHeading: {{ _ZH['citation.trace_title'] | tojson }},
                 citationHint: {{ _ZH['citation.trace_hint'] | tojson }},
                 citationCount: {{ _ZH['citation.source_count'] | tojson }},
+                renamePrompt: {{ _ZH['conversation.rename_prompt'] | tojson }},
             },
             en: {
                 tagline: {{ _EN['app.tagline'] | tojson }},
@@ -36,10 +37,11 @@
                 citationHeading: {{ _EN['citation.trace_title'] | tojson }},
                 citationHint: {{ _EN['citation.trace_hint'] | tojson }},
                 citationCount: {{ _EN['citation.source_count'] | tojson }},
+                renamePrompt: {{ _EN['conversation.rename_prompt'] | tojson }},
             }
         };
     </script>
-    <script src="/static/app.js?v=0.8.0-dev.4" defer></script>
+    <script src="/static/app.js?v=0.8.0-dev.5" defer></script>
 </head>
 <body>
     <div class="app-layout">

@@ -18,7 +18,7 @@ from typing import Any
 from config import DATABASE_FILE
 from src.evidence_policy import canonical_fact_value
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def utc_now() -> str:
@@ -131,6 +131,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL DEFAULT '',
     language TEXT NOT NULL DEFAULT 'zh',
+    archived_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -178,6 +179,29 @@ class Database:
     def initialize(self) -> None:
         with self.connect() as connection:
             connection.executescript(SCHEMA)
+            conversation_columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(conversations)").fetchall()
+            }
+            if "archived_at" not in conversation_columns:
+                connection.execute("ALTER TABLE conversations ADD COLUMN archived_at TEXT")
+            connection.execute(
+                """
+                UPDATE conversations AS conversation
+                SET title=substr(
+                    (
+                        SELECT content FROM messages
+                        WHERE conversation_id=conversation.id AND role='user'
+                        ORDER BY rowid LIMIT 1
+                    ),
+                    1, 48
+                )
+                WHERE title='' AND EXISTS (
+                    SELECT 1 FROM messages
+                    WHERE conversation_id=conversation.id AND role='user'
+                )
+                """
+            )
             connection.execute(
                 "INSERT OR REPLACE INTO schema_meta(key, value) VALUES ('version', ?)",
                 (str(SCHEMA_VERSION),),
@@ -603,9 +627,64 @@ class Database:
     def conversation_exists(self, conversation_id: str) -> bool:
         with self.connect() as connection:
             row = connection.execute(
-                "SELECT 1 FROM conversations WHERE id=?", (conversation_id,)
+                "SELECT 1 FROM conversations WHERE id=? AND archived_at IS NULL",
+                (conversation_id,),
             ).fetchone()
         return row is not None
+
+    def list_conversations(
+        self, *, include_archived: bool = False, limit: int = 30
+    ) -> list[dict[str, Any]]:
+        where = "" if include_archived else "WHERE archived_at IS NULL"
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT id, title, language, archived_at, created_at, updated_at
+                FROM conversations
+                {where}
+                ORDER BY updated_at DESC, rowid DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def rename_conversation(self, conversation_id: str, title: str) -> bool:
+        normalized = " ".join(title.split()).strip()[:80]
+        if not normalized:
+            return False
+        with self.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE conversations SET title=?, updated_at=?
+                WHERE id=? AND archived_at IS NULL
+                """,
+                (normalized, utc_now(), conversation_id),
+            )
+        return cursor.rowcount == 1
+
+    def archive_conversation(self, conversation_id: str) -> bool:
+        now = utc_now()
+        with self.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE conversations SET archived_at=?, updated_at=?
+                WHERE id=? AND archived_at IS NULL
+                """,
+                (now, now, conversation_id),
+            )
+        return cursor.rowcount == 1
+
+    def restore_conversation(self, conversation_id: str) -> bool:
+        with self.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE conversations SET archived_at=NULL, updated_at=?
+                WHERE id=? AND archived_at IS NOT NULL
+                """,
+                (utc_now(), conversation_id),
+            )
+        return cursor.rowcount == 1
 
     def add_message(
         self,
@@ -629,7 +708,16 @@ class Database:
                 ),
             )
             connection.execute(
-                "UPDATE conversations SET updated_at=? WHERE id=?", (now, conversation_id)
+                """
+                UPDATE conversations
+                SET updated_at=?,
+                    title=CASE
+                        WHEN title='' AND ?='user' THEN ?
+                        ELSE title
+                    END
+                WHERE id=?
+                """,
+                (now, role, " ".join(content.split())[:48], conversation_id),
             )
         return message_id
 

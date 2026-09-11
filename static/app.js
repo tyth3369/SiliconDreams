@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v0.8.0-dev.4)
+ * SiliconDreams — Client-side JS (v0.8.0-dev.5)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
@@ -105,6 +105,30 @@ function setLang(lang) {
         var langInput = document.querySelector('.chat-input-area input[name="lang"]');
         if (langInput) langInput.value = lang;
     }
+}
+
+function renameConversation(event, conversationId, currentTitle) {
+    event.preventDefault();
+    event.stopPropagation();
+    var lang = document.documentElement.lang || 'zh';
+    var text = window._LANG_TEXT[lang] || window._LANG_TEXT.zh || {};
+    var title = window.prompt(text.renamePrompt || 'Rename', currentTitle);
+    if (!title || !title.trim()) return;
+    var body = new URLSearchParams({title: title.trim()});
+    fetch('/conversations/' + encodeURIComponent(conversationId) + '/rename', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: body.toString()
+    }).then(function(response) {
+        if (!response.ok) throw new Error('rename failed');
+        return response.text();
+    }).then(function(html) {
+        var list = document.getElementById('conversation-list');
+        if (list) {
+            list.innerHTML = html;
+            htmx.process(list);
+        }
+    });
 }
 
 // ═══════════════════════════════════════════════════════

@@ -3,6 +3,40 @@
    This file is included by index.html and returned by HTMX endpoints.
 #}
 
+{% macro conversation_rows(conversations, active_conversation) %}
+{% for conversation in conversations %}
+<div class="conversation-row {{ 'active' if conversation.id == active_conversation }}">
+    <button class="conversation-select"
+            hx-post="/conversations/{{ conversation.id }}/select"
+            hx-target="#chat-container" hx-swap="innerHTML"
+            title="{{ conversation.display_title }}">
+        {{ conversation.display_title }}
+    </button>
+    <button class="conversation-action" type="button"
+            onclick="renameConversation(event, '{{ conversation.id }}', {{ conversation.display_title | tojson }})"
+            title="{{ t('conversation.rename') }}">REN</button>
+    <button class="conversation-action" type="button"
+            hx-post="/conversations/{{ conversation.id }}/archive"
+            hx-target="#chat-container" hx-swap="innerHTML"
+            hx-confirm="{{ t('conversation.archive_confirm') }}"
+            title="{{ t('conversation.archive') }}">ARC</button>
+</div>
+{% endfor %}
+{% endmacro %}
+
+{% macro archived_rows(conversations) %}
+{% for conversation in conversations %}
+<div class="conversation-row archived">
+    <span class="conversation-select" title="{{ conversation.display_title }}">
+        {{ conversation.display_title }}
+    </span>
+    <button class="conversation-restore" type="button"
+            hx-post="/conversations/{{ conversation.id }}/restore"
+            hx-target="#chat-container" hx-swap="innerHTML">{{ t('conversation.restore') }}</button>
+</div>
+{% endfor %}
+{% endmacro %}
+
 {# ── Sidebar Content (stats + files + settings) ── #}
 {% if component == "sidebar_content" or component is not defined %}
 <div class="sidebar-content">
@@ -38,6 +72,24 @@
         {% endfor %}
     </div>
     {% endif %}
+
+    <hr class="divider">
+
+    <!-- Conversations -->
+    <div class="conversation-heading">
+        <h3>{{ t('conversation.title') }}</h3>
+        <button class="conversation-new" hx-post="/conversations/new"
+                hx-target="#chat-container" hx-swap="innerHTML">{{ t('conversation.new') }}</button>
+    </div>
+    <div id="conversation-list" class="conversation-list">
+        {{ conversation_rows(conversations, active_conversation) }}
+        {% if archived_conversations %}
+        <details class="archived-conversations">
+            <summary>{{ t('conversation.archived') }} ({{ archived_conversations | length }})</summary>
+            {{ archived_rows(archived_conversations) }}
+        </details>
+        {% endif %}
+    </div>
 
     <hr class="divider">
 
@@ -84,6 +136,46 @@
         window._pendingStreams[msgId] = targetId;
     })();
 </script>
+<div id="conversation-list" class="conversation-list" hx-swap-oob="innerHTML">
+    {{ conversation_rows(conversations, active_conversation) }}
+    {% if archived_conversations %}
+    <details class="archived-conversations">
+        <summary>{{ t('conversation.archived') }} ({{ archived_conversations | length }})</summary>
+        {{ archived_rows(archived_conversations) }}
+    </details>
+    {% endif %}
+</div>
+{% endif %}
+
+{# ── Conversation switch (message history + sidebar OOB refresh) ── #}
+{% if component == "conversation_switch" %}
+{% for msg in messages %}
+<div class="chat-msg {{ msg.role }}">
+    <div class="msg-role">{{ 'USER' if msg.role == 'user' else 'AI' }}</div>
+    <div class="msg-content">{{ msg.content }}</div>
+    {% if msg.panel_html %}{{ msg.panel_html | safe }}{% endif %}
+</div>
+{% endfor %}
+<div id="conversation-list" class="conversation-list" hx-swap-oob="innerHTML">
+    {{ conversation_rows(conversations, active_conversation) }}
+    {% if archived_conversations %}
+    <details class="archived-conversations">
+        <summary>{{ t('conversation.archived') }} ({{ archived_conversations | length }})</summary>
+        {{ archived_rows(archived_conversations) }}
+    </details>
+    {% endif %}
+</div>
+{% endif %}
+
+{# ── Conversation list inner fragment ── #}
+{% if component == "conversation_list" %}
+{{ conversation_rows(conversations, active_conversation) }}
+{% if archived_conversations %}
+<details class="archived-conversations">
+    <summary>{{ t('conversation.archived') }} ({{ archived_conversations | length }})</summary>
+    {{ archived_rows(archived_conversations) }}
+</details>
+{% endif %}
 {% endif %}
 
 {# ── KB Stats partial ── #}
