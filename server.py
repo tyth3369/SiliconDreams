@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v0.8.0)
+SiliconDreams — FastAPI Server (v0.9.0-dev.1)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -27,6 +27,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from config import PDF_DIR, AppConfig, SearchConfig
 from src.agent_loop import run_agent_loop
+from src.analysis_templates import default_foundry_comparison_prompt
 from src.citation import CitationTracker
 from src.exporter import build_markdown_export, build_pdf_export, export_filename
 from src.financial_data import FinancialDataManager
@@ -103,8 +104,8 @@ _kb_stats: dict = {"doc_count": 0, "text_chunks": 0, "table_chunks": 0}
 
 PRESET_PROMPTS = {
     "compare": {
-        "zh": "请对已上传的财报进行行业对比分析，重点关注：毛利率、净利率、ROE、研发投入比的横向对比。",
-        "en": "Please perform a peer comparison analysis on the uploaded reports, focusing on: gross margin, net margin, ROE, and R&D intensity across companies.",
+        "zh": default_foundry_comparison_prompt("zh"),
+        "en": default_foundry_comparison_prompt("en"),
     },
     "tech_trend": {
         "zh": "请分析当前半导体行业的核心技术趋势，结合已上传财报中的相关数据说明其对公司的财务影响。",

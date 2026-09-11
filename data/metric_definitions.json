@@ -1,0 +1,79 @@
+{
+  "_meta": {
+    "description": "SiliconDreams 财务指标口径字典",
+    "version": "1.0.0",
+    "last_updated": "2026-09-12"
+  },
+  "metrics": {
+    "revenue": {
+      "label_zh": "营收",
+      "label_en": "Revenue",
+      "unit": "USD billion",
+      "kind": "reported",
+      "comparability": "direct",
+      "definition_zh": "公司在指定报告期直接披露并统一换算为十亿美元的营业收入。",
+      "definition_en": "Revenue directly reported for the period and normalized to USD billions.",
+      "comparison_note_zh": "台积电与中芯国际季度数据均为直接披露的美元营收，可横向比较。",
+      "comparison_note_en": "Quarterly TSMC and SMIC figures are directly reported in USD and are comparable."
+    },
+    "gross_margin": {
+      "label_zh": "毛利率",
+      "label_en": "Gross margin",
+      "unit": "percent",
+      "kind": "reported",
+      "comparability": "direct",
+      "definition_zh": "毛利占营收的比例；季度值采用公司直接披露口径。",
+      "definition_en": "Gross profit as a percentage of revenue, using the companies' reported quarterly measure.",
+      "comparison_note_zh": "两家公司均直接披露季度毛利率，可横向比较。",
+      "comparison_note_en": "Both companies directly report quarterly gross margin, so the values are comparable."
+    },
+    "operating_margin": {
+      "label_zh": "营业利润率",
+      "label_en": "Operating margin",
+      "unit": "percent",
+      "kind": "mixed_reported_derived",
+      "comparability": "derived_with_disclosure",
+      "calculator_operation": "ratio",
+      "definition_zh": "营业利润占营收的比例。台积电直接披露；中芯国际需用官方营业利润除以官方营收派生。",
+      "definition_en": "Operating profit as a percentage of revenue. TSMC reports it directly; SMIC requires derivation from reported operating profit and revenue.",
+      "comparison_note_zh": "必须将中芯国际数值标为派生值并通过 Decimal 计算器计算，不得伪装成直接披露。",
+      "comparison_note_en": "SMIC must be labelled as derived and calculated with the Decimal tool, never presented as directly reported."
+    },
+    "net_margin": {
+      "label_zh": "净利率",
+      "label_en": "Net margin",
+      "unit": "percent",
+      "kind": "reported_or_derived",
+      "comparability": "period_dependent",
+      "calculator_operation": "net_margin",
+      "definition_zh": "归属口径净利润占营收的比例；仅在利润归属和期间口径一致时比较。",
+      "definition_en": "Net income as a percentage of revenue; compare only when attribution and period scope match.",
+      "comparison_note_zh": "比较前必须核对归母/合并口径以及币种、期间是否一致。",
+      "comparison_note_en": "Confirm attribution, consolidation scope, currency and period before comparison."
+    },
+    "capex_intensity": {
+      "label_zh": "资本开支强度",
+      "label_en": "Capex intensity",
+      "unit": "percent",
+      "kind": "derived",
+      "comparability": "derived_with_disclosure",
+      "calculator_operation": "ratio",
+      "definition_zh": "资本开支除以同期营收，用于衡量扩产投入强度。",
+      "definition_en": "Capital expenditure divided by revenue for the same period.",
+      "comparison_note_zh": "必须使用同期间、同币种数据并通过 Decimal 计算器派生。",
+      "comparison_note_en": "Use the same period and currency and derive the ratio with the Decimal calculator."
+    },
+    "rd_intensity": {
+      "label_zh": "研发强度",
+      "label_en": "R&D intensity",
+      "unit": "percent",
+      "kind": "reported_or_derived",
+      "comparability": "period_dependent",
+      "calculator_operation": "rd_ratio",
+      "definition_zh": "研发费用占同期营收的比例。",
+      "definition_en": "Research and development expense as a percentage of revenue for the same period.",
+      "comparison_note_zh": "需统一研发费用定义、期间和币种；未直接披露时使用 Decimal 计算器。",
+      "comparison_note_en": "Align R&D definitions, period and currency; use the Decimal calculator when derived."
+    }
+  }
+}
