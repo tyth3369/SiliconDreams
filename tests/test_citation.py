@@ -30,6 +30,16 @@ def test_financial_citation_is_descriptive():
     assert "Quarterly Management Report" in display
 
 
+def test_quarterly_financial_citations_are_not_deduplicated_across_periods():
+    tracker = CitationTracker()
+    tracker.add_financial("台积电", name_en="TSMC", year="2025 Q3", reference_title="3Q25")
+    tracker.add_financial("台积电", name_en="TSMC", year="2025 Q4", reference_title="4Q25")
+    citations = tracker.to_list()
+    assert len(citations) == 2
+    assert "2025 Q3" in citations[0]["display_source"]
+    assert "2025 Q4" in citations[1]["display_source"]
+
+
 def test_rag_citation_includes_page():
     tracker = CitationTracker()
     tracker.add_rag("annual-report.pdf", page=42, snippet="margin", score=0.9)

@@ -107,6 +107,14 @@ def _status_event(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 
+def _format_duration(elapsed: float) -> str:
+    if elapsed < 0.001:
+        return "<1ms"
+    if elapsed < 0.1:
+        return f"{elapsed * 1000:.0f}ms"
+    return f"{elapsed:.1f}s"
+
+
 def _execute_retrieval_plan(
     calls: list[dict], tracker: CitationTracker, messages: list[dict], lang: str
 ) -> Generator[str, None, None]:
@@ -130,7 +138,7 @@ def _execute_retrieval_plan(
             index, result, local_tracker, elapsed = future.result()
             outcomes[index] = (result, local_tracker, elapsed)
             call = calls[index]
-            duration = f"{elapsed * 1000:.0f}ms" if elapsed < 0.1 else f"{elapsed:.1f}s"
+            duration = _format_duration(elapsed)
             yield _status_event(
                 {
                     "status": "tool_done",
@@ -168,9 +176,10 @@ def run_agent_loop(
     planning_instruction = (
         "你是证据检索规划器。只规划当前问题必需的检索工具，并在一次响应中给出所有调用。"
         "最多两次网络搜索、一次报告检索、一次术语查询和两次公司数据查询。"
+        "公司季度问题必须在 get_company_data.periods 中一次列出全部所需季度；环比应同时取当前季度和上一季度。"
         "不要计算，不要重复近义搜索，不要回答问题。"
         if lang == "zh"
-        else "You are an evidence planner. Select all necessary retrieval tools in one response: at most two web searches, one report search, one terminology lookup, and two company lookups. Do not calculate, repeat equivalent searches, or answer."
+        else "You are an evidence planner. Select all necessary retrieval tools in one response: at most two web searches, one report search, one terminology lookup, and two company lookups. For quarterly questions, include every required quarter in get_company_data.periods; QoQ needs both current and preceding quarters. Do not calculate, repeat equivalent searches, or answer."
     )
     planner_tools = RETRIEVAL_TOOLS
     if available_retrieval_tools is not None:
@@ -236,7 +245,7 @@ def run_agent_loop(
                 started = time.perf_counter()
                 result = execute_tool(call["name"], call["arguments"], tracker)
                 elapsed = time.perf_counter() - started
-                duration = f"{elapsed * 1000:.0f}ms" if elapsed < 0.1 else f"{elapsed:.1f}s"
+                duration = _format_duration(elapsed)
                 yield _status_event(
                     {
                         "status": "tool_done",
@@ -264,8 +273,9 @@ def run_agent_loop(
         source_index = "\n".join(source_lines)
         citation_instruction = (
             "只依据已提供证据回答。每个可核验事实的句末必须用 [1]、[2] 等编号，且对应以下来源。"
+            "保持证据中的数值单位；除非已有计算器结果，否则不得自行换算单位。"
             if lang == "zh"
-            else "Answer only from supplied evidence. Cite every verifiable claim with [1], [2], etc., matching this source index."
+            else "Answer only from supplied evidence. Cite every verifiable claim with [1], [2], etc., matching this source index. Preserve evidence units unless a calculator result explicitly converts them."
         )
         working_messages.append(
             {"role": "user", "content": f"{citation_instruction}\n\n{source_index}"}
