@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v0.9.0-dev.1)
+ * SiliconDreams — Client-side JS (v0.9.0-dev.2)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
@@ -73,10 +73,19 @@ function setLang(lang) {
         if (tagline) tagline.textContent = txt.tagline;
 
         var btns = document.querySelectorAll('.quick-actions button');
-        if (btns.length >= 3) {
+        if (btns.length >= 4) {
             btns[0].textContent = txt.compare;
             btns[1].textContent = txt.tech;
             btns[2].textContent = txt.finance;
+            btns[3].textContent = txt.analytics;
+        }
+
+        var analyticsPanel = document.getElementById('analytics-panel');
+        if (analyticsPanel && analyticsPanel.children.length) {
+            htmx.ajax('GET', '/analytics?lang=' + lang, {
+                target: '#analytics-panel',
+                swap: 'innerHTML'
+            });
         }
 
         var input = document.querySelector('.chat-input-area input[name="message"]');
@@ -290,6 +299,152 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
     if (evt.detail.target.id === 'chat-container') {
         // Give the browser a tick to insert the new elements, then start streams
         setTimeout(initStream, 50);
+    }
+});
+
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'analytics-panel') renderAnalytics();
+});
+
+// ═══════════════════════════════════════════════════════
+// Evidence-backed analytics
+// ═══════════════════════════════════════════════════════
+
+var SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgNode(tag, attrs, text) {
+    var node = document.createElementNS(SVG_NS, tag);
+    Object.keys(attrs || {}).forEach(function(key) { node.setAttribute(key, attrs[key]); });
+    if (text !== undefined) node.textContent = text;
+    return node;
+}
+
+function chartFrame(title) {
+    var svg = svgNode('svg', {
+        viewBox: '0 0 760 250', role: 'img', 'aria-label': title,
+        preserveAspectRatio: 'xMidYMid meet'
+    });
+    svg.appendChild(svgNode('title', {}, title));
+    return svg;
+}
+
+function addLegend(svg, series) {
+    series.forEach(function(item, index) {
+        var x = 52 + index * 130;
+        svg.appendChild(svgNode('line', {
+            x1: x, y1: 16, x2: x + 20, y2: 16,
+            class: 'chart-series-' + index, 'stroke-width': 3
+        }));
+        svg.appendChild(svgNode('text', {x: x + 27, y: 20, class: 'chart-label'}, item.company_en));
+    });
+}
+
+function renderLineChart(container, series, metric) {
+    var svg = chartFrame(metric);
+    var left = 52, right = 738, top = 34, bottom = 212;
+    var values = [];
+    series.forEach(function(item) {
+        item.points.forEach(function(point) { values.push(Number(point.value)); });
+    });
+    var min = metric === 'gross_margin_pct' ? Math.max(0, Math.floor(Math.min.apply(null, values) / 10) * 10 - 10) : 0;
+    var max = Math.ceil(Math.max.apply(null, values) / 10) * 10;
+    if (max === min) max = min + 1;
+    addLegend(svg, series);
+
+    for (var grid = 0; grid <= 4; grid++) {
+        var y = top + (bottom - top) * grid / 4;
+        var label = max - (max - min) * grid / 4;
+        svg.appendChild(svgNode('line', {x1: left, y1: y, x2: right, y2: y, class: 'chart-grid'}));
+        svg.appendChild(svgNode('text', {x: left - 8, y: y + 4, class: 'chart-axis', 'text-anchor': 'end'}, label.toFixed(0)));
+    }
+
+    series.forEach(function(item, seriesIndex) {
+        var coords = item.points.map(function(point, index) {
+            var x = left + (right - left) * index / (item.points.length - 1);
+            var y = bottom - (Number(point.value) - min) / (max - min) * (bottom - top);
+            return {x: x, y: y, point: point};
+        });
+        svg.appendChild(svgNode('polyline', {
+            points: coords.map(function(p) { return p.x + ',' + p.y; }).join(' '),
+            class: 'chart-line chart-series-' + seriesIndex
+        }));
+        coords.forEach(function(coord) {
+            var link = svgNode('a', {
+                href: coord.point.source_url, target: '_blank', rel: 'noopener noreferrer',
+                'aria-label': item.company_en + ' ' + coord.point.period + ': ' + coord.point.value + '. ' + coord.point.source_title
+            });
+            var circle = svgNode('circle', {
+                cx: coord.x, cy: coord.y, r: 4,
+                class: 'chart-point chart-series-' + seriesIndex
+            });
+            circle.appendChild(svgNode('title', {}, item.company_en + ' · ' + coord.point.period + ' · ' + coord.point.value + '\n' + coord.point.source_title));
+            link.appendChild(circle);
+            svg.appendChild(link);
+        });
+    });
+
+    series[0].points.forEach(function(point, index) {
+        if (index % 2 !== 0 && index !== series[0].points.length - 1) return;
+        var x = left + (right - left) * index / (series[0].points.length - 1);
+        svg.appendChild(svgNode('text', {x: x, y: 235, class: 'chart-axis', 'text-anchor': 'middle'}, point.period.replace('20', '')));
+    });
+    container.replaceChildren(svg);
+}
+
+function renderStackedChart(container, companies) {
+    var svg = chartFrame('FY2025 process revenue mix');
+    companies.forEach(function(company, companyIndex) {
+        var y = 65 + companyIndex * 92;
+        svg.appendChild(svgNode('text', {x: 20, y: y + 15, class: 'chart-label'}, company.company_en));
+        var offset = 105;
+        company.segments.forEach(function(segment, segmentIndex) {
+            var width = segment.value * 6.1;
+            var rect = svgNode('rect', {
+                x: offset, y: y, width: width, height: 30,
+                class: 'chart-segment chart-segment-' + segmentIndex
+            });
+            rect.appendChild(svgNode('title', {}, segment.label + ': ' + (segment.approximate ? '~' : '') + segment.value + '%'));
+            svg.appendChild(rect);
+            if (width > 70) {
+                svg.appendChild(svgNode('text', {x: offset + width / 2, y: y + 20, class: 'chart-segment-label', 'text-anchor': 'middle'}, segment.value + '%'));
+            }
+            svg.appendChild(svgNode('text', {x: offset, y: y + 49, class: 'chart-axis'}, segment.label));
+            offset += width;
+        });
+    });
+    container.replaceChildren(svg);
+}
+
+function renderBarChart(container, companies) {
+    var svg = chartFrame('FY2025 capex intensity');
+    companies.forEach(function(company, index) {
+        var y = 66 + index * 85;
+        svg.appendChild(svgNode('text', {x: 22, y: y + 20, class: 'chart-label'}, company.company_en));
+        svg.appendChild(svgNode('rect', {x: 110, y: y, width: company.value * 6.4, height: 32, class: 'chart-bar chart-series-' + index}));
+        svg.appendChild(svgNode('text', {x: 120 + company.value * 6.4, y: y + 21, class: 'chart-value'}, company.value.toFixed(1) + '%'));
+    });
+    container.replaceChildren(svg);
+}
+
+function renderAnalytics() {
+    var dataNode = document.getElementById('analytics-data');
+    if (!dataNode) return;
+    var data;
+    try { data = JSON.parse(dataNode.textContent); } catch (_error) { return; }
+    document.querySelectorAll('#analytics-panel [data-chart="line"]').forEach(function(container) {
+        var metric = container.getAttribute('data-metric');
+        renderLineChart(container, data.quarterly[metric], metric);
+    });
+    var stacked = document.querySelector('#analytics-panel [data-chart="stacked"]');
+    if (stacked) renderStackedChart(stacked, data.process_mix);
+    var bars = document.querySelector('#analytics-panel [data-chart="bars"]');
+    if (bars) renderBarChart(bars, data.capex_intensity);
+}
+
+document.addEventListener('click', function(event) {
+    if (event.target.closest('[data-close-analytics]')) {
+        var panel = document.getElementById('analytics-panel');
+        if (panel) panel.replaceChildren();
     }
 });
 

@@ -14,8 +14,8 @@
       {
         "title": "SMIC 2025 Annual Report",
         "publisher": "Semiconductor Manufacturing International Corporation / HKEX",
-        "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0326/2026032601294.pdf",
-        "published_at": "2026-03-26",
+        "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0408/2026040801181.pdf",
+        "published_at": "2026-04-08",
         "trust_tier": 1
       }
     ],
@@ -125,9 +125,9 @@
       "currency": "USD",
       "unit": "billion",
       "source_title": "SMIC 2025 Annual Report",
-      "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0326/2026032601294.pdf",
+      "source_url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0408/2026040801181.pdf",
       "source_publisher": "SMIC / Hong Kong Exchanges and Clearing Limited",
-      "source_published_at": "2026-03-26",
+      "source_published_at": "2026-04-08",
       "revenue": { "value": 9.3268, "yoy_growth_pct": 16.2, "note": "全年营收创历史新高" },
       "gross_margin": { "value": 21.0, "trend": "同比提升约3个百分点（2024年为18%水平），产能利用率回升至93.5%是主因" },
       "net_margin": { "value": 7.5, "trend": "净利同比+39%至$6.85亿，扣非净利+56%，经营利润翻倍至$11.1亿" },
