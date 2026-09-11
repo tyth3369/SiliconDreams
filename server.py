@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v0.8.0-dev.4)
+SiliconDreams — FastAPI Server (v0.8.0-dev.5)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -169,6 +169,27 @@ def _conversation_messages(conversation_id: str, lang: str) -> list[dict]:
     return messages
 
 
+def _conversation_summaries(lang: str) -> list[dict]:
+    """Return active conversations with a localized fallback title."""
+    fallback = "新研究" if lang == "zh" else "New research"
+    conversations = _db.list_conversations(limit=20)
+    for conversation in conversations:
+        conversation["display_title"] = conversation["title"] or fallback
+    return conversations
+
+
+def _archived_conversation_summaries(lang: str) -> list[dict]:
+    fallback = "未命名研究" if lang == "zh" else "Untitled research"
+    conversations = [
+        item
+        for item in _db.list_conversations(include_archived=True, limit=30)
+        if item["archived_at"]
+    ]
+    for conversation in conversations:
+        conversation["display_title"] = conversation["title"] or fallback
+    return conversations
+
+
 def _build_session_messages(lang: str, conversation_id: str) -> list[dict]:
     """Build messages list from session history with system prompt."""
     today = date.today().isoformat()
@@ -252,6 +273,9 @@ async def index(
         kb_stats=_kb_stats,
         llm_online=online,
         preset_prompts=PRESET_PROMPTS,
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=active_conversation,
         _ZH=_ZH,
         _EN=_EN,
     )
@@ -427,6 +451,9 @@ async def chat(
         kb_stats=_kb_stats,
         llm_online=llm_available(),
         preset_prompts=PRESET_PROMPTS,
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=active_conversation,
     )
     response = HTMLResponse(content)
     if active_conversation != conversation_id:
@@ -508,6 +535,7 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
 async def upload_pdf(
     file: Annotated[UploadFile, File()],
     lang: str = Depends(get_lang),
+    conversation_id: Annotated[str | None, Cookie()] = None,
 ):
     """Validate and persist a PDF, then enqueue durable background ingestion."""
     t = get_t(lang)
@@ -537,6 +565,9 @@ async def upload_pdf(
             lang=lang,
             uploaded_pdfs=_uploaded_pdfs,
             kb_stats=_kb_stats,
+            conversations=_conversation_summaries(lang),
+            archived_conversations=_archived_conversation_summaries(lang),
+            active_conversation=conversation_id,
         )
 
     await asyncio.to_thread(stored_path.write_bytes, content)
@@ -576,6 +607,9 @@ async def upload_pdf(
         kb_stats=_kb_stats,
         llm_online=llm_available(),
         preset_prompts=PRESET_PROMPTS,
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=conversation_id,
     )
 
 
@@ -650,6 +684,9 @@ async def quick_action(
         kb_stats=_kb_stats,
         llm_online=llm_available(),
         preset_prompts=PRESET_PROMPTS,
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=active_conversation,
     )
     response = HTMLResponse(content)
     if active_conversation != conversation_id:
@@ -679,6 +716,86 @@ async def set_lang(lang: str = Form(...)):
     return response
 
 
+def _conversation_switch_response(conversation_id: str, lang: str) -> HTMLResponse:
+    content = jinja.get_template("components.html").render(
+        component="conversation_switch",
+        t=get_t(lang),
+        lang=lang,
+        messages=_conversation_messages(conversation_id, lang),
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=conversation_id,
+    )
+    response = HTMLResponse(content)
+    response.set_cookie(
+        "conversation_id",
+        conversation_id,
+        max_age=365 * 24 * 3600,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
+
+
+@app.post("/conversations/new", response_class=HTMLResponse)
+async def new_conversation(lang: str = Depends(get_lang)):
+    """Create and select a blank research conversation."""
+    return _conversation_switch_response(_db.create_conversation(language=lang), lang)
+
+
+@app.post("/conversations/{conversation_id}/select", response_class=HTMLResponse)
+async def select_conversation(conversation_id: str, lang: str = Depends(get_lang)):
+    """Select an active conversation and return its persisted messages."""
+    if not _db.conversation_exists(conversation_id):
+        return HTMLResponse("", status_code=404)
+    return _conversation_switch_response(conversation_id, lang)
+
+
+@app.post("/conversations/{conversation_id}/rename", response_class=HTMLResponse)
+async def rename_conversation(
+    conversation_id: str,
+    title: Annotated[str, Form(min_length=1, max_length=80)],
+    lang: str = Depends(get_lang),
+    active_id: Annotated[str | None, Cookie(alias="conversation_id")] = None,
+):
+    """Rename a conversation without replacing the chat panel."""
+    if not _db.rename_conversation(conversation_id, title):
+        return HTMLResponse("", status_code=404)
+    return jinja.get_template("components.html").render(
+        component="conversation_list",
+        t=get_t(lang),
+        lang=lang,
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=active_id,
+    )
+
+
+@app.post("/conversations/{conversation_id}/archive", response_class=HTMLResponse)
+async def archive_conversation(
+    conversation_id: str,
+    lang: str = Depends(get_lang),
+    active_id: Annotated[str | None, Cookie(alias="conversation_id")] = None,
+):
+    """Archive a conversation and select the most recent remaining one."""
+    if not _db.archive_conversation(conversation_id):
+        return HTMLResponse("", status_code=404)
+    if active_id != conversation_id and active_id and _db.conversation_exists(active_id):
+        next_id = active_id
+    else:
+        remaining = _db.list_conversations(limit=1)
+        next_id = remaining[0]["id"] if remaining else _db.create_conversation(language=lang)
+    return _conversation_switch_response(next_id, lang)
+
+
+@app.post("/conversations/{conversation_id}/restore", response_class=HTMLResponse)
+async def restore_conversation(conversation_id: str, lang: str = Depends(get_lang)):
+    """Restore and select a previously archived conversation."""
+    if not _db.restore_conversation(conversation_id):
+        return HTMLResponse("", status_code=404)
+    return _conversation_switch_response(conversation_id, lang)
+
+
 @app.get("/sidebar", response_class=HTMLResponse)
 async def get_sidebar(request: Request):
     """Return sidebar HTML in the requested language (for HTMX language switch)."""
@@ -687,6 +804,7 @@ async def get_sidebar(request: Request):
     if lang not in ("zh", "en"):
         lang = request.cookies.get("lang", "zh")
     t = get_t(lang)
+    active_conversation = request.cookies.get("conversation_id")
     _refresh_uploaded_pdfs()
     # Avoid opening Chroma for count polling while the worker is actively writing it.
     if not any(pdf["job_status"] in {"pending", "running"} for pdf in _uploaded_pdfs):
@@ -697,6 +815,9 @@ async def get_sidebar(request: Request):
         component="sidebar_content",
         uploaded_pdfs=_uploaded_pdfs,
         kb_stats=_kb_stats,
+        conversations=_conversation_summaries(lang),
+        archived_conversations=_archived_conversation_summaries(lang),
+        active_conversation=active_conversation,
     )
 
 

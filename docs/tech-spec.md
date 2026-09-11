@@ -56,6 +56,7 @@ Browser
 - PDF 摄入任务保存在 SQLite `jobs` 表；单后台 worker 原子领取任务，记录阶段与进度，并在进程重启时把中断任务重新排队。
 - 上传接口只负责校验、内容寻址落盘和入队；侧栏每秒拉取一次任务状态，任务结束后自动停止轮询。
 - conversation cookie 为 HttpOnly、SameSite=Lax。
+- 对话列表按最近活动排序；首条用户消息自动生成可修改标题。归档使用 `archived_at` 软删除并支持恢复，schema v1 数据库启动时自动迁移到 v2。
 - SSE hand-off 有 60 秒 TTL 和 128 条上限。
 - 同步 LLM/RAG generator 通过 worker thread 逐步推进，避免冻结 FastAPI event loop。
 - 模型上下文只取最近 24 条消息，UI/数据库仍保留更长历史。

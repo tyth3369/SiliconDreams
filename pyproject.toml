@@ -1,6 +1,6 @@
 [project]
 name = "silicondreams"
-version = "0.8.0.dev4"
+version = "0.8.0.dev5"
 description = "Evidence-first semiconductor investment research assistant"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

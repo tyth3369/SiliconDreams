@@ -200,6 +200,57 @@ def test_conversation_messages_persist(database):
     messages = database.list_messages(conversation_id)
     assert [message["role"] for message in messages] == ["user", "assistant"]
     assert messages[1]["citations"] == [{"source_id": "src_1"}]
+    assert database.list_conversations()[0]["title"] == "TSMC"
+
+
+def test_first_user_message_sets_default_conversation_title(database):
+    conversation_id = database.create_conversation(language="zh")
+    database.add_message(conversation_id, "user", "  台积电   毛利率趋势？  ")
+    assert database.list_conversations()[0]["title"] == "台积电 毛利率趋势？"
+
+
+def test_conversations_can_be_renamed_and_archived(database):
+    first = database.create_conversation(language="zh")
+    second = database.create_conversation(language="en", title="Second")
+    assert database.rename_conversation(first, "  TSMC   research  ") is True
+    assert {item["title"] for item in database.list_conversations()} == {
+        "TSMC research",
+        "Second",
+    }
+
+    assert database.archive_conversation(first) is True
+    assert database.conversation_exists(first) is False
+    assert [item["id"] for item in database.list_conversations()] == [second]
+    assert {item["id"] for item in database.list_conversations(include_archived=True)} == {
+        first,
+        second,
+    }
+    assert database.restore_conversation(first) is True
+    assert database.conversation_exists(first) is True
+
+
+def test_schema_v1_database_migrates_archived_at_column(tmp_path):
+    path = tmp_path / "legacy.db"
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE conversations (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL DEFAULT '',
+                language TEXT NOT NULL DEFAULT 'zh',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+    migrated = Database(path)
+    with migrated.connect() as connection:
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(conversations)")}
+        version = connection.execute(
+            "SELECT value FROM schema_meta WHERE key='version'"
+        ).fetchone()["value"]
+    assert "archived_at" in columns
+    assert version == "2"
 
 
 def test_message_limit_returns_most_recent_items_in_conversation_order(database):

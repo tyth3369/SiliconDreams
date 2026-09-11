@@ -37,7 +37,7 @@ def test_homepage_smoke():
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.8.0-dev.4"}
+    assert response.json() == {"status": "ok", "version": "0.8.0-dev.5"}
 
 
 def test_stats_smoke():
@@ -80,6 +80,47 @@ def test_separate_clients_get_separate_conversations():
 
     first_id, second_id = asyncio.run(scenario())
     assert first_id != second_id
+
+
+def test_conversation_create_rename_switch_and_archive():
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            await client.get("/")
+            first_id = client.cookies["conversation_id"]
+            await client.post("/chat", data={"message": "First research"})
+
+            created = await client.post("/conversations/new")
+            second_id = client.cookies["conversation_id"]
+            renamed = await client.post(
+                f"/conversations/{second_id}/rename", data={"title": "SMIC margins"}
+            )
+            selected = await client.post(f"/conversations/{first_id}/select")
+            archived = await client.post(f"/conversations/{first_id}/archive")
+            restored = await client.post(f"/conversations/{first_id}/restore")
+            return (
+                first_id,
+                second_id,
+                created,
+                renamed,
+                selected,
+                archived,
+                restored,
+                client.cookies,
+            )
+
+    first_id, second_id, created, renamed, selected, archived, restored, cookies = asyncio.run(
+        scenario()
+    )
+    assert first_id != second_id
+    assert created.status_code == 200
+    assert renamed.status_code == 200
+    assert "SMIC margins" in renamed.text
+    assert "First research" in selected.text
+    assert archived.status_code == 200
+    assert restored.status_code == 200
+    assert cookies["conversation_id"] == first_id
+    assert server._db.conversation_exists(first_id) is True
 
 
 def test_pdf_upload_persists_document_and_exact_page_chunks(tmp_path, monkeypatch):
