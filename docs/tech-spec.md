@@ -36,6 +36,7 @@ Browser
 - 结构化公司事实区分 `FY2025` 与 `YYYY QN`；台积电季度实际值逐季绑定官方 IR 页面，中芯国际季度实际值逐季绑定港交所公告，未收录季度不得退回年度数据冒充。
 - 两家公司 2024 Q1–2026 Q2 的共同直接披露口径是 USD revenue 与 gross margin。台积电直接披露 operating margin；中芯国际披露 operating profit 金额，若需利润率只能调用 Decimal 计算器派生。
 - `data/metric_definitions.json` 是公司对比、后续图表和报告模板共用的指标口径注册表；`src/analysis_templates.py` 只生成有界研究请求，不执行或伪造计算。
+- `src/analytics.py` 只把已存储的官方报告值组织为图表载荷，不在展示层派生财务比率；季度点保留原始标题、发布日期和官方 URL，中芯国际制程结构保留近似值标记。
 
 ## 检索
 

@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiliconDreams | AI Semiconductor Research</title>
-    <link rel="stylesheet" href="/static/style.css?v=0.9.0-dev.1">
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/style.css?v=0.9.0-dev.2">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
@@ -16,6 +17,7 @@
                 compare: {{ _ZH['quick.compare'] | tojson }},
                 tech: {{ _ZH['quick.tech'] | tojson }},
                 finance: {{ _ZH['quick.finance'] | tojson }},
+                analytics: {{ _ZH['quick.analytics'] | tojson }},
                 placeholder: {{ _ZH['chat.placeholder'] | tojson }},
                 uploadTitle: {{ _ZH['sidebar.upload_title'] | tojson }},
                 uploadHint: {{ _ZH['sidebar.upload_hint'] | tojson }},
@@ -30,6 +32,7 @@
                 compare: {{ _EN['quick.compare'] | tojson }},
                 tech: {{ _EN['quick.tech'] | tojson }},
                 finance: {{ _EN['quick.finance'] | tojson }},
+                analytics: {{ _EN['quick.analytics'] | tojson }},
                 placeholder: {{ _EN['chat.placeholder'] | tojson }},
                 uploadTitle: {{ _EN['sidebar.upload_title'] | tojson }},
                 uploadHint: {{ _EN['sidebar.upload_hint'] | tojson }},
@@ -41,7 +44,7 @@
             }
         };
     </script>
-    <script src="/static/app.js?v=0.9.0-dev.1" defer></script>
+    <script src="/static/app.js?v=0.9.0-dev.2" defer></script>
 </head>
 <body>
     <div class="app-layout">
@@ -103,7 +106,12 @@
                 <button hx-post="/quick/finance" hx-target="#chat-container" hx-swap="beforeend">
                     {{ t('quick.finance') }}
                 </button>
+                <button hx-get="/analytics" hx-target="#analytics-panel" hx-swap="innerHTML">
+                    {{ t('quick.analytics') }}
+                </button>
             </div>
+
+            <section id="analytics-panel" aria-live="polite"></section>
 
             <!-- Chat Messages -->
             <div id="chat-container" class="chat-container">

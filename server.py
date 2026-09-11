@@ -28,6 +28,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from config import PDF_DIR, AppConfig, SearchConfig
 from src.agent_loop import run_agent_loop
 from src.analysis_templates import default_foundry_comparison_prompt
+from src.analytics import load_analytics_payload
 from src.citation import CitationTracker
 from src.exporter import build_markdown_export, build_pdf_export, export_filename
 from src.financial_data import FinancialDataManager
@@ -643,6 +644,20 @@ async def stats(lang: str = Depends(get_lang)):
         t=t,
         lang=lang,
         kb_stats=_kb_stats,
+    )
+
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def analytics(request: Request):
+    """Return the evidence-backed financial chart workbench."""
+    lang = request.query_params.get("lang")
+    if lang not in ("zh", "en"):
+        lang = request.cookies.get("lang", "zh")
+    return jinja.get_template("components.html").render(
+        component="analytics",
+        t=get_t(lang),
+        lang=lang,
+        analytics=load_analytics_payload(),
     )
 
 

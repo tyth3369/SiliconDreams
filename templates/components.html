@@ -196,3 +196,46 @@
     <span class="kb-stat">{{ t('sidebar.kb_table') }}: <strong>{{ kb_stats.table_chunks }}</strong></span>
 </div>
 {% endif %}
+
+{# ── Evidence-backed financial analytics ── #}
+{% if component == "analytics" %}
+<div class="analytics-workbench">
+    <header class="analytics-header">
+        <div>
+            <h2>{{ t('analytics.title') }}</h2>
+            <p>{{ t('analytics.subtitle') }}</p>
+        </div>
+        <button class="analytics-close" type="button" data-close-analytics
+                aria-label="{{ t('analytics.close') }}">{{ t('analytics.close') }}</button>
+    </header>
+    <div class="analytics-grid">
+        <article class="chart-card chart-card-wide">
+            <div class="chart-title"><span>{{ t('analytics.revenue') }}</span><small>{{ t('analytics.revenue_unit') }}</small></div>
+            <div class="chart-canvas" data-chart="line" data-metric="revenue_usd_billion"></div>
+        </article>
+        <article class="chart-card chart-card-wide">
+            <div class="chart-title"><span>{{ t('analytics.margin') }}</span><small>{{ t('analytics.margin_unit') }}</small></div>
+            <div class="chart-canvas" data-chart="line" data-metric="gross_margin_pct"></div>
+        </article>
+        <article class="chart-card">
+            <div class="chart-title"><span>{{ t('analytics.process') }}</span></div>
+            <div class="chart-canvas" data-chart="stacked"></div>
+            <small class="chart-note">{{ t('analytics.approximate') }}</small>
+        </article>
+        <article class="chart-card">
+            <div class="chart-title"><span>{{ t('analytics.capex') }}</span><small>%</small></div>
+            <div class="chart-canvas" data-chart="bars"></div>
+        </article>
+    </div>
+    <details class="analytics-sources">
+        <summary>{{ t('analytics.sources') }}</summary>
+        {% for source in analytics.annual_sources %}
+        <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">
+            <strong>{{ source.company }} / {{ source.title }}</strong>
+            <span>{{ source.publisher }} · {{ source.published_at }} · {{ t('analytics.open_source') }}</span>
+        </a>
+        {% endfor %}
+    </details>
+    <script type="application/json" id="analytics-data">{{ analytics | tojson }}</script>
+</div>
+{% endif %}

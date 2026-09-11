@@ -20,6 +20,7 @@
 - 中英文界面、自动/深色/浅色主题；研究会话可新建、命名、切换、归档和恢复
 - 当前研究会话可下载为完整 Markdown 或带嵌入中文字体、表格和来源链接的 PDF
 - 可复用的公司对比模板与指标口径字典；快捷对比明确直接披露、派生值和可比性边界
+- 证据型财务仪表盘：季度营收/毛利率、制程收入结构和 Capex 强度；季度数据点直达官方来源
 
 ## 架构
 
@@ -97,6 +98,7 @@ data/terminology.json         半导体术语库
 data/foundry_financials.json  官方来源结构化数据
 data/metric_definitions.json 指标定义、单位、可比性与派生规则
 src/analysis_templates.py    可复用公司对比模板
+src/analytics.py             官方数据图表载荷与来源绑定
 templates/ + static/          Bloomberg Terminal 风格 UI
 assets/fonts/                 PDF 使用的 OFL 中文字体及许可证
 tests/                        回归测试

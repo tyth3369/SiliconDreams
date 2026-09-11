@@ -14,7 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.9.0-dev.1 | (c) 2026",
+    "app.footer": "SiliconDreams v0.9.0-dev.2 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -69,6 +69,19 @@ _ZH = {
     "quick.compare": "行业对比",
     "quick.tech": "技术趋势",
     "quick.finance": "财务分析",
+    "quick.analytics": "数据图表",
+    "analytics.title": "代工财务仪表盘",
+    "analytics.subtitle": "官方披露数据 · 数据点可点击溯源",
+    "analytics.close": "关闭",
+    "analytics.revenue": "季度营收",
+    "analytics.revenue_unit": "十亿美元",
+    "analytics.margin": "季度毛利率",
+    "analytics.margin_unit": "%",
+    "analytics.process": "FY2025 制程收入结构",
+    "analytics.capex": "FY2025 资本开支强度",
+    "analytics.approximate": "中芯国际制程结构为近似披露口径",
+    "analytics.sources": "年度数据来源",
+    "analytics.open_source": "打开官方来源",
     # -- Chat --
     "chat.placeholder": "请输入您的问题",
     # -- Errors --
@@ -98,7 +111,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v0.9.0-dev.1 | (c) 2026",
+    "app.footer": "SiliconDreams v0.9.0-dev.2 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",
@@ -153,6 +166,19 @@ _EN = {
     "quick.compare": "Peer Comparison",
     "quick.tech": "Tech Trends",
     "quick.finance": "Financial Analysis",
+    "quick.analytics": "Data Charts",
+    "analytics.title": "Foundry Financial Analytics",
+    "analytics.subtitle": "Official disclosures · select a data point to trace its source",
+    "analytics.close": "Close",
+    "analytics.revenue": "Quarterly Revenue",
+    "analytics.revenue_unit": "USD billion",
+    "analytics.margin": "Quarterly Gross Margin",
+    "analytics.margin_unit": "%",
+    "analytics.process": "FY2025 Process Revenue Mix",
+    "analytics.capex": "FY2025 Capex Intensity",
+    "analytics.approximate": "SMIC process mix uses approximate disclosed groupings",
+    "analytics.sources": "Annual data sources",
+    "analytics.open_source": "Open official source",
     # -- Chat --
     "chat.placeholder": "Please enter your question",
     # -- Errors --

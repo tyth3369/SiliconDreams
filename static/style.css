@@ -1,5 +1,5 @@
 /* =========================================================
-   SiliconDreams — Bloomberg Terminal Theme (v0.9.0-dev.1)
+   SiliconDreams — Bloomberg Terminal Theme (v0.9.0-dev.2)
    Pure CSS with no frontend framework overrides.
    ========================================================= */
 
@@ -21,6 +21,9 @@
     --accent-primary: #ffb000;
     --accent-dim: #cc8c00;
     --accent-secondary: #ffd000;
+    --chart-secondary: #36c2d8;
+    --chart-tertiary: #8f7cff;
+    --chart-quaternary: #7a8b99;
     --error: #ff5f56;
 
     --text-primary: #e8e8e8;
@@ -58,6 +61,9 @@
     --accent-primary: #003d80;
     --accent-dim: #002d60;
     --accent-secondary: #005aaa;
+    --chart-secondary: #007a8a;
+    --chart-tertiary: #6554c0;
+    --chart-quaternary: #64748b;
     --error: #b42318;
 
     --text-primary: #1a1a1a;
@@ -1001,4 +1007,169 @@ button:active {
 @keyframes pulse-status {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Evidence-backed analytics workbench
+   ═══════════════════════════════════════════════════════ */
+
+#analytics-panel:not(:empty) {
+    flex: 0 1 auto;
+    min-height: 0;
+    margin-bottom: 10px;
+}
+
+.analytics-workbench {
+    max-height: min(62vh, 720px);
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    padding: 14px;
+    animation: fadeIn 180ms ease;
+}
+
+.analytics-header,
+.chart-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.analytics-header {
+    margin-bottom: 12px;
+}
+
+.analytics-header h2 {
+    color: var(--accent-primary);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.analytics-header p,
+.chart-title small,
+.chart-note {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 9px;
+}
+
+.analytics-close {
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+}
+
+.analytics-close:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.chart-card {
+    min-width: 0;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    padding: 10px;
+}
+
+.chart-title {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.chart-canvas svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.chart-grid {
+    stroke: var(--border-subtle);
+    stroke-width: 1;
+}
+
+.chart-axis,
+.chart-label,
+.chart-value,
+.chart-segment-label {
+    fill: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.chart-label,
+.chart-value {
+    fill: var(--text-primary);
+    font-weight: 600;
+}
+
+.chart-line {
+    fill: none !important;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.chart-series-0 { stroke: var(--accent-primary); fill: var(--accent-primary); }
+.chart-series-1 { stroke: var(--chart-secondary); fill: var(--chart-secondary); }
+.chart-segment-0 { fill: var(--accent-primary); }
+.chart-segment-1 { fill: var(--chart-secondary); }
+.chart-segment-2 { fill: var(--chart-tertiary); }
+.chart-segment-3 { fill: var(--chart-quaternary); }
+
+.chart-point {
+    stroke-width: 2;
+    stroke: var(--bg-card);
+    cursor: pointer;
+    transition: r 120ms ease;
+}
+
+.chart-point:hover { r: 7; }
+.chart-segment-label { fill: var(--bg-primary); font-weight: 600; }
+.chart-note { display: block; margin-top: 2px; }
+
+.analytics-sources {
+    margin-top: 10px;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.analytics-sources summary {
+    color: var(--accent-primary);
+    cursor: pointer;
+}
+
+.analytics-sources a {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 8px;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.analytics-sources a span { color: var(--text-secondary); }
+.analytics-sources a:hover strong { color: var(--accent-primary); }
+
+@media (max-width: 900px) {
+    .analytics-grid { grid-template-columns: 1fr; }
+    .analytics-workbench { max-height: 58vh; }
 }
