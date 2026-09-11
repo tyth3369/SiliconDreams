@@ -12,7 +12,9 @@ import hashlib
 import json
 import logging
 import re
+import time
 import uuid
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -21,8 +23,8 @@ from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from config import PDF_DIR, AppConfig
-from src.agent_loop import build_simple_context, run_agent_loop
+from config import PDF_DIR, AppConfig, SearchConfig
+from src.agent_loop import run_agent_loop
 from src.citation import CitationTracker
 from src.financial_data import FinancialDataManager
 from src.i18n import _EN, _ZH, I18n
@@ -44,6 +46,26 @@ jinja = Environment(
     loader=FileSystemLoader(str(TEMPLATES)),
     autoescape=select_autoescape(["html"]),
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Apply a conservative browser-security baseline to every response."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
+        "base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+    )
+    return response
 
 
 # ── I18n dependency ────────────────────────────────────
@@ -124,10 +146,29 @@ def _conversation_messages(conversation_id: str, lang: str) -> list[dict]:
 
 def _build_session_messages(lang: str, conversation_id: str) -> list[dict]:
     """Build messages list from session history with system prompt."""
-    messages = [{"role": "system", "content": AppConfig.get_system_prompt(lang)}]
-    for m in _db.list_messages(conversation_id):
+    today = date.today().isoformat()
+    date_rule = (
+        f"当前日期为 {today}。涉及‘最新’或时间线时，以此日期为上限并优先采用有发布日期的证据。"
+        if lang == "zh"
+        else f"Current date: {today}. For latest-status queries, do not go beyond this date and prefer dated evidence."
+    )
+    messages = [
+        {"role": "system", "content": f"{AppConfig.get_system_prompt(lang)}\n\n{date_rule}"}
+    ]
+    # Bound model context while retaining full history in SQLite/UI.
+    for m in _db.list_messages(conversation_id, limit=24):
         messages.append({"role": m["role"], "content": m["content"]})
     return messages
+
+
+def _available_retrieval_tools() -> set[str]:
+    """Do not advertise unavailable evidence paths to the planner."""
+    names = {"lookup_terms", "get_company_data"}
+    if SearchConfig.is_configured():
+        names.add("web_search")
+    if _db.count("documents") > 0:
+        names.add("search_reports")
+    return names
 
 
 def _stream_tokens_with_capture(generator, conversation_id: str, tracker: CitationTracker):
@@ -199,17 +240,97 @@ async def index(
 # Stores per-message agent config before SSE picks it up.
 # Format: {msg_id: {"query": str, "lang": str, "tracker": CitationTracker}}
 _pending_agent_configs: dict[str, dict] = {}
+_PENDING_TTL_SECONDS = 60.0
+_MAX_PENDING_REQUESTS = 128
+_STREAM_END = object()
+
+
+def _prune_pending_requests() -> None:
+    """Bound transient SSE hand-off state if a browser never opens its stream."""
+    cutoff = time.monotonic() - _PENDING_TTL_SECONDS
+    expired = [
+        key
+        for key, value in _pending_agent_configs.items()
+        if float(value.get("created_at", 0.0)) < cutoff
+    ]
+    for key in expired:
+        _pending_agent_configs.pop(key, None)
+    if len(_pending_agent_configs) >= _MAX_PENDING_REQUESTS:
+        oldest = min(
+            _pending_agent_configs,
+            key=lambda key: float(_pending_agent_configs[key].get("created_at", 0.0)),
+        )
+        _pending_agent_configs.pop(oldest, None)
+
+
+def _next_stream_item(iterator):
+    """Advance a blocking generator without leaking StopIteration through a Future."""
+    try:
+        return next(iterator)
+    except StopIteration:
+        return _STREAM_END
+
+
+def _ingest_pdf_sync(
+    *,
+    content: bytes,
+    original_filename: str,
+    stored_path: Path,
+    digest: str,
+    source_id: str,
+    document_id: str,
+) -> None:
+    """Run CPU/model-heavy PDF ingestion outside the ASGI event loop."""
+    stored_path.write_bytes(content)
+
+    from src.pdf_parser import parse_pdf
+
+    doc = parse_pdf(stored_path, original_filename=original_filename)
+
+    from src.chunker import chunk_document
+
+    chunks = chunk_document(doc)
+    for chunk in chunks:
+        database_chunk_id = _db.add_chunk(
+            document_id=document_id,
+            source_id=source_id,
+            page=max(1, chunk.page),
+            chunk_type=chunk.chunk_type,
+            text=chunk.text,
+            section=chunk.section,
+            metadata=chunk.metadata,
+        )
+        chunk.chunk_id = database_chunk_id
+        chunk.metadata.update(
+            {"document_id": document_id, "source_id": source_id, "vector_id": database_chunk_id}
+        )
+
+    from src.vector_store import VectorStore
+
+    VectorStore().add_chunks(chunks)
+    _db.upsert_document(
+        source_id=source_id,
+        original_filename=original_filename,
+        stored_path=str(stored_path),
+        sha256=digest,
+        page_count=doc.total_pages,
+        parse_status="ready",
+        parse_error="; ".join(doc.parse_errors) or None,
+    )
 
 
 @app.post("/chat", response_class=HTMLResponse)
 async def chat(
-    message: str = Form(...),
+    message: Annotated[str, Form(min_length=1, max_length=4000)],
     lang: str = Depends(get_lang),
     conversation_id: Annotated[str | None, Cookie()] = None,
 ):
     """Receive a user message, store it, return updated chat HTML + trigger SSE."""
     t = get_t(lang)
     msg_id = str(uuid.uuid4())[:8]
+    message = message.strip()
+    if not message:
+        return HTMLResponse("", status_code=400)
 
     active_conversation = _ensure_conversation(conversation_id, lang)
     _db.add_message(active_conversation, "user", message)
@@ -218,11 +339,13 @@ async def chat(
     tracker = CitationTracker()
 
     # Store config for SSE pickup
+    _prune_pending_requests()
     _pending_agent_configs[msg_id] = {
         "query": message,
         "lang": lang,
         "tracker": tracker,
         "conversation_id": active_conversation,
+        "created_at": time.monotonic(),
     }
 
     # Return the user message HTML + an empty assistant div with SSE trigger
@@ -254,7 +377,7 @@ async def chat(
 
 @app.get("/chat/stream/{msg_id}")
 async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
-    """SSE endpoint: run Agent Loop (V3) or fallback (R1), stream results."""
+    """Run the bounded Agent pipeline and stream its events over SSE."""
     t = get_t(lang)
 
     # Wait for /chat to store config (up to 3 seconds)
@@ -277,56 +400,28 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
         try:
             client = get_llm()
             tracker: CitationTracker = agent_config["tracker"]
-            query: str = agent_config["query"]
             _lang: str = agent_config["lang"]
             conversation_id: str = agent_config["conversation_id"]
 
             # Build conversation messages from session history
             session_messages = _build_session_messages(_lang, conversation_id)
 
-            # Decide: Agent Loop (V3) or Fallback (R1)
-            use_agent = client.model != client.reasoner_model
-
-            if use_agent:
-                # ── Agent Loop (V3) ──────────────────────
-                agent_gen = run_agent_loop(
-                    client=client,
-                    messages=session_messages,
-                    tracker=tracker,
-                    lang=_lang,
-                )
-                for sse_str in _stream_tokens_with_capture(agent_gen, conversation_id, tracker):
-                    yield sse_str
-                    await asyncio.sleep(0)
-            else:
-                # ── Fallback (R1 or no tool support) ─────
-                yield f"data: {json.dumps({'status': 'info', 'label': 'R1 深度推理模式（无工具调用）'})}\n\n"
-
-                # Inject local knowledge context manually
-                extra_messages = build_simple_context(query, _lang, tracker)
-                api_messages = extra_messages + session_messages
-
-                full_response = ""
-                for token in client.chat_stream(messages=api_messages):
-                    full_response += token
-                    yield f"data: {json.dumps({'token': token})}\n\n"
-                    await asyncio.sleep(0)
-
-                if full_response.strip():
-                    _db.add_message(
-                        conversation_id,
-                        "assistant",
-                        full_response,
-                        citations=tracker.to_list(),
-                    )
-
-                # Emit citations BEFORE done (so client processes them before ES close)
-                if not tracker.is_empty():
-                    citations = tracker.to_list()
-                    panel_html = CitationTracker.format_panel(citations, lang=_lang)
-                    yield f"data: {json.dumps({'citations': citations, 'panel_html': panel_html})}\n\n"
-
-                yield f"data: {json.dumps({'done': True})}\n\n"
+            agent_gen = run_agent_loop(
+                client=client,
+                messages=session_messages,
+                tracker=tracker,
+                lang=_lang,
+                available_retrieval_tools=_available_retrieval_tools(),
+            )
+            stream = iter(_stream_tokens_with_capture(agent_gen, conversation_id, tracker))
+            while True:
+                # LLM calls, embedding inference, reranking, and web requests are
+                # synchronous. Advance each generator step in a worker thread so
+                # one research request cannot freeze FastAPI's event loop.
+                sse_str = await asyncio.to_thread(_next_stream_item, stream)
+                if sse_str is _STREAM_END:
+                    break
+                yield sse_str
 
         except Exception as e:
             error_msg = f"{t('error.llm_failed')}: {e}"
@@ -382,44 +477,14 @@ async def upload_pdf(
         parse_status="pending",
     )
     try:
-        stored_path.write_bytes(content)
-
-        from src.pdf_parser import parse_pdf
-
-        doc = parse_pdf(stored_path, original_filename=original_filename)
-
-        from src.chunker import chunk_document
-
-        chunks = chunk_document(doc)
-
-        for chunk in chunks:
-            database_chunk_id = _db.add_chunk(
-                document_id=document_id,
-                source_id=source_id,
-                page=max(1, chunk.page),
-                chunk_type=chunk.chunk_type,
-                text=chunk.text,
-                section=chunk.section,
-                metadata=chunk.metadata,
-            )
-            chunk.chunk_id = database_chunk_id
-            chunk.metadata.update(
-                {"document_id": document_id, "source_id": source_id, "vector_id": database_chunk_id}
-            )
-
-        from src.vector_store import VectorStore
-
-        store = VectorStore()
-        store.add_chunks(chunks)
-
-        _db.upsert_document(
-            source_id=source_id,
+        await asyncio.to_thread(
+            _ingest_pdf_sync,
+            content=content,
             original_filename=original_filename,
-            stored_path=str(stored_path),
-            sha256=digest,
-            page_count=doc.total_pages,
-            parse_status="ready",
-            parse_error="; ".join(doc.parse_errors) or None,
+            stored_path=stored_path,
+            digest=digest,
+            source_id=source_id,
+            document_id=document_id,
         )
         _refresh_uploaded_pdfs()
         _update_kb_stats()
@@ -480,11 +545,13 @@ async def quick_action(
     tracker = CitationTracker()
 
     # Store config for SSE pickup
+    _prune_pending_requests()
     _pending_agent_configs[msg_id] = {
         "query": prompt,
         "lang": lang,
         "tracker": tracker,
         "conversation_id": active_conversation,
+        "created_at": time.monotonic(),
     }
 
     assistant_id = str(uuid.uuid4())[:8]

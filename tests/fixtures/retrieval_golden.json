@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "query": "台积电毛利率",
+      "expected": [
+        {"source": "TSMC-2025.pdf", "page": 12, "contains": "gross margin"}
+      ]
+    },
+    {
+      "query": "中芯国际资本开支",
+      "expected": [
+        {"source": "SMIC-2025.pdf", "page": 8, "contains": "capital expenditure"}
+      ]
+    }
+  ]
+}

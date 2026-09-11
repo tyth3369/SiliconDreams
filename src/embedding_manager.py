@@ -43,14 +43,14 @@ class EmbeddingManager:
             import torch
 
             if torch.backends.mps.is_available():
-                logger.info("✅ Embedding 设备: MPS (Apple Silicon GPU)")
+                logger.info("Embedding 设备: MPS (Apple Silicon GPU)")
                 return "mps"
             elif torch.cuda.is_available():
-                logger.info("✅ Embedding 设备: CUDA")
+                logger.info("Embedding 设备: CUDA")
                 return "cuda"
         except ImportError:
             pass
-        logger.info("⚡ Embedding 设备: CPU (MPS 不可用)")
+        logger.info("Embedding 设备: CPU (MPS 不可用)")
         return "cpu"
 
     def get_device(self) -> str:
@@ -115,9 +115,9 @@ class EmbeddingManager:
 
         if self._is_model_cached(EmbeddingConfig.model_name):
             _os.environ.setdefault("HF_HUB_OFFLINE", "1")
-            logger.info("📦 BGE-M3 模型已缓存，跳过在线检查（HF_HUB_OFFLINE=1）")
+            logger.info("BGE-M3 模型已缓存，跳过在线检查（HF_HUB_OFFLINE=1）")
         else:
-            logger.info("🔄 首次使用，需要下载 BGE-M3 模型（约 2GB）...")
+            logger.info("首次使用，需要下载 BGE-M3 模型（约 2GB）...")
             logger.info("   如遇 SSL 错误，请运行: python src/tools/download_bge_m3.py")
 
         device = self.get_device()
@@ -136,7 +136,7 @@ class EmbeddingManager:
         )
         self._model.max_seq_length = EmbeddingConfig.max_length
 
-        logger.info(f"✅ BGE-M3 模型加载完成 (device={device})")
+        logger.info(f"BGE-M3 模型加载完成 (device={device})")
         return self._model
 
     def get_embedding(self, text: str) -> list[float]:

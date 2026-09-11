@@ -50,9 +50,6 @@ models/
 .LSOverride
 ._*
 
-# Streamlit
-.streamlit/secrets.toml
-
 # 开发日志 (可选追踪)
 # devlog/   # 如需追踪日志，取消此注释
 

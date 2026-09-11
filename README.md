@@ -1,151 +1,96 @@
-# SiliconDreams — AI Semiconductor Investment Research Analyst
+# SiliconDreams
 
-> **Technical Expert + Financial Analyst = Intelligent Investment Research Brain**
+面向电子与半导体行业的证据优先 AI 投研助理。系统将实时网页搜索、用户上传财报、结构化公司数据和半导体术语库统一成可追溯证据，再由有界 Agent 规划检索、调用 Python 财务计算器并生成带行内引用的回答。
 
-A RAG-based AI investment research assistant purpose-built for the semiconductor industry. Solves two key pain points of traditional RAG in financial report scenarios: messy table parsing & insufficient technical terminology understanding.
+> 技术专家 + 财务分析师 + 可验证证据 = 投研大脑
 
----
+## 已实现能力
 
-## Core Capabilities
+- DeepSeek V4 Flash / Pro Provider 抽象与 SSE 流式输出
+- 确定性 Agent：一次检索规划、并发取证、至多一次计算规划，无开放式循环
+- Tavily 实时网页搜索，DuckDuckGo 仅作降级备用
+- PDF 双引擎解析，保留原始文件名与精确页码
+- BGE-M3 稠密检索 + 中文 BM25 + RRF 融合 + 多语言 Cross-encoder 重排
+- SQLite 证据、事实、文档和会话持久化；ChromaDB 存储向量
+- Decimal 财务计算器；LLM 不负责算术
+- 100 条半导体术语与台积电/中芯国际 FY2025 官方数据
+- `[1]` 行内引用、原文片段、网页/官方报告链接与点击定位
+- 中英文界面、自动/深色/浅色主题、会话刷新后保留
 
-| Capability | Description |
-|------------|-------------|
-| **Financial Report Parsing** | Dual-engine PDF parsing (PyMuPDF4LLM + pdfplumber), tables 100% preserved as Markdown |
-| **Hybrid Retrieval** | Vector similarity + keyword + table-first routing + reranking |
-| **Precise Financial Calculation** | 10 financial ratios computed by Python with full precision, zero LLM math — 100% accurate |
-| **Terminology Enhancement** | 100+ semiconductor core terms, auto-linked from technology to business impact |
-| **ReAct Agent** | 4 tools (search/calculate/compare/technology analysis), autonomous decision-making |
-| **Source Traceability** | Every AI-cited data point is clickable back to the original report paragraph |
+## 架构
 
----
-
-## Architecture
-
+```text
+FastAPI + HTMX + Jinja2 + SSE
+              |
+      Deterministic Planner
+       /       |        \
+Web / PDF RAG / Terms / Official Facts
+       \       |        /
+   Python Decimal Calculator
+              |
+      DeepSeek V4 Generation
+              |
+   Inline citations + source panel
 ```
-FastAPI + HTMX Frontend (theme-adaptive: dark + light)
-    |
-LangChain ReAct Agent (query routing + tool calling)
-    |
-LlamaIndex RAG Layer (HyDE + hybrid retrieval + reranking)
-    |
-ChromaDB Vector Store (text + table dual Collection)
-    |
-BGE-M3 Embedding (Apple Silicon MPS accelerated)
-```
 
-## Tech Stack
+PDF RAG 的排序链路为：BGE-M3 cosine 与 BM25 并行召回 → weighted RRF → `mmarco-mMiniLMv2-L12-H384-v1` 重排。
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | FastAPI + HTMX + Jinja2 (theme-adaptive, SSE streaming) |
-| RAG | LlamaIndex (retrieval) + LangChain (Agent) |
-| Vector DB | ChromaDB (local persistence) |
-| Embedding | BGE-M3 (local, Apple Silicon MPS) |
-| LLM | DeepSeek API (V3 + R1) |
-| PDF | PyMuPDF4LLM + pdfplumber (dual-engine) |
+## 快速启动
 
----
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.9+ (3.11+ recommended)
-- macOS (Apple Silicon for best performance)
-- DeepSeek API Key ([free registration](https://platform.deepseek.com))
-
-### Installation
+要求：macOS、[uv](https://docs.astral.sh/uv/)、Python 3.12。Apple Silicon 可使用 MPS。
 
 ```bash
-# 1. Clone
-git clone https://github.com/YOUR_USERNAME/SiliconDreams.git
-cd SiliconDreams
-
-# 2. Virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure API Key
+cd /Users/eric/Desktop/SiliconDreams
+uv sync --dev
 cp .env.example .env
-# Edit .env, fill in DEEPSEEK_API_KEY
-
-# 5. Launch
-uvicorn server:app --host 127.0.0.1 --port 8000 --reload
+# 在 .env 填入 DEEPSEEK_API_KEY 和 TAVILY_API_KEY
+uv run python src/tools/download_bge_m3.py
+uv run python src/tools/download_reranker.py
+uv run uvicorn server:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### Usage
+浏览器打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
 
-1. **Upload Reports** -> Sidebar: drag & drop PDF (TSMC / NVIDIA / SMIC annual reports, etc.)
-2. **Wait for Indexing** -> Auto parse -> chunk -> vectorize (~30-60 sec per report)
-3. **Ask Questions** -> Type in natural language in the chat area
-4. **View Sources** -> Click `[source pN]` tags in responses to see original paragraphs
+## 质量检查
 
----
-
-## Project Structure
-
-```
-SiliconDreams/
-├── server.py                  # FastAPI main entry
-├── config.py                  # Global configuration
-├── CLAUDE.md                  # AI work guide
-├── src/
-│   ├── i18n.py                # Chinese/English localization
-│   ├── llm_client.py          # DeepSeek API client
-│   ├── pdf_parser.py          # PDF dual-engine
-│   ├── chunker.py             # Smart chunking
-│   ├── embedding_manager.py   # BGE-M3 singleton
-│   ├── vector_store.py        # ChromaDB management
-│   ├── retriever.py           # LlamaIndex retrieval
-│   ├── agent.py               # ReAct Agent
-│   ├── report_generator.py    # Report templates
-│   ├── terminology.py         # Terminology management
-│   └── tools/                 # Agent tools
-├── templates/                 # Jinja2 HTML templates
-├── static/                    # CSS + JS + static assets
-├── data/                      # Terminology DB + PDF cache + vector store
-├── docs/                      # Project specification docs
-├── devlog/                    # Development logs
+```bash
+uv run ruff check .
+uv run pytest
+uv run pytest --cov=src --cov-report=term-missing
+uv run python scripts/evaluate_retrieval.py path/to/reviewed-cases.json
 ```
 
----
+检索评估格式见 `tests/fixtures/retrieval_golden.json`。正式数据集应由人工核对真实 PDF 后填写来源名、页码和关键文本，不应使用示例数据冒充质量结论。
 
-## Documentation
+## 关键目录
 
-| Document | Description |
-|----------|-------------|
-| [Requirements](docs/requirements.md) | User stories + acceptance criteria |
-| [Tech Spec](docs/tech-spec.md) | Architecture design + data flow |
-| [Design Spec](docs/design-spec.md) | UI/UX color/font/component specs |
-| [Execution Plan](docs/execution-plan.md) | Sprint 0-5 task checklist |
-| [API Guide](docs/api-keys-guide.md) | API Key setup guide |
-| [Dependencies](docs/dependencies.md) | Complete dependency record |
+```text
+server.py                     FastAPI 入口、会话与 PDF 摄入
+config.py                     环境、模型、RAG 配置
+src/agent_loop.py             有界编排管线
+src/agent_tools.py            工具 Schema、校验与执行
+src/providers/                LLM Provider 抽象与 DeepSeek 实现
+src/storage.py                SQLite 证据/事实/会话模型
+src/retriever.py              混合检索与重排
+src/tools/calculator.py       唯一财务计算实现
+data/terminology.json         半导体术语库
+data/foundry_financials.json  官方来源结构化数据
+templates/ + static/          Bloomberg Terminal 风格 UI
+tests/                        回归测试
+```
 
----
+## 数据与安全边界
 
-## Important Notes
+- `.env`、`.github_token`、上传 PDF、SQLite 和 ChromaDB 均被 Git 忽略。
+- PDF、Embedding、向量和会话存储在本机；用户问题和检索证据会发送给配置的 DeepSeek API，实时搜索查询会发送给 Tavily。
+- 网页和 PDF 内容被视为不可信证据，不作为系统指令执行。
+- 本项目用于研究辅助，不构成投资建议。重要判断应回到原始公告核验。
 
-- **Financial Calculations**: All ratios are computed by Python with full precision; LLM only does narrative polish
-- **Investment Advice**: This tool is for research reference only and does NOT constitute investment advice
-- **Data Security**: All data is stored locally (ChromaDB + file cache), never uploaded to third parties
+## 文档
 
----
-
-## Acknowledgments
-
-Built with the support of:
-
-- **Claude** (Anthropic) — AI-assisted design & implementation
-- **DeepSeek** — Primary LLM API
-- **BGE-M3** (BAAI) — Chinese Embedding model
-- **FastAPI** + **HTMX** — Modern Python web framework
-- **LlamaIndex** + **LangChain** — RAG & Agent frameworks
-
----
-
-## License
-
-MIT License — For research and educational use only.
+- [需求规格](docs/requirements.md)
+- [技术规范](docs/tech-spec.md)
+- [设计规范](docs/design-spec.md)
+- [执行计划](docs/execution-plan.md)
+- [API 与模型配置](docs/api-keys-guide.md)
+- [依赖说明](docs/dependencies.md)

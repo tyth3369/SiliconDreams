@@ -162,6 +162,18 @@ def test_conversation_messages_persist(database):
     assert messages[1]["citations"] == [{"source_id": "src_1"}]
 
 
+def test_message_limit_returns_most_recent_items_in_conversation_order(database):
+    conversation_id = database.create_conversation()
+    for index in range(5):
+        database.add_message(conversation_id, "user", f"message-{index}")
+
+    assert [item["content"] for item in database.list_messages(conversation_id, limit=3)] == [
+        "message-2",
+        "message-3",
+        "message-4",
+    ]
+
+
 def test_foreign_keys_are_enforced(database):
     with pytest.raises(sqlite3.IntegrityError):
         database.add_message("missing", "user", "orphan")

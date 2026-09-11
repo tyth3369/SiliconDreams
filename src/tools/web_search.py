@@ -14,6 +14,7 @@ import json
 import logging
 import re
 import time
+from urllib.parse import urlparse
 
 from config import SearchConfig
 
@@ -21,6 +22,44 @@ logger = logging.getLogger(__name__)
 
 MAX_RESULTS = 5
 SEARCH_TIMEOUT = 10
+
+OFFICIAL_DOMAINS = {
+    "tsmc.com",
+    "smic.com",
+    "hkexnews.hk",
+    "sec.gov",
+    "intel.com",
+    "samsung.com",
+    "amd.com",
+    "nvidia.com",
+    "asml.com",
+    "appliedmaterials.com",
+    "lamresearch.com",
+    "micron.com",
+    "skhynix.com",
+}
+REPUTABLE_NEWS_DOMAINS = {"reuters.com", "bloomberg.com", "ft.com", "wsj.com"}
+
+
+def _hostname(url: str) -> str:
+    try:
+        return (urlparse(url).hostname or "").lower().removeprefix("www.")
+    except ValueError:
+        return ""
+
+
+def _domain_matches(hostname: str, domains: set[str]) -> bool:
+    return any(hostname == domain or hostname.endswith(f".{domain}") for domain in domains)
+
+
+def source_trust_tier(url: str) -> int:
+    """Classify known primary/reputable domains; unknown web sources remain tier 3."""
+    hostname = _hostname(url)
+    if _domain_matches(hostname, OFFICIAL_DOMAINS):
+        return 1
+    if _domain_matches(hostname, REPUTABLE_NEWS_DOMAINS):
+        return 2
+    return 3
 
 
 # ═══════════════════════════════════════════════════════════
@@ -81,8 +120,21 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dic
                     "url": r.get("url", ""),
                     "snippet": content,
                     "score": r.get("score", 0.0),
+                    "publisher": _hostname(r.get("url", "")),
+                    "published_at": r.get("published_date", ""),
+                    "trust_tier": source_trust_tier(r.get("url", "")),
                 }
             )
+
+        # Preserve relevance while giving first-party and regulated disclosures
+        # a modest deterministic advantage over summaries and aggregators.
+        structured.sort(
+            key=lambda item: (
+                float(item.get("score", 0.0))
+                + {1: 0.20, 2: 0.08}.get(int(item.get("trust_tier", 3)), 0.0)
+            ),
+            reverse=True,
+        )
 
         # Build formatted text for LLM
         lines = [f'## Web 搜索结果 (Tavily): "{query}"\n']
@@ -90,6 +142,7 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dic
             body = r.get("snippet", "")
             lines.append(f"### 结果 {i}: {r['title']}")
             lines.append(f"来源: {r['url']}")
+            lines.append(f"来源等级: Tier {r['trust_tier']} ({r['publisher'] or 'unknown'})")
             if body:
                 lines.append(f"摘要: {body}")
             lines.append("")
@@ -209,7 +262,16 @@ def _parse_ddg_html(html: str, max_results: int) -> list[dict]:
             snippet = snippet.replace("&#x27;", "'").replace("&amp;", "&")
 
         if title and url:
-            results.append({"title": title, "url": url, "snippet": snippet})
+            results.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "snippet": snippet,
+                    "publisher": _hostname(url),
+                    "published_at": "",
+                    "trust_tier": source_trust_tier(url),
+                }
+            )
 
     return results
 

@@ -152,11 +152,6 @@ class FinancialDataManager:
                 f"- 制程结构: {', '.join(f'{k}: {v}' for k, v in c['capacity'].get('process_mix', {}).items())}"
             )
 
-            if c.get("key_strengths"):
-                parts.append(f"- 核心优势: {'; '.join(c['key_strengths'][:3])}")
-            if c.get("key_risks"):
-                parts.append(f"- 关键风险: {'; '.join(c['key_risks'][:3])}")
-
             if c.get("source_title"):
                 parts.append(
                     f"- 官方来源: {c['source_title']} ({c.get('source_published_at', '日期未知')})"

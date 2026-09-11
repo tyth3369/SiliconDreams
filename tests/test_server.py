@@ -25,6 +25,9 @@ def test_homepage_smoke():
     response = asyncio.run(_request("GET", "/"))
     assert response.status_code == 200
     assert "SiliconDreams" in response.text
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
 
 
 def test_stats_smoke():
@@ -112,3 +115,13 @@ def test_pdf_upload_rejects_spoofed_extension(tmp_path, monkeypatch):
     assert response.status_code == 200
     assert "invalid PDF signature" in response.text
     assert server._db.count("documents") == 0
+
+
+def test_chat_rejects_oversized_input():
+    response = asyncio.run(_request("POST", "/chat", data={"message": "x" * 4001}))
+    assert response.status_code == 422
+
+
+def test_chat_rejects_whitespace_only_input():
+    response = asyncio.run(_request("POST", "/chat", data={"message": "   "}))
+    assert response.status_code == 400

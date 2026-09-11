@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v0.4.0)
+ * SiliconDreams — Client-side JS (v0.7.0)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
@@ -82,6 +82,25 @@ function setLang(lang) {
         var input = document.querySelector('.chat-input-area input[name="message"]');
         if (input) input.placeholder = txt.placeholder;
 
+        var uploadTitle = document.querySelector('.sidebar-upload-title');
+        if (uploadTitle) uploadTitle.textContent = txt.uploadTitle;
+        var uploadHint = document.querySelector('.sidebar-upload-hint');
+        if (uploadHint) uploadHint.textContent = txt.uploadHint;
+        var uploadHelp = document.querySelector('.sidebar-upload-help');
+        if (uploadHelp) uploadHelp.textContent = txt.uploadHelp;
+
+        document.querySelectorAll('.citation-panel').forEach(function(panel) {
+            var heading = panel.querySelector('.citation-heading');
+            var hint = panel.querySelector('.citation-hint');
+            var count = panel.querySelectorAll('.citation-item').length;
+            if (heading) {
+                heading.textContent = lang === 'zh'
+                    ? txt.citationHeading + '（' + count + txt.citationCount + '）'
+                    : txt.citationHeading + ' (' + count + ')';
+            }
+            if (hint) hint.textContent = txt.citationHint;
+        });
+
         // Update hidden lang input in chat form
         var langInput = document.querySelector('.chat-input-area input[name="lang"]');
         if (langInput) langInput.value = lang;
@@ -101,10 +120,37 @@ function renderMarkdownSafe(raw) {
 }
 
 function linkInlineCitations(container) {
-    container.innerHTML = container.innerHTML.replace(
-        /\[(\d+)\]/g,
-        '<sup><a href="#" data-cite-index="$1" class="inline-cite" title="Jump to source $1">[$1]</a></sup>'
-    );
+    var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    var nodes = [];
+    while (walker.nextNode()) {
+        var node = walker.currentNode;
+        var parent = node.parentElement;
+        if (!parent || parent.closest('code, pre, a, .citation-panel')) continue;
+        if (/\[\d+\]/.test(node.nodeValue || '')) nodes.push(node);
+    }
+
+    nodes.forEach(function(node) {
+        var value = node.nodeValue || '';
+        var expression = /\[(\d+)\]/g;
+        var match;
+        var cursor = 0;
+        var fragment = document.createDocumentFragment();
+        while ((match = expression.exec(value)) !== null) {
+            fragment.appendChild(document.createTextNode(value.slice(cursor, match.index)));
+            var sup = document.createElement('sup');
+            var link = document.createElement('a');
+            link.href = '#';
+            link.dataset.citeIndex = match[1];
+            link.className = 'inline-cite';
+            link.title = 'Jump to source ' + match[1];
+            link.textContent = '[' + match[1] + ']';
+            sup.appendChild(link);
+            fragment.appendChild(sup);
+            cursor = expression.lastIndex;
+        }
+        fragment.appendChild(document.createTextNode(value.slice(cursor)));
+        node.parentNode.replaceChild(fragment, node);
+    });
 }
 
 window._startStream = function(msgId, targetId) {
@@ -187,7 +233,9 @@ window._startStream = function(msgId, targetId) {
             var panelHtml = data.panel_html;
             if (panelHtml) {
                 var panel = document.createElement('div');
-                panel.innerHTML = panelHtml;
+                panel.innerHTML = typeof DOMPurify === 'undefined'
+                    ? panelHtml
+                    : DOMPurify.sanitize(panelHtml);
                 target.parentNode.appendChild(panel.firstElementChild);
             }
         } else if (data.error) {

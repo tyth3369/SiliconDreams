@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from config import RAGConfig
+from src.reranker import RerankerManager
 from src.storage import Database
 from src.vector_store import VectorStore
 
@@ -37,9 +38,14 @@ class Retriever:
         dense = self.store.search_hybrid(query, top_k=candidate_count)
         lexical = self.database.search_chunks_bm25(query, limit=candidate_count)
         results = self._reciprocal_rank_fusion(dense, lexical, route)
-        # `rerank` remains in the public API for compatibility. A model-backed
-        # reranker can consume this candidate list without changing callers.
-        selected = results[:top_k]
+        if rerank and len(results) > 1:
+            selected = RerankerManager.get_instance().rerank(
+                query,
+                results[:candidate_count],
+                top_n=min(top_k, RAGConfig.rerank_top_n),
+            )
+        else:
+            selected = results[:top_k]
         logger.info(
             "Hybrid retrieval: query=%r route=%s dense=%d bm25=%d selected=%d",
             query[:80],

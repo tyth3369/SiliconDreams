@@ -47,7 +47,7 @@ class FakeDatabase:
 
 def test_rrf_rewards_candidates_found_by_both_paths():
     retriever = Retriever(vector_store=FakeVectorStore(), database=FakeDatabase())
-    results = retriever.retrieve("台积电", top_k=3)
+    results = retriever.retrieve("台积电", top_k=3, rerank=False)
     assert results[0]["id"] == "chunk-b"
     assert results[0]["dense_score"] == 0.8
     assert results[0]["bm25_score"] == 4.2
@@ -56,7 +56,7 @@ def test_rrf_rewards_candidates_found_by_both_paths():
 
 def test_financial_query_boosts_table_candidates():
     retriever = Retriever(vector_store=FakeVectorStore(), database=FakeDatabase())
-    results = retriever.retrieve("台积电毛利率", top_k=3)
+    results = retriever.retrieve("台积电毛利率", top_k=3, rerank=False)
     assert results[0]["source_type"] == "table"
 
 

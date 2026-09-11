@@ -154,7 +154,7 @@ def extract_tables_with_pdfplumber(
     import pdfplumber
 
     filepath = Path(filepath)
-    logger.info(f"🔍 [pdfplumber] 开始提取表格: {filepath.name}")
+    logger.info(f"[pdfplumber] 开始提取表格: {filepath.name}")
 
     tables = []
     with pdfplumber.open(str(filepath)) as pdf:
@@ -198,7 +198,7 @@ def extract_tables_with_pdfplumber(
                     )
                 )
 
-    logger.info(f"✅ [pdfplumber] 提取完成: {len(tables)} 个表格")
+    logger.info(f"[pdfplumber] 提取完成: {len(tables)} 个表格")
     return tables
 
 
@@ -234,11 +234,11 @@ def parse_pdf(filepath: str | Path, original_filename: str | None = None) -> Par
     tables_need_fix = _check_table_quality(doc.tables)
 
     if tables_need_fix:
-        logger.info("🔧 部分表格格式异常，启用 pdfplumber 辅助引擎...")
+        logger.info("部分表格格式异常，启用 pdfplumber 辅助引擎...")
         try:
             pdfplumber_tables = extract_tables_with_pdfplumber(filepath)
             doc.tables = _merge_tables(doc.tables, pdfplumber_tables)
-            logger.info(f"✅ 双引擎合并完成: {len(doc.tables)} 个表格")
+            logger.info(f"双引擎合并完成: {len(doc.tables)} 个表格")
         except Exception as e:
             logger.warning(f"pdfplumber 辅助引擎失败: {e}")
             doc.parse_errors.append(f"pdfplumber: {e}")
