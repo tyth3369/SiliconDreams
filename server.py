@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v0.8.0-dev.3)
+SiliconDreams — FastAPI Server (v0.8.0-dev.4)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -14,6 +14,7 @@ import logging
 import re
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from typing import Annotated
@@ -28,13 +29,23 @@ from src.agent_loop import run_agent_loop
 from src.citation import CitationTracker
 from src.financial_data import FinancialDataManager
 from src.i18n import _EN, _ZH, I18n
+from src.ingestion_jobs import IngestionWorker
 from src.llm_client import get_llm, llm_available
 from src.storage import Database
 
 logger = logging.getLogger(__name__)
 
+
 # ── App setup ──────────────────────────────────────────
-app = FastAPI(title="SiliconDreams", version=AppConfig.version)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Recover durable ingestion work and stop the local worker cleanly."""
+    _ingestion_worker.start(recover=True)
+    yield
+    _ingestion_worker.stop()
+
+
+app = FastAPI(title="SiliconDreams", version=AppConfig.version, lifespan=lifespan)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATES = BASE_DIR / "templates"
@@ -117,15 +128,29 @@ def _update_kb_stats():
 
 
 def _refresh_uploaded_pdfs() -> None:
+    active_jobs = {}
+    for job in _db.list_jobs(job_type=IngestionWorker.JOB_TYPE, limit=100):
+        document_id = job["payload"].get("document_id")
+        if document_id and document_id not in active_jobs:
+            active_jobs[document_id] = job
     _uploaded_pdfs.clear()
     for document in _db.list_documents(limit=100):
         path = Path(document["stored_path"])
         size_mb = round(path.stat().st_size / 1024 / 1024, 1) if path.exists() else 0.0
+        job = active_jobs.get(document["id"])
+        result = job["result"] if job else {}
         _uploaded_pdfs.append(
             {
                 "name": document["original_filename"],
                 "size": size_mb,
                 "status": document["parse_status"],
+                "job_id": job["id"] if job else "",
+                "job_status": job["status"] if job else "",
+                "stage": result.get("stage", document["parse_status"]),
+                "progress": result.get(
+                    "progress", 100 if document["parse_status"] == "ready" else 0
+                ),
+                "error": (job.get("error") if job else document.get("parse_error")) or "",
             }
         )
 
@@ -279,23 +304,27 @@ def _next_stream_item(iterator):
 
 def _ingest_pdf_sync(
     *,
-    content: bytes,
     original_filename: str,
     stored_path: Path,
-    digest: str,
     source_id: str,
     document_id: str,
-) -> None:
+    progress_callback=None,
+) -> dict:
     """Run CPU/model-heavy PDF ingestion outside the ASGI event loop."""
-    stored_path.write_bytes(content)
+    if progress_callback:
+        progress_callback("parsing", 10)
 
     from src.pdf_parser import parse_pdf
 
     doc = parse_pdf(stored_path, original_filename=original_filename)
+    if progress_callback:
+        progress_callback("chunking", 35, {"page_count": doc.total_pages})
 
     from src.chunker import chunk_document
 
     chunks = chunk_document(doc)
+    if progress_callback:
+        progress_callback("persisting", 50, {"chunk_count": len(chunks)})
     for chunk in chunks:
         database_chunk_id = _db.add_chunk(
             document_id=document_id,
@@ -313,16 +342,46 @@ def _ingest_pdf_sync(
 
     from src.vector_store import VectorStore
 
+    if progress_callback:
+        progress_callback("indexing", 70, {"chunk_count": len(chunks)})
     VectorStore().add_chunks(chunks)
-    _db.upsert_document(
-        source_id=source_id,
-        original_filename=original_filename,
-        stored_path=str(stored_path),
-        sha256=digest,
+    _db.set_document_status(
+        document_id,
+        "ready",
         page_count=doc.total_pages,
-        parse_status="ready",
-        parse_error="; ".join(doc.parse_errors) or None,
+        error="; ".join(doc.parse_errors) or None,
     )
+    return {
+        "stage": "completed",
+        "progress": 100,
+        "page_count": doc.total_pages,
+        "chunk_count": len(chunks),
+    }
+
+
+def _process_ingestion_job(job: dict) -> dict:
+    """Resolve a persisted job payload and update durable progress checkpoints."""
+    payload = job["payload"]
+    job_id = job["id"]
+    document_id = payload["document_id"]
+
+    def report(stage: str, progress: int, detail: dict | None = None) -> None:
+        _db.update_job_progress(job_id, stage=stage, progress=progress, detail=detail)
+
+    try:
+        return _ingest_pdf_sync(
+            original_filename=payload["original_filename"],
+            stored_path=Path(payload["stored_path"]),
+            source_id=payload["source_id"],
+            document_id=document_id,
+            progress_callback=report,
+        )
+    except Exception as exc:
+        _db.set_document_status(document_id, "failed", error=str(exc))
+        raise
+
+
+_ingestion_worker = IngestionWorker(lambda: _db, _process_ingestion_job)
 
 
 @app.post("/chat", response_class=HTMLResponse)
@@ -450,7 +509,7 @@ async def upload_pdf(
     file: Annotated[UploadFile, File()],
     lang: str = Depends(get_lang),
 ):
-    """Handle PDF upload: save → parse → chunk → vectorize."""
+    """Validate and persist a PDF, then enqueue durable background ingestion."""
     t = get_t(lang)
 
     if not file.filename or not file.filename.lower().endswith(".pdf"):
@@ -468,6 +527,19 @@ async def upload_pdf(
     digest = hashlib.sha256(content).hexdigest()
     PDF_DIR.mkdir(parents=True, exist_ok=True)
     stored_path = PDF_DIR / f"{digest[:16]}-{safe_filename}"
+    existing = _db.get_document_by_sha256(digest)
+    if existing and existing["parse_status"] == "ready":
+        _refresh_uploaded_pdfs()
+        _update_kb_stats()
+        return jinja.get_template("components.html").render(
+            component="sidebar_content",
+            t=t,
+            lang=lang,
+            uploaded_pdfs=_uploaded_pdfs,
+            kb_stats=_kb_stats,
+        )
+
+    await asyncio.to_thread(stored_path.write_bytes, content)
     source_id = _db.upsert_source(
         source_type="document",
         title=original_filename,
@@ -482,30 +554,19 @@ async def upload_pdf(
         sha256=digest,
         parse_status="pending",
     )
-    try:
-        await asyncio.to_thread(
-            _ingest_pdf_sync,
-            content=content,
-            original_filename=original_filename,
-            stored_path=stored_path,
-            digest=digest,
-            source_id=source_id,
-            document_id=document_id,
-        )
-        _refresh_uploaded_pdfs()
-        _update_kb_stats()
-
-    except Exception as e:
-        _db.upsert_document(
-            source_id=source_id,
-            original_filename=original_filename,
-            stored_path=str(stored_path),
-            sha256=digest,
-            parse_status="failed",
-            parse_error=str(e),
-        )
-        logger.exception("PDF ingestion failed: %s", original_filename)
-        return f"<p>{t('error.pdf_failed')}: {e}</p>"
+    _db.enqueue_job(
+        IngestionWorker.JOB_TYPE,
+        {
+            "document_id": document_id,
+            "source_id": source_id,
+            "original_filename": original_filename,
+            "stored_path": str(stored_path),
+            "digest": digest,
+        },
+        dedupe_key=document_id,
+    )
+    _ingestion_worker.wake()
+    _refresh_uploaded_pdfs()
 
     return jinja.get_template("components.html").render(
         component="sidebar_content",
@@ -516,6 +577,22 @@ async def upload_pdf(
         llm_online=llm_available(),
         preset_prompts=PRESET_PROMPTS,
     )
+
+
+@app.get("/jobs/{job_id}")
+async def get_job(job_id: str):
+    """Return durable ingestion status for diagnostics and UI polling."""
+    job = _db.get_job(job_id)
+    if job is None:
+        return Response(status_code=404)
+    return {
+        "id": job["id"],
+        "type": job["job_type"],
+        "status": job["status"],
+        "stage": job["result"].get("stage", "queued"),
+        "progress": job["result"].get("progress", 0),
+        "error": job["error"],
+    }
 
 
 @app.get("/stats", response_class=HTMLResponse)
@@ -610,8 +687,10 @@ async def get_sidebar(request: Request):
     if lang not in ("zh", "en"):
         lang = request.cookies.get("lang", "zh")
     t = get_t(lang)
-    _update_kb_stats()
     _refresh_uploaded_pdfs()
+    # Avoid opening Chroma for count polling while the worker is actively writing it.
+    if not any(pdf["job_status"] in {"pending", "running"} for pdf in _uploaded_pdfs):
+        _update_kb_stats()
     return jinja.get_template("components.html").render(
         t=t,
         lang=lang,

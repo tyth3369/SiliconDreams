@@ -21,7 +21,20 @@
     <div class="uploaded-files">
         <strong>{{ t('sidebar.kb_uploaded') }}</strong>
         {% for pdf in uploaded_pdfs[-5:] %}
-        <div class="file-item">&ndash; {{ pdf.name }} ({{ pdf.size }}MB)</div>
+        <div class="file-item" data-job-active="{{ 'true' if pdf.job_status in ('pending', 'running') else 'false' }}">
+            <div class="file-name">&ndash; {{ pdf.name }} ({{ pdf.size }}MB)</div>
+            <div class="file-status {{ 'failed' if pdf.job_status == 'failed' else '' }}">
+                <span>{{ t('job.stage.' ~ pdf.stage) }}</span>
+                <span>{{ pdf.progress }}%</span>
+            </div>
+            <div class="job-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                 aria-valuenow="{{ pdf.progress }}" aria-label="{{ pdf.progress }}%">
+                <span style="width: {{ pdf.progress }}%"></span>
+            </div>
+            {% if pdf.job_status == 'failed' and pdf.error %}
+            <div class="file-error" title="{{ pdf.error }}">{{ pdf.error[:160] }}</div>
+            {% endif %}
+        </div>
         {% endfor %}
     </div>
     {% endif %}

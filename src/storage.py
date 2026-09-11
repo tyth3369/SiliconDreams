@@ -302,6 +302,34 @@ class Database:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def get_document_by_sha256(self, sha256: str) -> dict[str, Any] | None:
+        """Return an existing content-addressed document, if any."""
+        with self.connect() as connection:
+            row = connection.execute("SELECT * FROM documents WHERE sha256=?", (sha256,)).fetchone()
+        return dict(row) if row else None
+
+    def set_document_status(
+        self,
+        document_id: str,
+        status: str,
+        *,
+        page_count: int | None = None,
+        error: str | None = None,
+    ) -> None:
+        """Update ingestion state without rewriting immutable document identity."""
+        with self.connect() as connection:
+            connection.execute(
+                """
+                UPDATE documents
+                SET parse_status=?,
+                    page_count=COALESCE(?, page_count),
+                    parse_error=?,
+                    updated_at=?
+                WHERE id=?
+                """,
+                (status, page_count, error, utc_now(), document_id),
+            )
+
     def add_chunk(
         self,
         *,
@@ -627,6 +655,178 @@ class Database:
             item["citations"] = json.loads(item.pop("citations_json"))
             messages.append(item)
         return messages
+
+    def enqueue_job(
+        self,
+        job_type: str,
+        payload: dict[str, Any],
+        *,
+        dedupe_key: str,
+    ) -> str:
+        """Persist an idempotent job; failed jobs are reset for an explicit retry."""
+        job_id = stable_id("job", job_type, dedupe_key)
+        now = utc_now()
+        payload_json = json.dumps(payload, ensure_ascii=False)
+        with self.connect() as connection:
+            existing = connection.execute(
+                "SELECT status FROM jobs WHERE id=?", (job_id,)
+            ).fetchone()
+            if existing is None:
+                connection.execute(
+                    """
+                    INSERT INTO jobs(
+                        id, job_type, status, payload_json, result_json,
+                        error, created_at, updated_at
+                    ) VALUES (?, ?, 'pending', ?, ?, NULL, ?, ?)
+                    """,
+                    (
+                        job_id,
+                        job_type,
+                        payload_json,
+                        json.dumps({"stage": "queued", "progress": 0}),
+                        now,
+                        now,
+                    ),
+                )
+            elif existing["status"] == "failed":
+                connection.execute(
+                    """
+                    UPDATE jobs
+                    SET status='pending', payload_json=?, result_json=?, error=NULL, updated_at=?
+                    WHERE id=?
+                    """,
+                    (
+                        payload_json,
+                        json.dumps({"stage": "queued", "progress": 0}),
+                        now,
+                        job_id,
+                    ),
+                )
+        return job_id
+
+    @staticmethod
+    def _decode_job(row: sqlite3.Row | None) -> dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["payload"] = json.loads(item.pop("payload_json"))
+        item["result"] = json.loads(item.pop("result_json"))
+        return item
+
+    def get_job(self, job_id: str) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            row = connection.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        return self._decode_job(row)
+
+    def list_jobs(
+        self,
+        *,
+        job_type: str | None = None,
+        statuses: tuple[str, ...] | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if job_type:
+            clauses.append("job_type=?")
+            params.append(job_type)
+        if statuses:
+            placeholders = ",".join("?" for _ in statuses)
+            clauses.append(f"status IN ({placeholders})")
+            params.extend(statuses)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM jobs {where} ORDER BY created_at DESC LIMIT ?", params
+            ).fetchall()
+        return [self._decode_job(row) for row in rows]
+
+    def requeue_running_jobs(self, job_type: str) -> int:
+        """Recover work interrupted by a process restart."""
+        now = utc_now()
+        with self.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE jobs
+                SET status='pending', result_json=?, error=NULL, updated_at=?
+                WHERE job_type=? AND status='running'
+                """,
+                (json.dumps({"stage": "queued", "progress": 0}), now, job_type),
+            )
+        return cursor.rowcount
+
+    def claim_next_job(self, job_type: str) -> dict[str, Any] | None:
+        """Atomically claim the oldest pending job for a single local worker."""
+        with self.transaction() as connection:
+            row = connection.execute(
+                """
+                SELECT * FROM jobs
+                WHERE job_type=? AND status='pending'
+                ORDER BY created_at
+                LIMIT 1
+                """,
+                (job_type,),
+            ).fetchone()
+            if row is None:
+                return None
+            updated = connection.execute(
+                """
+                UPDATE jobs SET status='running', result_json=?, updated_at=?
+                WHERE id=? AND status='pending'
+                """,
+                (
+                    json.dumps({"stage": "starting", "progress": 1}),
+                    utc_now(),
+                    row["id"],
+                ),
+            )
+            if updated.rowcount != 1:
+                return None
+            claimed = connection.execute("SELECT * FROM jobs WHERE id=?", (row["id"],)).fetchone()
+        return self._decode_job(claimed)
+
+    def update_job_progress(
+        self,
+        job_id: str,
+        *,
+        stage: str,
+        progress: int,
+        detail: dict[str, Any] | None = None,
+    ) -> None:
+        progress = max(0, min(100, int(progress)))
+        result = {"stage": stage, "progress": progress, **(detail or {})}
+        with self.connect() as connection:
+            connection.execute(
+                "UPDATE jobs SET result_json=?, updated_at=? WHERE id=?",
+                (json.dumps(result, ensure_ascii=False), utc_now(), job_id),
+            )
+
+    def finish_job(
+        self,
+        job_id: str,
+        *,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> None:
+        status = "failed" if error else "succeeded"
+        final_result = result or {
+            "stage": "failed" if error else "completed",
+            "progress": 100 if not error else 0,
+        }
+        with self.connect() as connection:
+            connection.execute(
+                """
+                UPDATE jobs SET status=?, result_json=?, error=?, updated_at=? WHERE id=?
+                """,
+                (
+                    status,
+                    json.dumps(final_result, ensure_ascii=False),
+                    error,
+                    utc_now(),
+                    job_id,
+                ),
+            )
 
     def count(self, table: str) -> int:
         allowed = {"sources", "documents", "chunks", "facts", "conversations", "messages", "jobs"}

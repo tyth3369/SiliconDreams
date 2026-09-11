@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v0.7.0)
+ * SiliconDreams — Client-side JS (v0.8.0-dev.4)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
@@ -277,8 +277,31 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
         document.querySelectorAll('#theme-toggles .toggle-btn').forEach(function(btn) {
             btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
         });
+        syncUploadPolling();
     }
 });
+
+// Keep durable PDF ingestion progress current without reloading the page.
+window._uploadPollTimer = null;
+
+function syncUploadPolling() {
+    var hasActiveJob = document.querySelector('.file-item[data-job-active="true"]');
+    if (!hasActiveJob) {
+        if (window._uploadPollTimer) {
+            clearInterval(window._uploadPollTimer);
+            window._uploadPollTimer = null;
+        }
+        return;
+    }
+    if (window._uploadPollTimer) return;
+    window._uploadPollTimer = setInterval(function() {
+        var lang = document.documentElement.lang || 'zh';
+        htmx.ajax('GET', '/sidebar?lang=' + lang, {
+            target: '#sidebar-inner',
+            swap: 'innerHTML'
+        });
+    }, 1000);
+}
 
 // ═══════════════════════════════════════════════════════
 // Markdown Rendering (page load)
@@ -299,9 +322,13 @@ function renderMarkdownMessages() {
 
 // Run after DOM ready (marked library loaded synchronously before app.js)
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderMarkdownMessages);
+    document.addEventListener('DOMContentLoaded', function() {
+        renderMarkdownMessages();
+        syncUploadPolling();
+    });
 } else {
     renderMarkdownMessages();
+    syncUploadPolling();
 }
 
 // ═══════════════════════════════════════════════════════
