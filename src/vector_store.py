@@ -6,6 +6,7 @@ SiliconDreams — ChromaDB 向量存储管理
 - 混合检索: 向量相似度 + 元数据过滤
 """
 
+import json
 import logging
 from pathlib import Path
 
@@ -17,6 +18,25 @@ from src.chunker import Chunk
 from src.embedding_manager import EmbeddingManager
 
 logger = logging.getLogger(__name__)
+
+
+def _chroma_metadata(metadata: dict) -> dict:
+    """Normalize parser metadata to values accepted by Chroma."""
+    normalized = {}
+    for key, value in metadata.items():
+        if isinstance(value, tuple):
+            normalized[key] = list(value)
+        elif isinstance(value, dict):
+            normalized[key] = json.dumps(value, ensure_ascii=False, sort_keys=True)
+        elif isinstance(value, list):
+            normalized[key] = [
+                item if isinstance(item, (str, int, float, bool)) else str(item) for item in value
+            ]
+        elif value is None or isinstance(value, (str, int, float, bool)):
+            normalized[key] = value
+        else:
+            normalized[key] = str(value)
+    return normalized
 
 
 class VectorStore:
@@ -80,8 +100,15 @@ class VectorStore:
         # 分离文本和表格
         text_items = {"ids": [], "documents": [], "metadatas": []}
         table_items = {"ids": [], "documents": [], "metadatas": []}
+        seen_ids: set[str] = set()
 
         for chunk in chunks:
+            # Parser fallbacks can surface the same content more than once.
+            # SQLite then reuses its content-addressed ID, while Chroma requires
+            # every ID in one upsert request to be unique.
+            if chunk.chunk_id in seen_ids:
+                continue
+            seen_ids.add(chunk.chunk_id)
             item = {
                 "ids": chunk.chunk_id,
                 "documents": chunk.text,
@@ -91,7 +118,7 @@ class VectorStore:
                     "section": chunk.section,
                     "char_count": len(chunk.text),
                     "chunk_type": chunk.chunk_type,
-                    **chunk.metadata,
+                    **_chroma_metadata(chunk.metadata),
                 },
             }
             if chunk.chunk_type == "table":
@@ -135,6 +162,7 @@ class VectorStore:
         query: str,
         top_k: int = RAGConfig.similarity_top_k,
         collection: str = "auto",
+        sources: list[str] | None = None,
     ) -> list[dict]:
         """
         向量相似度检索。
@@ -179,23 +207,29 @@ class VectorStore:
         results = col.query(
             query_embeddings=[query_embedding],
             n_results=min(top_k, col.count()),
+            where={"source": {"$in": sources}} if sources else None,
             include=["documents", "metadatas", "distances"],
         )
 
         return self._format_results(results)
 
-    def search_tables(self, query: str, top_k: int = 5) -> list[dict]:
+    def search_tables(
+        self, query: str, top_k: int = 5, sources: list[str] | None = None
+    ) -> list[dict]:
         """仅在表格 Collection 中检索"""
-        return self.search(query, top_k=top_k, collection="table")
+        return self.search(query, top_k=top_k, collection="table", sources=sources)
 
-    def search_texts(self, query: str, top_k: int = 5) -> list[dict]:
+    def search_texts(
+        self, query: str, top_k: int = 5, sources: list[str] | None = None
+    ) -> list[dict]:
         """仅在文本 Collection 中检索"""
-        return self.search(query, top_k=top_k, collection="text")
+        return self.search(query, top_k=top_k, collection="text", sources=sources)
 
     def search_hybrid(
         self,
         query: str,
         top_k: int = RAGConfig.similarity_top_k,
+        sources: list[str] | None = None,
     ) -> list[dict]:
         """
         混合检索：从文本和表格两个 Collection 各取 top_k 条 → 合并去重 → 重排序。
@@ -203,8 +237,8 @@ class VectorStore:
         当前实现：合并两个 Chroma collection 的稠密检索结果；
         BM25、RRF 融合与 Cross-Encoder 重排由 retriever.py 完成。
         """
-        text_results = self.search_texts(query, top_k=top_k)
-        table_results = self.search_tables(query, top_k=top_k)
+        text_results = self.search_texts(query, top_k=top_k, sources=sources)
+        table_results = self.search_tables(query, top_k=top_k, sources=sources)
 
         # 合并去重
         seen_ids = set()

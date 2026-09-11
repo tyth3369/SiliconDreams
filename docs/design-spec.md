@@ -1,4 +1,4 @@
-# SiliconDreams — UI/UX 设计规范 v0.7
+# SiliconDreams — UI/UX 设计规范 v0.8
 
 ## 视觉原则
 
