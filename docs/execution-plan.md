@@ -16,6 +16,7 @@
 - [x] 检索 Recall@K/MRR 评估框架
 - [x] 服务端事件循环 offload、输入限制和安全响应头
 - [x] 文档与真实实现同步
+- [x] GitHub 首发准备、Docker Compose、Caddy HTTPS 与部署文档
 
 ## v0.8 数据质量与研究工作台
 

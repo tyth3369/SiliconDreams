@@ -66,3 +66,11 @@ Browser
 - CSP 暂时允许 inline script，以兼容现有 HTMX fragment 和本地化数据；公网部署前应改 nonce 或移除 inline script。
 - 上传仍为单请求工作流，虽不阻塞 Agent SSE，但尚无持久后台队列与百分比进度。
 - 当前身份模型适用于 localhost 单用户，不适合直接公开部署。
+
+## v0.7 首发部署
+
+- 生产拓扑：Caddy（TLS + Basic Auth）→ 单 worker Uvicorn → SQLite/Chroma 持久目录。
+- Caddy 对 SSE 禁用响应缓冲，自动完成 HTTP 到 HTTPS 跳转与证书续期。
+- BGE-M3 与 Cross-Encoder 位于独立 Docker 命名卷，应用数据绑定到宿主机 `data/`。
+- Basic Auth 仅用于首发访问保护；移除前必须完成正式身份认证、CSRF、限流和审计。
+- 由于 SSE hand-off 仍为进程内状态，v0.7 禁止多 worker 或多实例部署。

@@ -30,6 +30,12 @@ def test_homepage_smoke():
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
 
 
+def test_healthz():
+    response = asyncio.run(_request("GET", "/healthz"))
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "version": "0.7.0"}
+
+
 def test_stats_smoke():
     response = asyncio.run(_request("GET", "/stats"))
     assert response.status_code == 200

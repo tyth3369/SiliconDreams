@@ -202,6 +202,12 @@ def _stream_tokens_with_capture(generator, conversation_id: str, tracker: Citati
 # ═══════════════════════════════════════════════════════
 
 
+@app.get("/healthz")
+async def healthz():
+    """Lightweight container/orchestrator health probe."""
+    return {"status": "ok", "version": AppConfig.version}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(
     lang: str = Depends(get_lang),

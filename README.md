@@ -40,7 +40,7 @@ PDF RAG 的排序链路为：BGE-M3 cosine 与 BM25 并行召回 → weighted RR
 要求：macOS、[uv](https://docs.astral.sh/uv/)、Python 3.12。Apple Silicon 可使用 MPS。
 
 ```bash
-cd /Users/eric/Desktop/SiliconDreams
+cd SiliconDreams
 uv sync --dev
 cp .env.example .env
 # 在 .env 填入 DEEPSEEK_API_KEY 和 TAVILY_API_KEY
@@ -50,6 +50,21 @@ uv run uvicorn server:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 浏览器打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
+
+## 部署到 sillycon.xyz
+
+首版生产方案为阿里云香港 ECS + Docker Compose + Caddy：Caddy 自动管理 HTTPS，Basic Auth 保护 API 额度与上传资料，`data/` 和本地模型使用持久卷。完整操作见[部署指南](docs/deployment.md)。
+
+```bash
+cp .env.production.example .env.production
+cp .env.caddy.example .env.caddy
+docker compose build
+docker compose run --rm app python src/tools/download_bge_m3.py
+docker compose run --rm app python src/tools/download_reranker.py
+docker compose up -d
+```
+
+当前 SSE hand-off 是进程内状态，生产命令必须保持一个 Uvicorn worker。
 
 ## 质量检查
 
