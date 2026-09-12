@@ -21,6 +21,7 @@
 - “最新”问题优先网页；财报问题优先本地 PDF/官方结构化事实。
 - 检索质量通过人工 golden set 的 Recall@K/MRR 评估，不凭演示印象判断；v0.8 发布门槛为 Recall@5 ≥ 90%、MRR ≥ 70%。
 - 引用质量使用真实 Agent 回答的人工 claim→source 标注集评估；发布门槛为 citation precision ≥ 95%、claim coverage ≥ 90%、编号有效率 100%。
+- 每个 AI 请求必须可观测总耗时、首 token 延迟、模型/工具错误、API token、来源类型覆盖和可配置成本估算；遥测不得复制问题、回答或证据正文。
 
 ### 3. 精确财务分析
 

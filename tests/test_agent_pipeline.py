@@ -2,6 +2,7 @@ import json
 
 from src.agent_loop import _format_duration, run_agent_loop
 from src.citation import CitationTracker
+from src.observability import RunTelemetry
 
 
 def _events(generator):
@@ -67,11 +68,14 @@ def test_pipeline_has_one_retrieval_plan_and_one_calculation_plan(monkeypatch):
 
     monkeypatch.setattr("src.agent_loop.execute_tool", fake_execute)
     client = BoundedClient()
+    tracker = CitationTracker()
+    telemetry = RunTelemetry("request", "conversation", "deepseek", "model")
     events = _events(
         run_agent_loop(
             client,
             [{"role": "user", "content": "台积电Q4环比增长"}],
-            CitationTracker(),
+            tracker,
+            telemetry=telemetry,
         )
     )
     assert client.planning_calls == 2
@@ -80,6 +84,10 @@ def test_pipeline_has_one_retrieval_plan_and_one_calculation_plan(monkeypatch):
     assert names[2] == "financial_calculator"
     assert any(event.get("token") == "answer" for event in events)
     assert events[-1] == {"done": True}
+    run = telemetry.finish(tracker.to_list())
+    assert run["model_calls"] == 3
+    assert run["tool_calls"] == 3
+    assert run["source_types"] == {"web": 1}
 
 
 class NoToolClient:

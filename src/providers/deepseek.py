@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import time
-from collections.abc import Generator
-from typing import ClassVar
+from collections.abc import Callable, Generator
+from typing import Any, ClassVar
 
 from openai import OpenAI
 
@@ -15,8 +15,40 @@ from config import LLMConfig
 logger = logging.getLogger(__name__)
 
 
+def _usage_dict(usage: Any) -> dict[str, int]:
+    """Normalize SDK usage objects without retaining request or response content."""
+    if usage is None:
+        return {}
+    if hasattr(usage, "model_dump"):
+        payload = usage.model_dump()
+    elif isinstance(usage, dict):
+        payload = usage
+    else:
+        payload = {
+            key: getattr(usage, key, 0)
+            for key in (
+                "prompt_tokens",
+                "completion_tokens",
+                "total_tokens",
+                "prompt_cache_hit_tokens",
+                "prompt_cache_miss_tokens",
+            )
+        }
+    return {
+        key: max(0, int(payload.get(key) or 0))
+        for key in (
+            "prompt_tokens",
+            "completion_tokens",
+            "total_tokens",
+            "prompt_cache_hit_tokens",
+            "prompt_cache_miss_tokens",
+        )
+    }
+
+
 class DeepSeekProvider:
     _instance: ClassVar[DeepSeekProvider | None] = None
+    supports_usage_callback: ClassVar[bool] = True
 
     def __init__(self) -> None:
         if not self.is_available():
@@ -117,6 +149,7 @@ class DeepSeekProvider:
             "content": choice.message.content,
             "tool_calls": parsed_calls or None,
             "finish_reason": choice.finish_reason,
+            "usage": _usage_dict(getattr(response, "usage", None)),
         }
 
     def chat_stream(
@@ -126,6 +159,7 @@ class DeepSeekProvider:
         temperature: float | None = None,
         max_tokens: int | None = None,
         system_prompt: str | None = None,
+        usage_callback: Callable[[dict[str, int]], None] | None = None,
     ) -> Generator[str, None, None]:
         full_messages = self._messages(messages, system_prompt)
         for attempt in range(self.max_retries):
@@ -137,8 +171,12 @@ class DeepSeekProvider:
                     max_tokens=max_tokens or self.max_tokens,
                     extra_body={"thinking": {"type": "disabled"}},
                     stream=True,
+                    stream_options={"include_usage": True},
                 )
                 for chunk in stream:
+                    usage = _usage_dict(getattr(chunk, "usage", None))
+                    if usage and usage_callback:
+                        usage_callback(usage)
                     if chunk.choices and chunk.choices[0].delta.content:
                         yield chunk.choices[0].delta.content
                 return

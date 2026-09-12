@@ -1,6 +1,6 @@
 import pytest
 
-from config import SearchConfig, SecurityConfig
+from config import ObservabilityConfig, SearchConfig, SecurityConfig
 
 
 def test_tavily_placeholder_is_not_treated_as_configured(monkeypatch):
@@ -11,6 +11,15 @@ def test_tavily_placeholder_is_not_treated_as_configured(monkeypatch):
 def test_real_tavily_key_is_treated_as_configured(monkeypatch):
     monkeypatch.setattr(SearchConfig, "api_key", "tvly-test-value")
     assert SearchConfig.is_configured() is True
+
+
+def test_observability_pricing_requires_three_nonnegative_decimal_rates(monkeypatch):
+    monkeypatch.setattr(ObservabilityConfig, "input_cache_hit_usd_per_million", "0.1")
+    monkeypatch.setattr(ObservabilityConfig, "input_cache_miss_usd_per_million", "0.4")
+    monkeypatch.setattr(ObservabilityConfig, "output_usd_per_million", "1.0")
+    assert ObservabilityConfig.pricing_configured() is True
+    monkeypatch.setattr(ObservabilityConfig, "output_usd_per_million", "not-a-number")
+    assert ObservabilityConfig.pricing_configured() is False
 
 
 def test_production_refuses_to_start_without_auth(monkeypatch):

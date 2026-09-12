@@ -155,7 +155,23 @@ def test_login_rate_limit_returns_retry_after(monkeypatch):
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "1.0.0-dev.3"}
+    assert response.json() == {"status": "ok", "version": "1.0.0-dev.4"}
+
+
+def test_operations_metrics_are_aggregate_and_empty_by_default():
+    response = asyncio.run(_request("GET", "/ops/metrics?hours=48"))
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["window_hours"] == 48
+    assert payload["runs"] == 0
+    assert payload["estimated_cost_usd"] is None
+
+
+def test_operations_metrics_require_login_when_auth_is_enabled(monkeypatch):
+    _enable_auth(monkeypatch)
+    response = asyncio.run(_request("GET", "/ops/metrics"))
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
 
 
 def test_stats_smoke():
@@ -205,6 +221,41 @@ def test_chat_history_persists_by_conversation_cookie():
     assert posted.status_code == 200
     assert "持久化测试" in reloaded.text
     assert server._db.count("messages") == 1
+
+
+def test_completed_chat_persists_privacy_safe_run_telemetry(monkeypatch):
+    class FakeProvider:
+        model = "fake-model"
+
+        @staticmethod
+        def chat_with_tools(messages, tools, model=None, tool_choice="auto"):
+            return {"tool_calls": None, "usage": {"prompt_tokens": 5, "completion_tokens": 1}}
+
+        @staticmethod
+        def chat_stream(messages, model=None):
+            yield "grounded response"
+
+    monkeypatch.setattr(server, "llm_available", lambda: True)
+    monkeypatch.setattr(server, "get_llm", lambda: FakeProvider())
+
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            await client.get("/")
+            posted = await client.post("/chat", data={"message": "hello"})
+            msg_id = re.search(r'data-stream-msg-id="([^"]+)"', posted.text).group(1)
+            streamed = await client.get(f"/chat/stream/{msg_id}")
+            metrics = await client.get("/ops/metrics")
+            return streamed, metrics
+
+    streamed, metrics = asyncio.run(scenario())
+    assert '"done": true' in streamed.text
+    payload = metrics.json()
+    assert payload["runs"] == 1
+    assert payload["statuses"] == {"success": 1}
+    assert payload["tokens"]["prompt"] == 5
+    assert payload["tokens"]["completion"] == 1
+    assert payload["tokens"]["cache_miss"] == 5
 
 
 def test_separate_clients_get_separate_conversations():

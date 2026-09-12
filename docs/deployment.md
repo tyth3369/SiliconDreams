@@ -51,6 +51,10 @@ chmod 600 .env.production .env.caddy
 
 在 `.env.production` 填入真实 DeepSeek 与 Tavily API Key。
 
+若需要显示 API 成本估算，再按供应商当前合同价格填写
+`LLM_INPUT_CACHE_HIT_USD_PER_MILLION`、`LLM_INPUT_CACHE_MISS_USD_PER_MILLION` 和
+`LLM_OUTPUT_USD_PER_MILLION`。三个值必须同时填写；留空时仍记录实际 token，但成本显示为 `null`，避免用过期价格产生伪精确结果。
+
 生成应用用户名、PBKDF2 密码哈希和随机会话密钥：
 
 ```bash
@@ -105,6 +109,7 @@ docker compose build app
 docker compose up -d
 docker compose exec app python scripts/manage_database.py verify
 docker compose exec app python scripts/manage_database.py audit --limit 50
+docker compose exec app python scripts/manage_database.py metrics --hours 24
 ```
 
 完整灾备还应包含 `data/pdfs/` 与 `data/chroma_db/`；Caddy 证书卷可以自动重建，本地模型卷可以重新下载。停机后的完整目录归档可使用：

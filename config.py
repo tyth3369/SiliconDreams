@@ -7,6 +7,7 @@ SiliconDreams — 全局配置
 
 import os
 import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -49,6 +50,32 @@ class LLMConfig:
     @classmethod
     def is_configured(cls) -> bool:
         return bool(cls.api_key and cls.api_key != "sk-your-deepseek-api-key-here")
+
+
+class ObservabilityConfig:
+    """Optional pricing inputs for privacy-safe request telemetry."""
+
+    input_cache_hit_usd_per_million: str = os.getenv(
+        "LLM_INPUT_CACHE_HIT_USD_PER_MILLION", ""
+    ).strip()
+    input_cache_miss_usd_per_million: str = os.getenv(
+        "LLM_INPUT_CACHE_MISS_USD_PER_MILLION", ""
+    ).strip()
+    output_usd_per_million: str = os.getenv("LLM_OUTPUT_USD_PER_MILLION", "").strip()
+
+    @classmethod
+    def pricing_configured(cls) -> bool:
+        values = (
+            cls.input_cache_hit_usd_per_million,
+            cls.input_cache_miss_usd_per_million,
+            cls.output_usd_per_million,
+        )
+        if not all(values):
+            return False
+        try:
+            return all(Decimal(value) >= 0 for value in values)
+        except InvalidOperation:
+            return False
 
 
 # ── Web Search API 配置 ──────────────────────────────────
@@ -179,7 +206,7 @@ class AppConfig:
     """应用配置"""
 
     name: str = "SiliconDreams"
-    version: str = "1.0.0-dev.3"
+    version: str = "1.0.0-dev.4"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]

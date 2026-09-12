@@ -237,12 +237,57 @@ V5_STATEMENTS = (
     """,
 )
 
+V6_STATEMENTS = (
+    """
+    CREATE TABLE IF NOT EXISTS ai_runs (
+        id TEXT PRIMARY KEY,
+        request_id TEXT NOT NULL UNIQUE,
+        conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('success', 'degraded', 'error', 'cancelled')),
+        duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
+        first_token_ms INTEGER CHECK (first_token_ms IS NULL OR first_token_ms >= 0),
+        model_calls INTEGER NOT NULL DEFAULT 0 CHECK (model_calls >= 0),
+        model_errors INTEGER NOT NULL DEFAULT 0 CHECK (model_errors >= 0),
+        tool_calls INTEGER NOT NULL DEFAULT 0 CHECK (tool_calls >= 0),
+        tool_errors INTEGER NOT NULL DEFAULT 0 CHECK (tool_errors >= 0),
+        prompt_tokens INTEGER NOT NULL DEFAULT 0 CHECK (prompt_tokens >= 0),
+        completion_tokens INTEGER NOT NULL DEFAULT 0 CHECK (completion_tokens >= 0),
+        cache_hit_tokens INTEGER NOT NULL DEFAULT 0 CHECK (cache_hit_tokens >= 0),
+        cache_miss_tokens INTEGER NOT NULL DEFAULT 0 CHECK (cache_miss_tokens >= 0),
+        estimated_cost_usd TEXT,
+        source_count INTEGER NOT NULL DEFAULT 0 CHECK (source_count >= 0),
+        source_types_json TEXT NOT NULL DEFAULT '{}',
+        error_code TEXT,
+        started_at TEXT NOT NULL,
+        completed_at TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_ai_runs_created ON ai_runs(created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_ai_runs_status ON ai_runs(status, created_at)",
+    """
+    CREATE TABLE IF NOT EXISTS ai_tool_events (
+        id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL REFERENCES ai_runs(id) ON DELETE CASCADE,
+        tool_name TEXT NOT NULL,
+        outcome TEXT NOT NULL CHECK (outcome IN ('success', 'error')),
+        duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
+        created_at TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_ai_tool_events_run ON ai_tool_events(run_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ai_tool_events_tool ON ai_tool_events(tool_name, created_at)",
+)
+
 MIGRATIONS = (
     Migration(1, "evidence_conversations_jobs", V1_STATEMENTS),
     Migration(2, "conversation_archive_and_titles", V2_STATEMENTS),
     Migration(3, "company_watchlist", V3_STATEMENTS),
     Migration(4, "web_search_cache_and_snapshots", V4_STATEMENTS),
     Migration(5, "append_only_security_audit", V5_STATEMENTS),
+    Migration(6, "privacy_safe_ai_observability", V6_STATEMENTS),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version
 
@@ -258,6 +303,24 @@ REQUIRED_COLUMNS = {
     "web_search_cache": (4, {"query_key", "query", "backend", "results_json", "expires_at"}),
     "web_snapshots": (4, {"id", "url", "content_hash", "retrieved_at"}),
     "audit_events": (5, {"id", "request_id", "actor", "action", "outcome", "created_at"}),
+    "ai_runs": (
+        6,
+        {
+            "id",
+            "request_id",
+            "status",
+            "duration_ms",
+            "model_calls",
+            "tool_calls",
+            "prompt_tokens",
+            "completion_tokens",
+            "source_count",
+            "source_types_json",
+            "started_at",
+            "completed_at",
+        },
+    ),
+    "ai_tool_events": (6, {"id", "run_id", "tool_name", "outcome", "duration_ms"}),
 }
 REQUIRED_COLUMNS_BY_MIGRATION = {2: {"conversations": {"archived_at"}}}
 REQUIRED_OBJECTS = {
@@ -284,6 +347,14 @@ REQUIRED_OBJECTS_BY_MIGRATION = {
             "audit_events_no_update",
             "audit_events_no_delete",
         },
+    },
+    6: {
+        "index": {
+            "idx_ai_runs_created",
+            "idx_ai_runs_status",
+            "idx_ai_tool_events_run",
+            "idx_ai_tool_events_tool",
+        }
     },
 }
 

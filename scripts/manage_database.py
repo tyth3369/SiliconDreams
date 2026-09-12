@@ -30,6 +30,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("verify", help="Verify integrity and the current schema")
     audit = subparsers.add_parser("audit", help="Read recent append-only audit events")
     audit.add_argument("--limit", type=int, default=100)
+    metrics = subparsers.add_parser(
+        "metrics", help="Summarize privacy-safe AI cost, latency, errors, and source coverage"
+    )
+    metrics.add_argument("--hours", type=int, default=24)
 
     backup = subparsers.add_parser("backup", help="Create and verify an online SQLite backup")
     backup.add_argument("destination", type=Path)
@@ -52,6 +56,8 @@ def main() -> None:
         result = {"backup": str(backup_database(args.database, args.destination))}
     elif args.command == "audit":
         result = {"events": Database(args.database).list_audit_events(limit=args.limit)}
+    elif args.command == "metrics":
+        result = Database(args.database).observability_summary(hours=args.hours)
     else:
         result = {
             "restored": str(

@@ -11,7 +11,7 @@ import uuid
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -921,6 +921,165 @@ class Database:
             )
         return event_id
 
+    def add_ai_run(self, run: dict[str, Any]) -> str:
+        """Persist one privacy-safe AI run and its aggregate tool timings atomically."""
+        with self.transaction() as connection:
+            connection.execute(
+                """
+                INSERT INTO ai_runs(
+                    id, request_id, conversation_id, provider, model, status,
+                    duration_ms, first_token_ms, model_calls, model_errors,
+                    tool_calls, tool_errors, prompt_tokens, completion_tokens,
+                    cache_hit_tokens, cache_miss_tokens, estimated_cost_usd,
+                    source_count, source_types_json, error_code, started_at,
+                    completed_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run["id"],
+                    run["request_id"],
+                    run.get("conversation_id"),
+                    run["provider"],
+                    run["model"],
+                    run["status"],
+                    run["duration_ms"],
+                    run.get("first_token_ms"),
+                    run.get("model_calls", 0),
+                    run.get("model_errors", 0),
+                    run.get("tool_calls", 0),
+                    run.get("tool_errors", 0),
+                    run.get("prompt_tokens", 0),
+                    run.get("completion_tokens", 0),
+                    run.get("cache_hit_tokens", 0),
+                    run.get("cache_miss_tokens", 0),
+                    run.get("estimated_cost_usd"),
+                    run.get("source_count", 0),
+                    json.dumps(run.get("source_types") or {}, sort_keys=True),
+                    run.get("error_code"),
+                    run["started_at"],
+                    run["completed_at"],
+                    run["created_at"],
+                ),
+            )
+            for event in run.get("tool_events") or []:
+                connection.execute(
+                    """
+                    INSERT INTO ai_tool_events(
+                        id, run_id, tool_name, outcome, duration_ms, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        event["id"],
+                        run["id"],
+                        event["tool_name"],
+                        event["outcome"],
+                        event["duration_ms"],
+                        event["created_at"],
+                    ),
+                )
+        return str(run["id"])
+
+    def list_ai_runs(self, *, hours: int = 24, limit: int = 1000) -> list[dict[str, Any]]:
+        """Read recent aggregate runs; prompt, answer, and source text are never stored here."""
+        since = (datetime.now(UTC) - timedelta(hours=max(1, min(hours, 24 * 90)))).isoformat(
+            timespec="seconds"
+        )
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM ai_runs WHERE created_at >= ?
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                (since, max(1, min(limit, 10_000))),
+            ).fetchall()
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["source_types"] = json.loads(item.pop("source_types_json"))
+            items.append(item)
+        return items
+
+    def observability_summary(self, *, hours: int = 24) -> dict[str, Any]:
+        """Aggregate cost, latency, reliability, and evidence coverage for operations."""
+        from config import ObservabilityConfig
+        from src.tools.calculator import (
+            calculate_percentage,
+            sum_decimal_strings,
+            summarize_numeric_values,
+        )
+
+        bounded_hours = max(1, min(hours, 24 * 90))
+        runs = self.list_ai_runs(hours=bounded_hours, limit=10_000)
+        run_ids = [run["id"] for run in runs]
+        tool_rows: list[dict[str, Any]] = []
+        if run_ids:
+            placeholders = ",".join("?" for _ in run_ids)
+            with self.connect() as connection:
+                tool_rows = [
+                    dict(row)
+                    for row in connection.execute(
+                        f"""
+                        SELECT tool_name, outcome, duration_ms
+                        FROM ai_tool_events WHERE run_id IN ({placeholders})
+                        """,
+                        run_ids,
+                    ).fetchall()
+                ]
+
+        statuses = Counter(str(run["status"]) for run in runs)
+        source_types: Counter[str] = Counter()
+        for run in runs:
+            source_types.update(run["source_types"])
+        tools: dict[str, dict[str, Any]] = {}
+        for name in sorted({str(row["tool_name"]) for row in tool_rows}):
+            selected = [row for row in tool_rows if row["tool_name"] == name]
+            tools[name] = {
+                **summarize_numeric_values([int(row["duration_ms"]) for row in selected]),
+                "errors": sum(row["outcome"] == "error" for row in selected),
+            }
+
+        sourced_runs = sum(int(run["source_count"]) > 0 for run in runs)
+        model_calls = sum(int(run["model_calls"]) for run in runs)
+        model_errors = sum(int(run["model_errors"]) for run in runs)
+        tool_calls = sum(int(run["tool_calls"]) for run in runs)
+        tool_errors = sum(int(run["tool_errors"]) for run in runs)
+        return {
+            "window_hours": bounded_hours,
+            "runs": len(runs),
+            "statuses": dict(sorted(statuses.items())),
+            "success_rate_pct": calculate_percentage(statuses["success"], len(runs)),
+            "degraded_rate_pct": calculate_percentage(statuses["degraded"], len(runs)),
+            "error_rate_pct": calculate_percentage(statuses["error"], len(runs)),
+            "cancelled_rate_pct": calculate_percentage(statuses["cancelled"], len(runs)),
+            "sourced_run_rate_pct": calculate_percentage(sourced_runs, len(runs)),
+            "latency_ms": summarize_numeric_values([int(run["duration_ms"]) for run in runs]),
+            "first_token_ms": summarize_numeric_values(
+                [int(run["first_token_ms"]) for run in runs if run["first_token_ms"] is not None]
+            ),
+            "tokens": {
+                "prompt": sum(int(run["prompt_tokens"]) for run in runs),
+                "completion": sum(int(run["completion_tokens"]) for run in runs),
+                "cache_hit": sum(int(run["cache_hit_tokens"]) for run in runs),
+                "cache_miss": sum(int(run["cache_miss_tokens"]) for run in runs),
+            },
+            "estimated_cost_usd": sum_decimal_strings(
+                [str(run["estimated_cost_usd"]) for run in runs if run["estimated_cost_usd"]]
+            ),
+            "cost_configured": ObservabilityConfig.pricing_configured(),
+            "model": {
+                "calls": model_calls,
+                "errors": model_errors,
+                "error_rate_pct": calculate_percentage(model_errors, model_calls),
+            },
+            "tool": {
+                "calls": tool_calls,
+                "errors": tool_errors,
+                "error_rate_pct": calculate_percentage(tool_errors, tool_calls),
+            },
+            "source_types": dict(sorted(source_types.items())),
+            "tools": tools,
+        }
+
     def list_audit_events(self, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as connection:
             rows = connection.execute(
@@ -947,6 +1106,8 @@ class Database:
             "web_search_cache",
             "web_snapshots",
             "audit_events",
+            "ai_runs",
+            "ai_tool_events",
         }
         if table not in allowed:
             raise ValueError(f"Unsupported table: {table}")

@@ -24,6 +24,26 @@ def _populated_database(path: Path) -> tuple[Database, str]:
     return database, conversation_id
 
 
+def _downgrade_fixture_to_v4(database: Database) -> None:
+    with database.connect() as connection:
+        connection.execute("UPDATE schema_meta SET value='4' WHERE key='version'")
+        connection.execute("DELETE FROM schema_migrations WHERE version IN (5, 6)")
+        for name in (
+            "idx_audit_events_created",
+            "idx_audit_events_action",
+            "idx_ai_runs_created",
+            "idx_ai_runs_status",
+            "idx_ai_tool_events_run",
+            "idx_ai_tool_events_tool",
+        ):
+            connection.execute(f"DROP INDEX {name}")
+        connection.execute("DROP TRIGGER audit_events_no_update")
+        connection.execute("DROP TRIGGER audit_events_no_delete")
+        connection.execute("DROP TABLE ai_tool_events")
+        connection.execute("DROP TABLE ai_runs")
+        connection.execute("DROP TABLE audit_events")
+
+
 def test_inspect_and_verify_current_database(tmp_path):
     database, _ = _populated_database(tmp_path / "source.db")
     status = inspect_database(database.path)
@@ -84,14 +104,7 @@ def test_invalid_backup_is_rejected_before_destination_changes(tmp_path):
 
 def test_restore_accepts_verified_older_schema_and_migrates_on_open(tmp_path):
     source, conversation_id = _populated_database(tmp_path / "source.db")
-    with source.connect() as connection:
-        connection.execute("UPDATE schema_meta SET value='4' WHERE key='version'")
-        connection.execute("DELETE FROM schema_migrations WHERE version=5")
-        connection.execute("DROP TRIGGER audit_events_no_update")
-        connection.execute("DROP TRIGGER audit_events_no_delete")
-        connection.execute("DROP INDEX idx_audit_events_created")
-        connection.execute("DROP INDEX idx_audit_events_action")
-        connection.execute("DROP TABLE audit_events")
+    _downgrade_fixture_to_v4(source)
     backup_path = tmp_path / "v4.db"
     with source.connect() as source_connection, sqlite3.connect(backup_path) as backup_connection:
         source_connection.backup(backup_connection)
@@ -104,14 +117,7 @@ def test_restore_accepts_verified_older_schema_and_migrates_on_open(tmp_path):
 
 def test_online_backup_accepts_supported_older_schema(tmp_path):
     source, _ = _populated_database(tmp_path / "source.db")
-    with source.connect() as connection:
-        connection.execute("UPDATE schema_meta SET value='4' WHERE key='version'")
-        connection.execute("DELETE FROM schema_migrations WHERE version=5")
-        connection.execute("DROP TRIGGER audit_events_no_update")
-        connection.execute("DROP TRIGGER audit_events_no_delete")
-        connection.execute("DROP INDEX idx_audit_events_created")
-        connection.execute("DROP INDEX idx_audit_events_action")
-        connection.execute("DROP TABLE audit_events")
+    _downgrade_fixture_to_v4(source)
 
     backup_path = backup_database(source.path, tmp_path / "v4-backup.db")
     assert inspect_database(backup_path)["schema_version"] == 4
@@ -162,3 +168,25 @@ def test_database_admin_cli_reads_audit_events(tmp_path):
     )
     payload = json.loads(result.stdout)
     assert payload["events"][0]["request_id"] == "req-cli"
+
+
+def test_database_admin_cli_reports_operational_metrics(tmp_path):
+    database, _ = _populated_database(tmp_path / "metrics-cli.db")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/manage_database.py",
+            "--database",
+            str(database.path),
+            "metrics",
+            "--hours",
+            "12",
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    assert payload["window_hours"] == 12
+    assert payload["runs"] == 0

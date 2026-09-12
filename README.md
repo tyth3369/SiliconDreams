@@ -90,6 +90,7 @@ uv run python scripts/run_official_retrieval_benchmark.py
 uv run python scripts/run_citation_benchmark.py
 uv run python scripts/manage_database.py status
 uv run python scripts/manage_database.py audit --limit 50
+uv run python scripts/manage_database.py metrics --hours 24
 ```
 
 正式检索基准由 TSMC 与 SMIC 2025 官方年报、6 个中文问题和 6 个英文问题组成；每个答案页码和关键文本均人工核验，PDF 以 SHA-256 锁定。v0.8 实测 Recall@5 为 **100%**、MRR 为 **84.03%**，高于 90% / 70% 发布门槛。脚本会下载并隔离索引官方年报，低于门槛时返回失败状态。
@@ -118,6 +119,7 @@ data/entity_aliases.json     人工核验的公司实体别名
 src/migrations.py            有序事务化 SQLite schema 迁移
 scripts/manage_database.py   数据库状态、校验、审计、备份与恢复 CLI
 scripts/run_citation_benchmark.py  人工核验的真实 Agent 引用质量门禁
+src/observability.py         无研究正文的请求级成本、延迟、错误与来源覆盖遥测
 templates/ + static/          Bloomberg Terminal 风格 UI
 assets/fonts/                 PDF 使用的 OFL 中文字体及许可证
 tests/                        回归测试
@@ -127,6 +129,7 @@ tests/                        回归测试
 
 - `.env`、`.github_token`、上传 PDF、SQLite 和 ChromaDB 均被 Git 忽略。
 - PDF、Embedding、向量和会话存储在本机；用户问题和检索证据会发送给配置的 DeepSeek API，实时搜索查询会发送给 Tavily。
+- `ai_runs` / `ai_tool_events` 只保存请求 ID、耗时、token、工具名、错误码和来源类型计数，不保存问题、回答、来源名称、URL 或证据片段。`/ops/metrics` 与 `manage_database.py metrics` 提供聚合运维视图。
 - 网页和 PDF 内容被视为不可信证据，不作为系统指令执行。
 - 本项目用于研究辅助，不构成投资建议。重要判断应回到原始公告核验。
 
