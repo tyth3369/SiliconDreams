@@ -6,6 +6,7 @@ SiliconDreams — 全局配置
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,7 +20,7 @@ if env_path.exists():
     load_dotenv(env_path)
 else:
     # 开发阶段仅警告，不阻断（允许先跑 UI 后配 Key）
-    print("[config] .env file not found. Run: cp .env.example .env")
+    print("[config] .env file not found. Run: cp .env.example .env", file=sys.stderr)
 
 # ── 路径常量 ───────────────────────────────────────────
 DATA_DIR = ROOT_DIR / "data"
