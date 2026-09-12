@@ -19,6 +19,7 @@ from src.agent_tools import (
 )
 from src.citation import CitationTracker
 from src.evidence_policy import build_answer_evidence_instruction
+from src.observability import RunTelemetry, is_tool_error
 
 logger = logging.getLogger(__name__)
 MAX_PLANNED_TOOLS = 6
@@ -146,7 +147,11 @@ def _fallback_retrieval_calls(query: str, planner_tools: list[dict]) -> list[dic
 
 
 def _execute_retrieval_plan(
-    calls: list[dict], tracker: CitationTracker, messages: list[dict], lang: str
+    calls: list[dict],
+    tracker: CitationTracker,
+    messages: list[dict],
+    lang: str,
+    telemetry: RunTelemetry | None = None,
 ) -> Generator[str, None, None]:
     labels = TOOL_LABELS.get(lang, TOOL_LABELS["zh"])
     for call in calls:
@@ -168,6 +173,8 @@ def _execute_retrieval_plan(
             index, result, local_tracker, elapsed = future.result()
             outcomes[index] = (result, local_tracker, elapsed)
             call = calls[index]
+            if telemetry:
+                telemetry.record_tool(call["name"], elapsed, error=is_tool_error(result))
             duration = _format_duration(elapsed)
             yield _status_event(
                 {
@@ -192,6 +199,7 @@ def run_agent_loop(
     lang: str = "zh",
     model: str | None = None,
     available_retrieval_tools: set[str] | None = None,
+    telemetry: RunTelemetry | None = None,
 ) -> Generator[str, None, None]:
     """Plan once, run retrieval concurrently, optionally calculate once, then answer."""
     working_messages = [dict(message) for message in messages]
@@ -219,16 +227,22 @@ def run_agent_loop(
             if tool["function"]["name"] in available_retrieval_tools
         ]
     try:
+        if telemetry:
+            telemetry.model_call_started()
         plan = client.chat_with_tools(
             messages=[{"role": "system", "content": planning_instruction}, *working_messages],
             tools=planner_tools,
             model=model,
             tool_choice="auto",
         )
+        if telemetry:
+            telemetry.add_usage(plan.get("usage"))
         retrieval_calls = _normalize_planned_calls(plan.get("tool_calls"))
         if not retrieval_calls:
             retrieval_calls = _fallback_retrieval_calls(user_query, planner_tools)
     except Exception as error:
+        if telemetry:
+            telemetry.model_call_failed("retrieval_planning_failed")
         logger.error("Evidence planning failed: %s", error, exc_info=True)
         retrieval_calls = []
         label = (
@@ -239,7 +253,9 @@ def run_agent_loop(
         yield _status_event({"status": "info", "label": label})
 
     if retrieval_calls:
-        yield from _execute_retrieval_plan(retrieval_calls, tracker, working_messages, lang)
+        yield from _execute_retrieval_plan(
+            retrieval_calls, tracker, working_messages, lang, telemetry
+        )
 
     if _needs_calculation(user_query):
         calculation_instruction = (
@@ -249,6 +265,8 @@ def run_agent_loop(
             else "Use only numbers already present in evidence. In one response call every calculator operation needed. Do not estimate, search, or answer."
         )
         try:
+            if telemetry:
+                telemetry.model_call_started()
             plan = client.chat_with_tools(
                 messages=[
                     {"role": "system", "content": calculation_instruction},
@@ -258,8 +276,12 @@ def run_agent_loop(
                 model=model,
                 tool_choice="auto",
             )
+            if telemetry:
+                telemetry.add_usage(plan.get("usage"))
             calculation_calls = _normalize_planned_calls(plan.get("tool_calls"))
         except Exception as error:
+            if telemetry:
+                telemetry.model_call_failed("calculation_planning_failed")
             logger.error("Calculation planning failed: %s", error, exc_info=True)
             calculation_calls = []
 
@@ -277,6 +299,8 @@ def run_agent_loop(
                 started = time.perf_counter()
                 result = execute_tool(call["name"], call["arguments"], tracker)
                 elapsed = time.perf_counter() - started
+                if telemetry:
+                    telemetry.record_tool(call["name"], elapsed, error=is_tool_error(result))
                 duration = _format_duration(elapsed)
                 yield _status_event(
                     {
@@ -321,9 +345,19 @@ def run_agent_loop(
     label = "正在生成回答..." if lang == "zh" else "Generating answer..."
     yield _status_event({"status": "info", "label": label})
     try:
-        for token in client.chat_stream(messages=working_messages, model=model):
+        if telemetry:
+            telemetry.model_call_started()
+        stream_kwargs = {"messages": working_messages, "model": model}
+        if telemetry and getattr(client, "supports_usage_callback", False):
+            stream_kwargs["usage_callback"] = telemetry.add_usage
+        for token in client.chat_stream(**stream_kwargs):
+            if telemetry:
+                telemetry.first_token()
             yield _status_event({"token": token})
     except Exception as error:
+        if telemetry:
+            telemetry.model_call_failed("final_response_failed")
+            telemetry.fail("final_response_failed")
         logger.error("Final response stream failed: %s", error, exc_info=True)
         yield _status_event({"error": f"回答生成失败: {error}"})
         return

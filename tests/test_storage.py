@@ -284,6 +284,27 @@ def test_existing_v4_database_is_baselined_without_losing_data(tmp_path):
     ]
 
 
+def test_schema_v5_database_migrates_observability_without_losing_messages(tmp_path):
+    path = tmp_path / "schema-v5.db"
+    initial = Database(path)
+    conversation_id = initial.create_conversation(title="Preserve v5")
+    initial.add_message(conversation_id, "user", "Keep this message")
+    with initial.connect() as connection:
+        connection.execute("UPDATE schema_meta SET value='5' WHERE key='version'")
+        connection.execute("DELETE FROM schema_migrations WHERE version=6")
+        connection.execute("DROP TABLE ai_tool_events")
+        connection.execute("DROP TABLE ai_runs")
+
+    migrated = Database(path)
+    assert migrated.list_messages(conversation_id)[0]["content"] == "Keep this message"
+    assert migrated.count("ai_runs") == 0
+    with migrated.connect() as connection:
+        version = connection.execute(
+            "SELECT value FROM schema_meta WHERE key='version'"
+        ).fetchone()["value"]
+    assert version == str(SCHEMA_VERSION)
+
+
 def test_newer_database_version_is_rejected_without_rewriting_version(tmp_path):
     path = tmp_path / "future.db"
     database = Database(path)
@@ -359,6 +380,61 @@ def test_audit_events_are_append_only(database):
             connection.execute("UPDATE audit_events SET actor='changed' WHERE id=?", (event_id,))
         with pytest.raises(sqlite3.IntegrityError, match="append-only"):
             connection.execute("DELETE FROM audit_events WHERE id=?", (event_id,))
+
+
+def test_ai_run_round_trip_and_operational_summary(database):
+    conversation_id = database.create_conversation(title="Private research")
+    database.add_ai_run(
+        {
+            "id": "run-1",
+            "request_id": "request-1",
+            "conversation_id": conversation_id,
+            "provider": "deepseek",
+            "model": "model",
+            "status": "success",
+            "duration_ms": 1200,
+            "first_token_ms": 800,
+            "model_calls": 2,
+            "model_errors": 0,
+            "tool_calls": 1,
+            "tool_errors": 0,
+            "prompt_tokens": 100,
+            "completion_tokens": 20,
+            "cache_hit_tokens": 60,
+            "cache_miss_tokens": 40,
+            "estimated_cost_usd": "0.00012300",
+            "source_count": 2,
+            "source_types": {"financial": 2},
+            "error_code": None,
+            "started_at": "2099-01-01T00:00:00+00:00",
+            "completed_at": "2099-01-01T00:00:01+00:00",
+            "created_at": "2099-01-01T00:00:01+00:00",
+            "tool_events": [
+                {
+                    "id": "tool-1",
+                    "tool_name": "get_company_data",
+                    "outcome": "success",
+                    "duration_ms": 4,
+                    "created_at": "2099-01-01T00:00:00+00:00",
+                }
+            ],
+        }
+    )
+
+    summary = database.observability_summary(hours=24)
+    assert summary["runs"] == 1
+    assert summary["success_rate_pct"] == 100.0
+    assert summary["degraded_rate_pct"] == 0.0
+    assert summary["error_rate_pct"] == 0.0
+    assert summary["cancelled_rate_pct"] == 0.0
+    assert summary["sourced_run_rate_pct"] == 100.0
+    assert summary["estimated_cost_usd"] == "0.00012300"
+    assert summary["source_types"] == {"financial": 2}
+    assert summary["tools"]["get_company_data"]["average"] == 4.0
+    with database.connect() as connection:
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(ai_runs)")}
+    assert "content" not in columns
+    assert "query" not in columns
 
 
 def test_watchlist_is_persistent_and_idempotent(database):

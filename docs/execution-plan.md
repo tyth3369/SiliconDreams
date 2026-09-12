@@ -42,7 +42,7 @@
 - [x] 完整数据迁移和 schema versioning
 - [x] 公网部署前身份认证、CSRF、限流、审计日志和 CSP nonce
 - [x] 真实 benchmark 达到约定 Recall@5 / citation precision 门槛
-- [ ] 成本、延迟、错误率和来源覆盖度可观测
+- [x] 成本、延迟、错误率和来源覆盖度可观测
 - [x] 安装、备份、恢复、升级和安全文档
 - [ ] 发布候选冻结与验收清单
 

@@ -51,12 +51,19 @@ def test_tool_calls_are_parsed_and_invalid_json_is_safely_rejected():
         ),
     ]
     response = SimpleNamespace(
+        usage=SimpleNamespace(
+            prompt_tokens=20,
+            completion_tokens=4,
+            total_tokens=24,
+            prompt_cache_hit_tokens=12,
+            prompt_cache_miss_tokens=8,
+        ),
         choices=[
             SimpleNamespace(
                 message=SimpleNamespace(content=None, tool_calls=tool_calls),
                 finish_reason="tool_calls",
             )
-        ]
+        ],
     )
     provider, _ = _provider(response)
 
@@ -64,20 +71,27 @@ def test_tool_calls_are_parsed_and_invalid_json_is_safely_rejected():
     assert result["tool_calls"][0]["arguments"] == {"query": "TSMC"}
     assert result["tool_calls"][1]["arguments"] == {}
     assert result["finish_reason"] == "tool_calls"
+    assert result["usage"]["prompt_cache_hit_tokens"] == 12
 
 
 def test_stream_yields_only_content_tokens():
+    seen_usage = []
     chunks = iter(
         [
             SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="A"))]),
             SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=None))]),
-            SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="B"))]),
+            SimpleNamespace(
+                choices=[SimpleNamespace(delta=SimpleNamespace(content="B"))],
+                usage={"prompt_tokens": 8, "completion_tokens": 2},
+            ),
         ]
     )
     provider, completions = _provider(chunks)
 
-    assert list(provider.chat_stream([])) == ["A", "B"]
+    assert list(provider.chat_stream([], usage_callback=seen_usage.append)) == ["A", "B"]
     assert completions.calls[0]["stream"] is True
+    assert completions.calls[0]["stream_options"] == {"include_usage": True}
+    assert seen_usage[0]["completion_tokens"] == 2
 
 
 def test_retry_recovers_from_transient_error():

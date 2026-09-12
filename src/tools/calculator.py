@@ -20,6 +20,56 @@ from pydantic import BaseModel, ConfigDict, Field
 logger = logging.getLogger(__name__)
 
 
+def calculate_llm_usage_cost(
+    *,
+    cache_hit_tokens: int,
+    cache_miss_tokens: int,
+    completion_tokens: int,
+    cache_hit_usd_per_million: str,
+    cache_miss_usd_per_million: str,
+    output_usd_per_million: str,
+) -> str:
+    """Calculate an LLM request estimate with Decimal and explicit configured rates."""
+    million = Decimal("1000000")
+    cost = (
+        Decimal(cache_hit_tokens) * Decimal(cache_hit_usd_per_million)
+        + Decimal(cache_miss_tokens) * Decimal(cache_miss_usd_per_million)
+        + Decimal(completion_tokens) * Decimal(output_usd_per_million)
+    ) / million
+    return format(cost.quantize(Decimal("0.00000001")), "f")
+
+
+def summarize_numeric_values(values: list[int | float]) -> dict:
+    """Return count, Decimal mean, and nearest-rank P95 for operational metrics."""
+    if not values:
+        return {"count": 0, "average": None, "p95": None}
+    decimals = sorted(Decimal(str(value)) for value in values)
+    count = len(decimals)
+    rank = max(0, (count * 95 + 99) // 100 - 1)
+    average = sum(decimals, Decimal("0")) / Decimal(count)
+    return {
+        "count": count,
+        "average": float(average.quantize(Decimal("0.01"))),
+        "p95": float(decimals[rank]),
+    }
+
+
+def calculate_percentage(numerator: int, denominator: int) -> float | None:
+    """Calculate an operational percentage through the canonical Decimal path."""
+    if denominator == 0:
+        return None
+    result = Decimal(numerator) / Decimal(denominator) * Decimal("100")
+    return float(result.quantize(Decimal("0.01")))
+
+
+def sum_decimal_strings(values: list[str]) -> str | None:
+    """Sum configured monetary estimates without binary floating-point conversion."""
+    if not values:
+        return None
+    total = sum((Decimal(value) for value in values), Decimal("0"))
+    return format(total.quantize(Decimal("0.00000001")), "f")
+
+
 # ═══════════════════════════════════════════════════
 # 核心计算函数
 # ═══════════════════════════════════════════════════

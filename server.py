@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v1.0.0-dev.3)
+SiliconDreams — FastAPI Server (v1.0.0-dev.4)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -27,7 +27,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response, Streamin
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from config import PDF_DIR, AppConfig, SearchConfig, SecurityConfig
+from config import PDF_DIR, AppConfig, LLMConfig, SearchConfig, SecurityConfig
 from src.agent_loop import run_agent_loop
 from src.analysis_templates import default_foundry_comparison_prompt
 from src.analytics import build_watchlist_timeline, load_analytics_payload
@@ -37,6 +37,7 @@ from src.financial_data import FinancialDataManager
 from src.i18n import _EN, _ZH, I18n
 from src.ingestion_jobs import IngestionWorker
 from src.llm_client import get_llm, llm_available
+from src.observability import RunTelemetry
 from src.security import SecurityManager, SlidingWindowLimiter, verify_password
 from src.storage import Database
 
@@ -362,6 +363,12 @@ async def healthz():
     return {"status": "ok", "version": AppConfig.version}
 
 
+@app.get("/ops/metrics")
+async def operations_metrics(hours: int = 24):
+    """Return authenticated aggregate AI operations metrics without research content."""
+    return _db.observability_summary(hours=hours)
+
+
 def _render_login(request: Request, lang: str, csrf_token: str, error: str = "") -> HTMLResponse:
     t = get_t(lang)
     content = jinja.get_template("login.html").render(
@@ -524,13 +531,30 @@ def _prune_pending_requests() -> None:
         if float(value.get("created_at", 0.0)) < cutoff
     ]
     for key in expired:
-        _pending_agent_configs.pop(key, None)
+        config = _pending_agent_configs.pop(key, None)
+        if config:
+            _persist_agent_run(config, status="cancelled")
     if len(_pending_agent_configs) >= _MAX_PENDING_REQUESTS:
         oldest = min(
             _pending_agent_configs,
             key=lambda key: float(_pending_agent_configs[key].get("created_at", 0.0)),
         )
-        _pending_agent_configs.pop(oldest, None)
+        config = _pending_agent_configs.pop(oldest, None)
+        if config:
+            _persist_agent_run(config, status="cancelled")
+
+
+def _persist_agent_run(config: dict, *, status: str | None = None) -> None:
+    """Finalize one aggregate run without persisting prompts, answers, or source names."""
+    telemetry: RunTelemetry | None = config.get("telemetry")
+    tracker: CitationTracker | None = config.get("tracker")
+    if telemetry is None or config.get("telemetry_persisted"):
+        return
+    config["telemetry_persisted"] = True
+    try:
+        _db.add_ai_run(telemetry.finish(tracker.to_list() if tracker else [], status=status))
+    except Exception:
+        logger.exception("Failed to persist AI request telemetry")
 
 
 def _next_stream_item(iterator):
@@ -625,6 +649,7 @@ _ingestion_worker = IngestionWorker(lambda: _db, _process_ingestion_job)
 
 @app.post("/chat", response_class=HTMLResponse)
 async def chat(
+    request: Request,
     message: Annotated[str, Form(min_length=1, max_length=4000)],
     lang: str = Depends(get_lang),
     conversation_id: Annotated[str | None, Cookie()] = None,
@@ -650,6 +675,12 @@ async def chat(
         "tracker": tracker,
         "conversation_id": active_conversation,
         "created_at": time.monotonic(),
+        "telemetry": RunTelemetry(
+            request_id=request.state.request_id,
+            conversation_id=active_conversation,
+            provider=LLMConfig.provider,
+            model=LLMConfig.model,
+        ),
     }
 
     # Return the user message HTML + an empty assistant div with SSE trigger
@@ -702,9 +733,13 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
             return
 
         if not llm_available():
+            telemetry: RunTelemetry = agent_config["telemetry"]
+            telemetry.fail("llm_not_configured")
+            _persist_agent_run(agent_config, status="error")
             yield f"data: {json.dumps({'error': t('error.llm_not_configured')})}\n\n"
             return
 
+        final_status: str | None = "cancelled"
         try:
             client = get_llm()
             tracker: CitationTracker = agent_config["tracker"]
@@ -720,6 +755,7 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
                 tracker=tracker,
                 lang=_lang,
                 available_retrieval_tools=_available_retrieval_tools(),
+                telemetry=agent_config["telemetry"],
             )
             stream = iter(_stream_tokens_with_capture(agent_gen, conversation_id, tracker))
             while True:
@@ -730,11 +766,16 @@ async def chat_stream(msg_id: str, lang: str = Depends(get_lang)):
                 if sse_str is _STREAM_END:
                     break
                 yield sse_str
+            final_status = None
 
         except Exception as e:
+            final_status = "error"
+            agent_config["telemetry"].fail("agent_stream_failed")
             error_msg = f"{t('error.llm_failed')}: {e}"
             logger.error(f"Agent SSE 异常: {e}", exc_info=True)
             yield f"data: {json.dumps({'error': error_msg})}\n\n"
+        finally:
+            _persist_agent_run(agent_config, status=final_status)
 
     return StreamingResponse(
         generate(),
@@ -903,6 +944,7 @@ async def toggle_watchlist(company: str, watched: bool = Form(...), lang: str = 
 
 @app.post("/quick/{action}", response_class=HTMLResponse)
 async def quick_action(
+    request: Request,
     action: str,
     lang: str = Depends(get_lang),
     conversation_id: Annotated[str | None, Cookie()] = None,
@@ -927,6 +969,12 @@ async def quick_action(
         "tracker": tracker,
         "conversation_id": active_conversation,
         "created_at": time.monotonic(),
+        "telemetry": RunTelemetry(
+            request_id=request.state.request_id,
+            conversation_id=active_conversation,
+            provider=LLMConfig.provider,
+            model=LLMConfig.model,
+        ),
     }
 
     assistant_id = str(uuid.uuid4())[:8]

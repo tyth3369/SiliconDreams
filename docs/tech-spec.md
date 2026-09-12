@@ -57,6 +57,8 @@ Browser
 
 `src/evaluation.py` 同时检查行内编号范围、人工标注 claim 的来源支持关系和可核验陈述覆盖率。`tests/fixtures/citation_golden.json` 冻结 6 个由真实 DeepSeek Agent 生成并人工复核的中英双语回答；CI 强制 citation precision ≥ 95%、claim coverage ≥ 90%、marker validity = 100%。结构化财务与术语引用均携带本次实际提供给模型的有界证据摘要，而不是只有笼统数据库名称。
 
+`src/observability.py` 为每次 Agent 请求收集总耗时、首 token、模型调用与 token usage、工具耗时/错误以及引用来源类型。schema v6 的 `ai_runs` / `ai_tool_events` 仅保存聚合元数据，不保存问题、回答、来源名称、URL 或证据片段。DeepSeek 流按[官方 Chat Completions 规范](https://api-docs.deepseek.com/api/create-chat-completion/)使用 `stream_options.include_usage` 获取实际 token；成本仅在部署者显式配置每百万 token 价格时由 Decimal 计算，否则返回 `null`。认证后的 `/ops/metrics` 和 `manage_database.py metrics` 提供 24 小时或自定义窗口汇总，并分别报告 success、degraded、error 与 cancelled 比例，不把降级回答或客户端取消误称为错误。
+
 时效性查询使用 Tavily `news` topic 并把当前日期作为 `end_date`；普通知识查询使用 `general`。网页结果进入上下文前按相关度、Tier 和时效状态重排。Tier 1 是公司/监管官方域名；Tier 2 仅由显式白名单中的国际主流媒体和半导体专业媒体构成；其余均为 Tier 3。引用面板显示发布者、日期、Tier，以及“日期未知/较旧背景来源”标签。最终回答提示包含本次实际来源构成，并要求低等级来源不得无说明覆盖官方披露。
 
 明确包含“官方/财报/年报/季报/filing/results”等意图的公司查询通过 Tavily `include_domains` 约束到对应公司或监管域名。一般搜索缓存 24 小时，时效性搜索缓存 15 分钟；缓存命中仍重新执行当前日期的时效策略。每个返回摘要以 URL + 内容哈希保存到 SQLite `web_snapshots`，支持事后审计检索时实际提供给模型的网页证据。
@@ -64,7 +66,7 @@ Browser
 ## 持久化与并发
 
 - SQLite WAL 保存来源、事实、文档、会话和消息。
-- `src/migrations.py` 按 v1→v5 在单一 `BEGIN IMMEDIATE` 事务中升级数据库；每步在 `schema_migrations` 保存名称、SHA-256 校验和、时间和 baseline 状态。启动时拒绝未来版本、历史漂移、缺表/列/索引/触发器以及不完整 FTS 结构，不再以最终建表脚本覆盖真实升级历史。
+- `src/migrations.py` 按 v1→v6 在单一 `BEGIN IMMEDIATE` 事务中升级数据库；每步在 `schema_migrations` 保存名称、SHA-256 校验和、时间和 baseline 状态。启动时拒绝未来版本、历史漂移、缺表/列/索引/触发器以及不完整 FTS 结构，不再以最终建表脚本覆盖真实升级历史。
 - `scripts/manage_database.py` 提供只读状态、完整性校验、SQLite 在线备份和显式原子恢复；备份在返回前再次验证当前 schema、foreign keys 和 `PRAGMA integrity_check`。
 - PDF 摄入任务保存在 SQLite `jobs` 表；单后台 worker 原子领取任务，记录阶段与进度，并在进程重启时把中断任务重新排队。
 - 上传接口只负责校验、内容寻址落盘和入队；侧栏每秒拉取一次任务状态，任务结束后自动停止轮询。
