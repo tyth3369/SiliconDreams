@@ -29,9 +29,11 @@ data/reports/*
 data/*.db
 data/*.db-shm
 data/*.db-wal
+backups/*
 !data/pdfs/.gitkeep
 !data/chroma_db/.gitkeep
 !data/reports/.gitkeep
+!backups/.gitkeep
 
 # 模型缓存 (BGE-M3 等)
 .cache/

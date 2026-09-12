@@ -10,6 +10,7 @@ services:
       - "8000"
     volumes:
       - ./data:/app/data
+      - ./backups:/app/backups
       - model_cache:/root/.cache/silicondreams/models
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/healthz"]

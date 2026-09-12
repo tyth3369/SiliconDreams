@@ -84,18 +84,40 @@ curl -fsS http://127.0.0.1:8000/healthz
 
 ## 7. 更新、备份和回滚
 
+升级前先创建并校验 SQLite 在线备份（能够包含 WAL 中已提交的数据）：
+
+```bash
+mkdir -p backups
+docker compose exec app python scripts/manage_database.py status
+docker compose exec app python scripts/manage_database.py backup \
+  "/app/backups/silicondreams-$(date +%F-%H%M%S).db"
+```
+
+Compose 已把宿主机 `backups/` 挂载到容器 `/app/backups/`。不要只在服务运行时复制 `.db` 文件，因为 WAL 中可能还有已提交的数据。
+
 更新：
 
 ```bash
 git pull --ff-only
 docker compose build app
 docker compose up -d
+docker compose exec app python scripts/manage_database.py verify
 ```
 
-备份至少应包含 `data/`；Caddy 证书卷可以自动重建，本地模型卷可以重新下载。升级前建议：
+完整灾备还应包含 `data/pdfs/` 与 `data/chroma_db/`；Caddy 证书卷可以自动重建，本地模型卷可以重新下载。停机后的完整目录归档可使用：
 
 ```bash
 tar -czf "silicondreams-data-$(date +%F).tar.gz" data
+```
+
+数据库恢复会拒绝覆盖现有文件，必须明确传入 `--force`。恢复前停止应用并保留当前数据目录：
+
+```bash
+docker compose stop app
+docker compose run --rm app python scripts/manage_database.py \
+  --database /app/data/silicondreams.db restore /app/backups/KNOWN-GOOD.db --force
+docker compose up -d app
+docker compose exec app python scripts/manage_database.py verify
 ```
 
 查看状态与回滚：

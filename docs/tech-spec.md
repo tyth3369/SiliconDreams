@@ -62,6 +62,8 @@ Browser
 ## 持久化与并发
 
 - SQLite WAL 保存来源、事实、文档、会话和消息。
+- `src/migrations.py` 按 v1→v4 在单一 `BEGIN IMMEDIATE` 事务中升级数据库；每步在 `schema_migrations` 保存名称、SHA-256 校验和、时间和 baseline 状态。启动时拒绝未来版本、历史漂移、缺表/列/索引/触发器以及不完整 FTS 结构，不再以最终建表脚本覆盖真实升级历史。
+- `scripts/manage_database.py` 提供只读状态、完整性校验、SQLite 在线备份和显式原子恢复；备份在返回前再次验证当前 schema、foreign keys 和 `PRAGMA integrity_check`。
 - PDF 摄入任务保存在 SQLite `jobs` 表；单后台 worker 原子领取任务，记录阶段与进度，并在进程重启时把中断任务重新排队。
 - 上传接口只负责校验、内容寻址落盘和入队；侧栏每秒拉取一次任务状态，任务结束后自动停止轮询。
 - conversation cookie 为 HttpOnly、SameSite=Lax。
