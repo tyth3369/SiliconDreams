@@ -19,6 +19,7 @@ from src.database_admin import (  # noqa: E402
     restore_database,
     verify_database,
 )
+from src.storage import Database  # noqa: E402
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,6 +28,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("status", help="Show schema, migration, and integrity status")
     subparsers.add_parser("verify", help="Verify integrity and the current schema")
+    audit = subparsers.add_parser("audit", help="Read recent append-only audit events")
+    audit.add_argument("--limit", type=int, default=100)
 
     backup = subparsers.add_parser("backup", help="Create and verify an online SQLite backup")
     backup.add_argument("destination", type=Path)
@@ -47,6 +50,8 @@ def main() -> None:
         result = verify_database(args.database)
     elif args.command == "backup":
         result = {"backup": str(backup_database(args.database, args.destination))}
+    elif args.command == "audit":
+        result = {"events": Database(args.database).list_audit_events(limit=args.limit)}
     else:
         result = {
             "restored": str(

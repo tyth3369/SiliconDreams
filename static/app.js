@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v1.0.0-dev.1)
+ * SiliconDreams — Client-side JS (v1.0.0-dev.2)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
@@ -15,7 +15,8 @@ function getTheme() {
 }
 
 function setThemeCookie(value) {
-    document.cookie = 'theme=' + value + ';path=/;max-age=' + (365 * 24 * 3600) + ';SameSite=Lax';
+    var secure = location.protocol === 'https:' ? ';Secure' : '';
+    document.cookie = 'theme=' + value + ';path=/;max-age=' + (365 * 24 * 3600) + ';SameSite=Lax' + secure;
 }
 
 function applyTheme(t) {
@@ -58,7 +59,8 @@ function setTheme(t) {
 window._LANG_TEXT = window._LANG_TEXT || {};
 
 function setLang(lang) {
-    document.cookie = 'lang=' + lang + ';path=/;max-age=' + (365 * 24 * 3600) + ';SameSite=Lax';
+    var secure = location.protocol === 'https:' ? ';Secure' : '';
+    document.cookie = 'lang=' + lang + ';path=/;max-age=' + (365 * 24 * 3600) + ';SameSite=Lax' + secure;
 
     // Refresh sidebar via HTMX (no full page reload — preserves chat)
     htmx.ajax('GET', '/sidebar?lang=' + lang, {target: '#sidebar-inner', swap: 'innerHTML'});
@@ -119,9 +121,12 @@ function setLang(lang) {
     }
 }
 
-function renameConversation(event, conversationId, currentTitle) {
-    event.preventDefault();
-    event.stopPropagation();
+function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+function renameConversation(conversationId, currentTitle) {
     var lang = document.documentElement.lang || 'zh';
     var text = window._LANG_TEXT[lang] || window._LANG_TEXT.zh || {};
     var title = window.prompt(text.renamePrompt || 'Rename', currentTitle);
@@ -129,7 +134,10 @@ function renameConversation(event, conversationId, currentTitle) {
     var body = new URLSearchParams({title: title.trim()});
     fetch('/conversations/' + encodeURIComponent(conversationId) + '/rename', {
         method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRF-Token': csrfToken()
+        },
         body: body.toString()
     }).then(function(response) {
         if (!response.ok) throw new Error('rename failed');
@@ -147,7 +155,6 @@ function renameConversation(event, conversationId, currentTitle) {
 // SSE Streaming
 // ═══════════════════════════════════════════════════════
 
-window._pendingStreams = {};
 window._activeStreams = {};
 
 function renderMarkdownSafe(raw) {
@@ -205,7 +212,7 @@ window._startStream = function(msgId, targetId) {
             // Clear any active status indicators on first token
             var statusEl = target.parentNode.querySelector('.agent-status');
             if (statusEl) {
-                statusEl.style.display = 'none';
+                statusEl.classList.add('agent-status-hidden');
             }
             target.textContent += data.token;
             // Auto-scroll
@@ -258,7 +265,6 @@ window._startStream = function(msgId, targetId) {
                 if (safeHtml !== null) {
                     target.innerHTML = safeHtml;
                     linkInlineCitations(target);
-                    target.style.whiteSpace = 'normal';
                     target.setAttribute('data-rendered', '1');
                 }
             }
@@ -289,12 +295,12 @@ window._startStream = function(msgId, targetId) {
 
 // After HTMX swaps chat_response, trigger SSE
 function initStream() {
-    // HTMX just swapped new content — find any pending streams and start them
-    for (var msgId in window._pendingStreams) {
-        var targetId = window._pendingStreams[msgId];
+    document.querySelectorAll('[data-stream-msg-id]:not([data-stream-registered])').forEach(function(node) {
+        var msgId = node.getAttribute('data-stream-msg-id');
+        var targetId = node.getAttribute('data-stream-target-id');
+        node.setAttribute('data-stream-registered', 'true');
         window._startStream(msgId, targetId);
-        delete window._pendingStreams[msgId];
-    }
+    });
 }
 
 // HTMX event: after a chat POST completes
@@ -302,6 +308,18 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
     if (evt.detail.target.id === 'chat-container') {
         // Give the browser a tick to insert the new elements, then start streams
         setTimeout(initStream, 50);
+    }
+});
+
+document.body.addEventListener('htmx:configRequest', function(evt) {
+    var token = csrfToken();
+    if (token) evt.detail.headers['X-CSRF-Token'] = token;
+});
+
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.elt && evt.detail.elt.matches('[data-chat-form]') && evt.detail.successful) {
+        evt.detail.elt.reset();
+        initStream();
     }
 });
 
@@ -445,9 +463,40 @@ function renderAnalytics() {
 }
 
 document.addEventListener('click', function(event) {
+    var languageButton = event.target.closest('[data-set-lang]');
+    if (languageButton) {
+        setLang(languageButton.getAttribute('data-set-lang'));
+        return;
+    }
+    var themeButton = event.target.closest('#theme-toggles [data-theme]');
+    if (themeButton) {
+        setTheme(themeButton.getAttribute('data-theme'));
+        return;
+    }
+    var renameButton = event.target.closest('[data-rename-conversation]');
+    if (renameButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        renameConversation(
+            renameButton.getAttribute('data-rename-conversation'),
+            renameButton.getAttribute('data-current-title') || ''
+        );
+        return;
+    }
+    if (event.target.closest('[data-logout]')) {
+        fetch('/logout', {method: 'POST', headers: {'X-CSRF-Token': csrfToken()}})
+            .then(function() { location.assign('/login'); });
+        return;
+    }
     if (event.target.closest('[data-close-analytics]')) {
         var panel = document.getElementById('analytics-panel');
         if (panel) panel.replaceChildren();
+    }
+});
+
+document.addEventListener('change', function(event) {
+    if (event.target.matches('[data-auto-submit]') && event.target.form) {
+        event.target.form.requestSubmit();
     }
 });
 
@@ -496,7 +545,6 @@ function renderMarkdownMessages() {
             var raw = el.textContent;
             el.innerHTML = renderMarkdownSafe(raw);
             linkInlineCitations(el);
-            el.style.whiteSpace = 'normal';
             el.setAttribute('data-rendered', '1');
         }
     });

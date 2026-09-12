@@ -1,11 +1,6 @@
 {$DOMAIN:sillycon.xyz} {
     encode zstd gzip
 
-    # Protect API credits, uploads and private research until account auth exists.
-    basic_auth {
-        {$SITE_USERNAME} {$SITE_PASSWORD_HASH}
-    }
-
     reverse_proxy app:8000 {
         # Disable response buffering so SSE tokens arrive immediately.
         flush_interval -1

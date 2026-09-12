@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v1.0.0-dev.1)
+SiliconDreams — FastAPI Server (v1.0.0-dev.2)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import json
 import logging
 import re
+import secrets
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -21,11 +23,11 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import Cookie, Depends, FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from config import PDF_DIR, AppConfig, SearchConfig
+from config import PDF_DIR, AppConfig, SearchConfig, SecurityConfig
 from src.agent_loop import run_agent_loop
 from src.analysis_templates import default_foundry_comparison_prompt
 from src.analytics import build_watchlist_timeline, load_analytics_payload
@@ -35,6 +37,7 @@ from src.financial_data import FinancialDataManager
 from src.i18n import _EN, _ZH, I18n
 from src.ingestion_jobs import IngestionWorker
 from src.llm_client import get_llm, llm_available
+from src.security import SecurityManager, SlidingWindowLimiter, verify_password
 from src.storage import Database
 
 logger = logging.getLogger(__name__)
@@ -44,6 +47,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Recover durable ingestion work and stop the local worker cleanly."""
+    SecurityConfig.validate()
     _ingestion_worker.start(recover=True)
     yield
     _ingestion_worker.stop()
@@ -61,21 +65,121 @@ jinja = Environment(
     loader=FileSystemLoader(str(TEMPLATES)),
     autoescape=select_autoescape(["html"]),
 )
+jinja.globals["auth_enabled"] = SecurityConfig.auth_enabled
+
+_security = SecurityManager(
+    SecurityConfig.session_secret or "silicondreams-local-development-secret",
+    SecurityConfig.session_ttl_seconds,
+)
+_rate_limiter = SlidingWindowLimiter()
+SESSION_COOKIE = "sd_session"
+CSRF_COOKIE = "sd_csrf"
+PUBLIC_PATHS = {"/healthz", "/login"}
+
+
+def _client_address(request: Request) -> str:
+    if SecurityConfig.trust_proxy_headers:
+        forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+        if forwarded:
+            return forwarded
+    return request.client.host if request.client else "unknown"
+
+
+def _set_cookie(response: Response, key: str, value: str, **kwargs) -> None:
+    response.set_cookie(key, value, secure=SecurityConfig.cookie_secure, **kwargs)
+
+
+def _audit_request(request: Request, status_code: int, outcome: str | None = None) -> None:
+    if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return
+    session = getattr(request.state, "auth_session", None)
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", request.url.path)
+    resolved_outcome = outcome or (
+        "success" if status_code < 400 else "denied" if status_code in {401, 403, 429} else "error"
+    )
+    try:
+        _db.add_audit_event(
+            request_id=request.state.request_id,
+            actor=session.username if session else "anonymous",
+            action=f"{request.method} {route_path}",
+            outcome=resolved_outcome,
+            target_type="http_route",
+            target_id=request.url.path[:500],
+            client_hash=_security.hash_identifier(_client_address(request)),
+            metadata={"status_code": status_code},
+        )
+    except Exception:
+        logger.exception("Failed to append security audit event")
 
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    """Apply a conservative browser-security baseline to every response."""
-    response = await call_next(request)
+    """Authenticate, enforce CSRF/rate limits, audit mutations, and apply CSP."""
+    request.state.request_id = uuid.uuid4().hex
+    request.state.csp_nonce = secrets.token_urlsafe(18)
+    request.state.auth_session = _security.verify_session(request.cookies.get(SESSION_COOKIE))
+    path = request.url.path
+    is_public = path.startswith("/static/") or path in PUBLIC_PATHS
+
+    response: Response | None = None
+    if SecurityConfig.rate_limit_enabled and not path.startswith("/static/") and path != "/healthz":
+        session = request.state.auth_session
+        identity = session.session_id if session else _client_address(request)
+        if path == "/login" and request.method == "POST":
+            bucket, limit, window = "login", SecurityConfig.login_attempts_per_5_minutes, 300
+        elif path == "/chat" or path.startswith("/quick/"):
+            bucket, limit, window = "ai", SecurityConfig.ai_limit_per_minute, 60
+        else:
+            bucket, limit, window = "request", SecurityConfig.request_limit_per_minute, 60
+        allowed, retry_after = _rate_limiter.allow(
+            f"{bucket}:{identity}", limit=limit, window_seconds=window
+        )
+        if not allowed:
+            response = Response(
+                "Too Many Requests", status_code=429, headers={"Retry-After": str(retry_after)}
+            )
+
+    if response is None and SecurityConfig.auth_enabled and not is_public:
+        session = request.state.auth_session
+        if session is None:
+            if request.headers.get("HX-Request") == "true":
+                response = Response(status_code=401, headers={"HX-Redirect": "/login"})
+            else:
+                response = RedirectResponse("/login", status_code=303)
+        elif request.method not in {"GET", "HEAD", "OPTIONS"}:
+            header_token = request.headers.get("X-CSRF-Token")
+            cookie_token = request.cookies.get(CSRF_COOKIE)
+            if (
+                not header_token
+                or not hmac.compare_digest(header_token, cookie_token or "")
+                or not _security.verify_csrf(header_token, session.session_id)
+            ):
+                response = Response("CSRF validation failed", status_code=403)
+
+    if response is None:
+        try:
+            response = await call_next(request)
+        except Exception:
+            _audit_request(request, 500, outcome="error")
+            raise
+
+    _audit_request(request, response.status_code)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("X-Request-ID", request.state.request_id)
+    if SecurityConfig.cookie_secure:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"script-src 'self' 'nonce-{request.state.csp_nonce}' https://unpkg.com https://cdn.jsdelivr.net; "
+        "style-src 'self' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
         "base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
@@ -258,8 +362,92 @@ async def healthz():
     return {"status": "ok", "version": AppConfig.version}
 
 
+def _render_login(request: Request, lang: str, csrf_token: str, error: str = "") -> HTMLResponse:
+    t = get_t(lang)
+    content = jinja.get_template("login.html").render(
+        lang=lang,
+        t=t,
+        csp_nonce=request.state.csp_nonce,
+        csrf_token=csrf_token,
+        error=error,
+    )
+    response = HTMLResponse(content, status_code=401 if error else 200)
+    _set_cookie(
+        response,
+        CSRF_COOKIE,
+        csrf_token,
+        max_age=600,
+        httponly=False,
+        samesite="strict",
+    )
+    return response
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, lang: str = Depends(get_lang)):
+    if not SecurityConfig.auth_enabled:
+        return RedirectResponse("/", status_code=303)
+    if request.state.auth_session is not None:
+        return RedirectResponse("/", status_code=303)
+    return _render_login(request, lang, _security.issue_csrf("login"))
+
+
+@app.post("/login", response_class=HTMLResponse)
+async def login(
+    request: Request,
+    username: Annotated[str, Form(max_length=120)],
+    password: Annotated[str, Form(max_length=500)],
+    csrf_token: Annotated[str, Form(max_length=500)],
+    lang: str = Depends(get_lang),
+):
+    cookie_token = request.cookies.get(CSRF_COOKIE, "")
+    csrf_valid = hmac.compare_digest(csrf_token, cookie_token) and _security.verify_csrf(
+        csrf_token, "login"
+    )
+    username_valid = hmac.compare_digest(username, SecurityConfig.username)
+    password_valid = verify_password(password, SecurityConfig.password_hash)
+    if not csrf_valid or not username_valid or not password_valid:
+        return _render_login(
+            request,
+            lang,
+            _security.issue_csrf("login"),
+            get_t(lang)("auth.invalid"),
+        )
+
+    session_token = _security.issue_session(SecurityConfig.username)
+    session = _security.verify_session(session_token)
+    request.state.auth_session = session
+    response = RedirectResponse("/", status_code=303)
+    _set_cookie(
+        response,
+        SESSION_COOKIE,
+        session_token,
+        max_age=SecurityConfig.session_ttl_seconds,
+        httponly=True,
+        samesite="lax",
+    )
+    _set_cookie(
+        response,
+        CSRF_COOKIE,
+        _security.issue_csrf(session.session_id),
+        max_age=SecurityConfig.session_ttl_seconds,
+        httponly=False,
+        samesite="strict",
+    )
+    return response
+
+
+@app.post("/logout")
+async def logout():
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(CSRF_COOKIE, path="/")
+    return response
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(
+    request: Request,
     lang: str = Depends(get_lang),
     conversation_id: Annotated[str | None, Cookie()] = None,
 ):
@@ -269,7 +457,17 @@ async def index(
     _refresh_uploaded_pdfs()
     online = llm_available()
     active_conversation = _ensure_conversation(conversation_id, lang)
+    csrf_token = request.cookies.get(CSRF_COOKIE, "")
+    session = request.state.auth_session
+    refresh_csrf = bool(
+        SecurityConfig.auth_enabled
+        and session
+        and not _security.verify_csrf(csrf_token, session.session_id)
+    )
+    if refresh_csrf:
+        csrf_token = _security.issue_csrf(session.session_id)
     content = jinja.get_template("index.html").render(
+        request=request,
         t=t,
         lang=lang,
         messages=_conversation_messages(active_conversation, lang),
@@ -280,12 +478,25 @@ async def index(
         conversations=_conversation_summaries(lang),
         archived_conversations=_archived_conversation_summaries(lang),
         active_conversation=active_conversation,
+        csp_nonce=request.state.csp_nonce,
+        csrf_token=csrf_token,
+        auth_enabled=SecurityConfig.auth_enabled,
         _ZH=_ZH,
         _EN=_EN,
     )
     response = HTMLResponse(content)
+    if refresh_csrf:
+        _set_cookie(
+            response,
+            CSRF_COOKIE,
+            csrf_token,
+            max_age=SecurityConfig.session_ttl_seconds,
+            httponly=False,
+            samesite="strict",
+        )
     if active_conversation != conversation_id:
-        response.set_cookie(
+        _set_cookie(
+            response,
             "conversation_id",
             active_conversation,
             max_age=365 * 24 * 3600,
@@ -461,7 +672,8 @@ async def chat(
     )
     response = HTMLResponse(content)
     if active_conversation != conversation_id:
-        response.set_cookie(
+        _set_cookie(
+            response,
             "conversation_id",
             active_conversation,
             max_age=365 * 24 * 3600,
@@ -736,7 +948,8 @@ async def quick_action(
     )
     response = HTMLResponse(content)
     if active_conversation != conversation_id:
-        response.set_cookie(
+        _set_cookie(
+            response,
             "conversation_id",
             active_conversation,
             max_age=365 * 24 * 3600,
@@ -750,7 +963,7 @@ async def quick_action(
 async def set_theme(theme: str = Form(...)):
     """Set theme cookie."""
     response = Response(status_code=204)
-    response.set_cookie(key="theme", value=theme, max_age=365 * 24 * 3600)
+    _set_cookie(response, key="theme", value=theme, max_age=365 * 24 * 3600)
     return response
 
 
@@ -758,7 +971,7 @@ async def set_theme(theme: str = Form(...)):
 async def set_lang(lang: str = Form(...)):
     """Set language cookie and reload page."""
     response = Response(status_code=204)
-    response.set_cookie(key="lang", value=lang, max_age=365 * 24 * 3600)
+    _set_cookie(response, key="lang", value=lang, max_age=365 * 24 * 3600)
     return response
 
 
@@ -773,7 +986,8 @@ def _conversation_switch_response(conversation_id: str, lang: str) -> HTMLRespon
         active_conversation=conversation_id,
     )
     response = HTMLResponse(content)
-    response.set_cookie(
+    _set_cookie(
+        response,
         "conversation_id",
         conversation_id,
         max_age=365 * 24 * 3600,

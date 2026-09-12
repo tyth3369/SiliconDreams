@@ -1916,7 +1916,7 @@ wheels = [
 
 [[package]]
 name = "silicondreams"
-version = "1.0.0.dev1"
+version = "1.0.0.dev2"
 source = { virtual = "." }
 dependencies = [
     { name = "chromadb" },

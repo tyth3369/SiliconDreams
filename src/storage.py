@@ -884,6 +884,56 @@ class Database:
                 ),
             )
 
+    def add_audit_event(
+        self,
+        *,
+        request_id: str,
+        actor: str,
+        action: str,
+        outcome: str,
+        target_type: str | None = None,
+        target_id: str | None = None,
+        client_hash: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> str:
+        """Append a security/administrative event; rows are immutable by schema trigger."""
+        event_id = f"aud_{uuid.uuid4().hex}"
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO audit_events(
+                    id, request_id, actor, action, target_type, target_id,
+                    outcome, client_hash, metadata_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event_id,
+                    request_id,
+                    actor,
+                    action,
+                    target_type,
+                    target_id,
+                    outcome,
+                    client_hash,
+                    json.dumps(metadata or {}, ensure_ascii=False),
+                    utc_now(),
+                ),
+            )
+        return event_id
+
+    def list_audit_events(self, limit: int = 100) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM audit_events ORDER BY created_at DESC, rowid DESC LIMIT ?",
+                (max(1, min(limit, 1000)),),
+            ).fetchall()
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["metadata"] = json.loads(item.pop("metadata_json"))
+            items.append(item)
+        return items
+
     def count(self, table: str) -> int:
         allowed = {
             "sources",
@@ -896,6 +946,7 @@ class Database:
             "watchlist",
             "web_search_cache",
             "web_snapshots",
+            "audit_events",
         }
         if table not in allowed:
             raise ValueError(f"Unsupported table: {table}")

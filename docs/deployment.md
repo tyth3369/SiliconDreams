@@ -41,7 +41,7 @@ cd SiliconDreams
 
 生产环境更建议按阿里云官方 Docker 文档配置软件源，而不是长期依赖 convenience script。
 
-## 4. 配置 secrets 与访问保护
+## 4. 配置 secrets 与应用登录
 
 ```bash
 cp .env.production.example .env.production
@@ -51,13 +51,15 @@ chmod 600 .env.production .env.caddy
 
 在 `.env.production` 填入真实 DeepSeek 与 Tavily API Key。
 
-生成网站密码哈希：
+生成应用用户名、PBKDF2 密码哈希和随机会话密钥：
 
 ```bash
-docker run --rm -it caddy:2-alpine caddy hash-password
+docker compose run --rm app python scripts/generate_auth_config.py
 ```
 
-按提示输入强密码，将输出完整复制到 `.env.caddy` 的 `SITE_PASSWORD_HASH`，并按需修改 `SITE_USERNAME`。浏览器访问网站时会要求这组用户名和密码。不要填写明文密码，也不要提交这两个生产环境文件。
+将输出的 `APP_*`、`AUTH_ENABLED`、`COOKIE_SECURE`、`TRUST_PROXY_HEADERS` 和 `RATE_LIMIT_ENABLED` 行完整复制到 `.env.production`，替换示例值。密码哈希必须保留生成器输出的单引号，避免 `$` 被 Compose 插值；明文密码不会写入文件。`APP_ENV=production` 会在认证或安全 Cookie 未正确配置时让服务拒绝启动。
+
+Caddy 只负责 TLS 与反向代理，登录、CSRF、限流和审计均由应用处理。不要提交 `.env.production` 或 `.env.caddy`。
 
 ## 5. 构建并下载本地模型
 
@@ -102,6 +104,7 @@ git pull --ff-only
 docker compose build app
 docker compose up -d
 docker compose exec app python scripts/manage_database.py verify
+docker compose exec app python scripts/manage_database.py audit --limit 50
 ```
 
 完整灾备还应包含 `data/pdfs/` 与 `data/chroma_db/`；Caddy 证书卷可以自动重建，本地模型卷可以重新下载。停机后的完整目录归档可使用：
@@ -131,8 +134,8 @@ docker compose up -d
 
 ## 上线边界
 
-- 该配置面向个人/小范围首发，Basic Auth 是必要保护，不是完整多用户账号系统。
+- 该配置面向个人/小范围首发，应用提供单账号认证，不是多租户权限系统。
 - 不要直接暴露 `8000` 端口；公网只开放 Caddy 的 80/443。
 - 不要使用多个 Uvicorn worker。
 - `data/` 含上传文档、会话和向量索引，应视为敏感数据并定期备份。
-- v1.0 前仍需补充正式身份认证、CSRF、应用层限流、审计日志和 CSP nonce。
+- 上线前阅读 `docs/security.md`，确认密钥轮换、代理边界和事故响应步骤。

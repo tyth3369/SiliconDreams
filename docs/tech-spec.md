@@ -1,4 +1,4 @@
-# SiliconDreams — 技术规范 v0.9
+# SiliconDreams — 技术规范 v1.0-dev.2
 
 ## 真实架构
 
@@ -62,7 +62,7 @@ Browser
 ## 持久化与并发
 
 - SQLite WAL 保存来源、事实、文档、会话和消息。
-- `src/migrations.py` 按 v1→v4 在单一 `BEGIN IMMEDIATE` 事务中升级数据库；每步在 `schema_migrations` 保存名称、SHA-256 校验和、时间和 baseline 状态。启动时拒绝未来版本、历史漂移、缺表/列/索引/触发器以及不完整 FTS 结构，不再以最终建表脚本覆盖真实升级历史。
+- `src/migrations.py` 按 v1→v5 在单一 `BEGIN IMMEDIATE` 事务中升级数据库；每步在 `schema_migrations` 保存名称、SHA-256 校验和、时间和 baseline 状态。启动时拒绝未来版本、历史漂移、缺表/列/索引/触发器以及不完整 FTS 结构，不再以最终建表脚本覆盖真实升级历史。
 - `scripts/manage_database.py` 提供只读状态、完整性校验、SQLite 在线备份和显式原子恢复；备份在返回前再次验证当前 schema、foreign keys 和 `PRAGMA integrity_check`。
 - PDF 摄入任务保存在 SQLite `jobs` 表；单后台 worker 原子领取任务，记录阶段与进度，并在进程重启时把中断任务重新排队。
 - 上传接口只负责校验、内容寻址落盘和入队；侧栏每秒拉取一次任务状态，任务结束后自动停止轮询。
@@ -79,14 +79,19 @@ Browser
 - `.env`、token、PDF、DB、vector store 由 `.gitignore` 排除。
 - PDF 校验扩展名、大小和 `%PDF-` magic；文件名净化。
 - 用户输入限制 4000 字符。
-- CSP、nosniff、frame deny、referrer policy、permissions policy 默认启用。
+- `APP_ENV=production` 强制启用应用层单账号认证和 Secure Cookie；PBKDF2 密码哈希与 HMAC 会话密钥只存在于部署环境变量。
+- 会话绑定的双提交 CSRF token 保护所有认证后的写请求；HTMX 统一附加请求头。
+- 登录、AI 与普通请求分桶限流；当前单 worker 下使用线程安全内存滑动窗口。
+- schema v5 的 `audit_events` 保存写请求结果和匿名化客户端标识，触发器拒绝修改或删除。
+- 每个页面请求生成独立 CSP nonce；CSP 不允许 `unsafe-inline`。nosniff、frame deny、referrer policy、permissions policy、COOP 和生产 HSTS 默认启用。
 - Prompt 明确把网页/PDF/工具输出视为不可信证据，禁止执行嵌入指令。
 
 ## 已知边界
 
-- CSP 暂时允许 inline script，以兼容现有 HTMX fragment 和本地化数据；公网部署前应改 nonce 或移除 inline script。
+- 认证是单共享账号，尚无角色、用户隔离和单会话服务端撤销。
+- 限流状态位于单进程内存，服务重启后重置；多实例前需要共享限流后端。
 - PDF 后台摄入采用单机 SQLite 队列；多实例部署前需要改为共享任务队列和跨进程锁。
-- 当前身份模型适用于 localhost 单用户，不适合直接公开部署。
+- 当前身份模型适用于个人或小团队共享账号的单实例部署，不适合多租户服务。
 
 ## 浏览器与性能回归
 
@@ -94,10 +99,10 @@ Browser
 - CI 安装固定于 lockfile 的 Playwright Chromium 并执行该测试。
 - `scripts/benchmark_workbench.py` 对无外部 API 的核心工作台路由建立可重复的本机中位数/P95基线。
 
-## v0.8 部署
+## v1.0 部署
 
-- 生产拓扑：Caddy（TLS + Basic Auth）→ 单 worker Uvicorn → SQLite/Chroma 持久目录。
+- 生产拓扑：Caddy（TLS）→ 应用认证与限流 → 单 worker Uvicorn → SQLite/Chroma 持久目录。
 - Caddy 对 SSE 禁用响应缓冲，自动完成 HTTP 到 HTTPS 跳转与证书续期。
 - BGE-M3 与 Cross-Encoder 位于独立 Docker 命名卷，应用数据绑定到宿主机 `data/`。
-- Basic Auth 仅用于首发访问保护；移除前必须完成正式身份认证、CSRF、限流和审计。
+- `APP_ENV=production` 在认证配置缺失或 Cookie 非 Secure 时拒绝启动。
 - 由于 SSE hand-off 仍为进程内状态，当前版本禁止多 worker 或多实例部署。

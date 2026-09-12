@@ -57,7 +57,7 @@ def test_analytics_fragment_contains_safe_json_and_local_renderer():
     assert "analytics-data" in response.text
     assert "onclick=" not in response.text
     match = re.search(
-        r'<script type="application/json" id="analytics-data">(.*?)</script>',
+        r'<div id="analytics-data" hidden>(.*?)</div>',
         response.text,
         re.DOTALL,
     )

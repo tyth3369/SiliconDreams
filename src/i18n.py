@@ -14,7 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v1.0.0-dev.1 | (c) 2026",
+    "app.footer": "SiliconDreams v1.0.0-dev.2 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -53,6 +53,12 @@ _ZH = {
     "sidebar.settings_language": "界面语言",
     "sidebar.settings_theme": "主题",
     "sidebar.settings_debug": "Debug 模式",
+    "auth.login_title": "研究终端登录",
+    "auth.username": "用户名",
+    "auth.password": "密码",
+    "auth.sign_in": "登录",
+    "auth.sign_out": "退出登录",
+    "auth.invalid": "凭据无效或表单已过期，请重试。",
     # -- Theme --
     "theme.auto": "自动",
     "theme.dark": "暗色",
@@ -118,7 +124,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v1.0.0-dev.1 | (c) 2026",
+    "app.footer": "SiliconDreams v1.0.0-dev.2 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",
@@ -157,6 +163,12 @@ _EN = {
     "sidebar.settings_language": "Language",
     "sidebar.settings_theme": "Theme",
     "sidebar.settings_debug": "Debug Mode",
+    "auth.login_title": "Research Terminal Access",
+    "auth.username": "Username",
+    "auth.password": "Password",
+    "auth.sign_in": "Sign In",
+    "auth.sign_out": "Sign Out",
+    "auth.invalid": "Invalid credentials or expired form. Please try again.",
     # -- Theme --
     "theme.auto": "Auto",
     "theme.dark": "Dark",
