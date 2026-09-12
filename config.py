@@ -26,7 +26,7 @@ DATA_DIR = ROOT_DIR / "data"
 PDF_DIR = DATA_DIR / "pdfs"
 CHROMA_DIR = DATA_DIR / "chroma_db"
 REPORTS_DIR = DATA_DIR / "reports"
-DATABASE_FILE = DATA_DIR / "silicondreams.db"
+DATABASE_FILE = Path(os.getenv("SILICONDREAMS_DATABASE_FILE", DATA_DIR / "silicondreams.db"))
 TERMINOLOGY_FILE = DATA_DIR / "terminology.json"
 DEVLOG_DIR = ROOT_DIR / "devlog"
 
@@ -123,7 +123,7 @@ class AppConfig:
     """应用配置"""
 
     name: str = "SiliconDreams"
-    version: str = "0.9.0-dev.4"
+    version: str = "0.9.0-dev.5"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]
