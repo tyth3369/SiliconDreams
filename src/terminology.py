@@ -81,6 +81,13 @@ class TerminologyManager:
                 "DDR5",
             ]:
                 self._aliases[name.lower()] = name
+        from src.knowledge_graph import get_knowledge_graph
+
+        graph = get_knowledge_graph()
+        for alias, node_id in graph.alias_index.items():
+            node = graph.nodes[node_id]
+            if node["type"] == "term":
+                self._aliases[alias] = node["name"]
 
     # ── 查找 ────────────────────────────────────────
 
@@ -150,6 +157,9 @@ class TerminologyManager:
 
         parts = ["## 半导体行业术语参考\n"]
         refs = []  # for citation tracking
+        from src.knowledge_graph import get_knowledge_graph
+
+        graph = get_knowledge_graph()
 
         for t in selected:
             # Assign a citation key so the LLM can reference this term
@@ -158,8 +168,12 @@ class TerminologyManager:
             parts.append(f"- **技术代际**: {t.get('generation', 'N/A')}")
             if t.get("business_impact"):
                 parts.append(f"- **商业影响**: {t['business_impact']}")
-            if t.get("related_terms"):
-                parts.append(f"- **关联概念**: {', '.join(t['related_terms'][:8])}")
+            related = graph.neighbors(t["name"], "related_to")[:8]
+            companies = graph.neighbors(t["name"], "associated_with")[:8]
+            if related:
+                parts.append(f"- **关联概念**: {', '.join(node['name'] for node in related)}")
+            if companies:
+                parts.append(f"- **关联公司**: {', '.join(node['name'] for node in companies)}")
             parts.append("")
 
             if return_refs:
@@ -183,9 +197,14 @@ class TerminologyManager:
 
     def stats(self) -> dict:
         """获取术语库统计信息"""
+        from src.knowledge_graph import get_knowledge_graph
+
+        graph_audit = get_knowledge_graph().audit()
         return {
             "total_terms": len(self._terms),
             "aliases": len(self._aliases),
+            "graph_nodes": graph_audit["nodes"],
+            "graph_edges": graph_audit["edges"],
         }
 
 
