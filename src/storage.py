@@ -17,8 +17,7 @@ from typing import Any
 
 from config import DATABASE_FILE
 from src.evidence_policy import canonical_fact_value
-
-SCHEMA_VERSION = 4
+from src.migrations import migrate
 
 
 def utc_now() -> str:
@@ -29,164 +28,6 @@ def stable_id(prefix: str, *parts: object) -> str:
     payload = "\x1f".join(str(part) for part in parts)
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:24]
     return f"{prefix}_{digest}"
-
-
-SCHEMA = """
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS schema_meta (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sources (
-    id TEXT PRIMARY KEY,
-    source_type TEXT NOT NULL CHECK (source_type IN ('official', 'web', 'document', 'term', 'dataset')),
-    title TEXT NOT NULL,
-    url TEXT,
-    publisher TEXT,
-    published_at TEXT,
-    retrieved_at TEXT NOT NULL,
-    trust_tier INTEGER NOT NULL DEFAULT 3 CHECK (trust_tier BETWEEN 1 AND 4),
-    content_hash TEXT,
-    metadata_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_sources_url
-ON sources(url) WHERE url IS NOT NULL AND url != '';
-
-CREATE TABLE IF NOT EXISTS documents (
-    id TEXT PRIMARY KEY,
-    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-    original_filename TEXT NOT NULL,
-    stored_path TEXT NOT NULL,
-    sha256 TEXT NOT NULL UNIQUE,
-    page_count INTEGER NOT NULL DEFAULT 0,
-    report_period TEXT,
-    parse_status TEXT NOT NULL DEFAULT 'pending',
-    parse_error TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS chunks (
-    id TEXT PRIMARY KEY,
-    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-    page INTEGER NOT NULL CHECK (page >= 1),
-    section TEXT NOT NULL DEFAULT '',
-    chunk_type TEXT NOT NULL CHECK (chunk_type IN ('text', 'table')),
-    text TEXT NOT NULL,
-    content_hash TEXT NOT NULL,
-    vector_id TEXT,
-    metadata_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
-    UNIQUE(document_id, content_hash)
-);
-
-CREATE INDEX IF NOT EXISTS idx_chunks_document_page ON chunks(document_id, page);
-
-CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
-    chunk_id UNINDEXED,
-    text,
-    section,
-    tokenize='unicode61'
-);
-
-CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
-    INSERT INTO chunks_fts(chunk_id, text, section) VALUES (new.id, new.text, new.section);
-END;
-
-CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
-    DELETE FROM chunks_fts WHERE chunk_id = old.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
-    DELETE FROM chunks_fts WHERE chunk_id = old.id;
-    INSERT INTO chunks_fts(chunk_id, text, section) VALUES (new.id, new.text, new.section);
-END;
-
-CREATE TABLE IF NOT EXISTS facts (
-    id TEXT PRIMARY KEY,
-    source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE RESTRICT,
-    document_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
-    company TEXT NOT NULL,
-    metric TEXT NOT NULL,
-    period TEXT NOT NULL,
-    value TEXT NOT NULL,
-    unit TEXT NOT NULL,
-    currency TEXT,
-    page INTEGER,
-    quote TEXT,
-    confidence REAL NOT NULL DEFAULT 1.0 CHECK (confidence BETWEEN 0 AND 1),
-    metadata_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
-    UNIQUE(company, metric, period, source_id, value, unit)
-);
-
-CREATE INDEX IF NOT EXISTS idx_facts_lookup ON facts(company, metric, period);
-
-CREATE TABLE IF NOT EXISTS conversations (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL DEFAULT '',
-    language TEXT NOT NULL DEFAULT 'zh',
-    archived_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS messages (
-    id TEXT PRIMARY KEY,
-    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-    content TEXT NOT NULL,
-    citations_json TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_messages_conversation
-ON messages(conversation_id, created_at);
-
-CREATE TABLE IF NOT EXISTS jobs (
-    id TEXT PRIMARY KEY,
-    job_type TEXT NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'succeeded', 'failed')),
-    payload_json TEXT NOT NULL DEFAULT '{}',
-    result_json TEXT NOT NULL DEFAULT '{}',
-    error TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS watchlist (
-    company TEXT PRIMARY KEY,
-    created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS web_search_cache (
-    query_key TEXT PRIMARY KEY,
-    query TEXT NOT NULL,
-    backend TEXT NOT NULL,
-    results_json TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS web_snapshots (
-    id TEXT PRIMARY KEY,
-    url TEXT NOT NULL,
-    title TEXT NOT NULL,
-    snippet TEXT NOT NULL,
-    content_hash TEXT NOT NULL,
-    publisher TEXT,
-    published_at TEXT,
-    retrieved_at TEXT NOT NULL,
-    UNIQUE(url, content_hash)
-);
-
-CREATE INDEX IF NOT EXISTS idx_web_snapshots_url ON web_snapshots(url, retrieved_at);
-"""
 
 
 class Database:
@@ -205,35 +46,11 @@ class Database:
         return connection
 
     def initialize(self) -> None:
-        with self.connect() as connection:
-            connection.executescript(SCHEMA)
-            conversation_columns = {
-                row["name"]
-                for row in connection.execute("PRAGMA table_info(conversations)").fetchall()
-            }
-            if "archived_at" not in conversation_columns:
-                connection.execute("ALTER TABLE conversations ADD COLUMN archived_at TEXT")
-            connection.execute(
-                """
-                UPDATE conversations AS conversation
-                SET title=substr(
-                    (
-                        SELECT content FROM messages
-                        WHERE conversation_id=conversation.id AND role='user'
-                        ORDER BY rowid LIMIT 1
-                    ),
-                    1, 48
-                )
-                WHERE title='' AND EXISTS (
-                    SELECT 1 FROM messages
-                    WHERE conversation_id=conversation.id AND role='user'
-                )
-                """
-            )
-            connection.execute(
-                "INSERT OR REPLACE INTO schema_meta(key, value) VALUES ('version', ?)",
-                (str(SCHEMA_VERSION),),
-            )
+        connection = self.connect()
+        try:
+            migrate(connection)
+        finally:
+            connection.close()
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:

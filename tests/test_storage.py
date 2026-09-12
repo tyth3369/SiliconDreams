@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from src.migrations import MIGRATIONS, SCHEMA_VERSION, SchemaMigrationError
 from src.storage import Database, stable_id
 
 
@@ -14,6 +15,17 @@ def database(tmp_path: Path) -> Database:
 
 def test_schema_initializes(database):
     assert database.count("sources") == 0
+    with database.connect() as connection:
+        version = connection.execute(
+            "SELECT value FROM schema_meta WHERE key='version'"
+        ).fetchone()["value"]
+        history = connection.execute(
+            "SELECT version, name, baseline FROM schema_migrations ORDER BY version"
+        ).fetchall()
+    assert version == str(SCHEMA_VERSION)
+    assert [(row["version"], row["name"], row["baseline"]) for row in history] == [
+        (migration.version, migration.name, 0) for migration in MIGRATIONS
+    ]
 
 
 def test_stable_id_is_deterministic():
@@ -250,7 +262,84 @@ def test_schema_v1_database_migrates_archived_at_column(tmp_path):
             "SELECT value FROM schema_meta WHERE key='version'"
         ).fetchone()["value"]
     assert "archived_at" in columns
-    assert version == "4"
+    assert version == str(SCHEMA_VERSION)
+
+
+def test_existing_v4_database_is_baselined_without_losing_data(tmp_path):
+    path = tmp_path / "existing-v4.db"
+    initial = Database(path)
+    conversation_id = initial.create_conversation(title="Preserve me")
+    initial.add_message(conversation_id, "user", "Keep this message")
+    with initial.connect() as connection:
+        connection.execute("DROP TABLE schema_migrations")
+
+    reopened = Database(path)
+    assert reopened.list_messages(conversation_id)[0]["content"] == "Keep this message"
+    with reopened.connect() as connection:
+        history = connection.execute(
+            "SELECT version, baseline FROM schema_migrations ORDER BY version"
+        ).fetchall()
+    assert [(row["version"], row["baseline"]) for row in history] == [
+        (migration.version, 1) for migration in MIGRATIONS
+    ]
+
+
+def test_newer_database_version_is_rejected_without_rewriting_version(tmp_path):
+    path = tmp_path / "future.db"
+    database = Database(path)
+    with database.connect() as connection:
+        connection.execute(
+            "UPDATE schema_meta SET value=? WHERE key='version'",
+            (str(SCHEMA_VERSION + 1),),
+        )
+
+    with pytest.raises(SchemaMigrationError, match="newer than supported"):
+        Database(path)
+    with sqlite3.connect(path) as connection:
+        version = connection.execute(
+            "SELECT value FROM schema_meta WHERE key='version'"
+        ).fetchone()[0]
+    assert version == str(SCHEMA_VERSION + 1)
+
+
+def test_migration_checksum_drift_is_rejected(tmp_path):
+    path = tmp_path / "drift.db"
+    database = Database(path)
+    with database.connect() as connection:
+        connection.execute("UPDATE schema_migrations SET checksum='tampered' WHERE version=1")
+
+    with pytest.raises(SchemaMigrationError, match="checksum mismatch"):
+        Database(path)
+
+
+def test_schema_drift_is_rejected_even_when_version_claims_current(tmp_path):
+    path = tmp_path / "incomplete.db"
+    database = Database(path)
+    with database.connect() as connection:
+        connection.execute("DROP TABLE watchlist")
+
+    with pytest.raises(SchemaMigrationError, match="missing table watchlist"):
+        Database(path)
+
+
+def test_migration_history_ahead_of_schema_version_is_rejected(tmp_path):
+    path = tmp_path / "history-ahead.db"
+    database = Database(path)
+    with database.connect() as connection:
+        connection.execute("UPDATE schema_meta SET value='3' WHERE key='version'")
+
+    with pytest.raises(SchemaMigrationError, match="history is ahead"):
+        Database(path)
+
+
+def test_missing_required_trigger_is_detected(tmp_path):
+    path = tmp_path / "missing-trigger.db"
+    database = Database(path)
+    with database.connect() as connection:
+        connection.execute("DROP TRIGGER chunks_ai")
+
+    with pytest.raises(SchemaMigrationError, match="missing trigger"):
+        Database(path)
 
 
 def test_watchlist_is_persistent_and_idempotent(database):
