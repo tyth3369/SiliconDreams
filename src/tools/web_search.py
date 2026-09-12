@@ -10,11 +10,12 @@ DDG:    https://html.duckduckgo.com/html/ — free but rate-limited.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlparse
 
 from config import SearchConfig
@@ -59,6 +60,31 @@ REPUTABLE_NEWS_DOMAINS = {
     "trendforce.com",
 }
 
+OFFICIAL_QUERY_DOMAINS = {
+    "tsmc": ["tsmc.com"],
+    "台积电": ["tsmc.com"],
+    "smic": ["smic.com", "hkexnews.hk"],
+    "中芯国际": ["smic.com", "hkexnews.hk"],
+    "nvidia": ["nvidia.com"],
+    "英伟达": ["nvidia.com"],
+    "amd": ["amd.com"],
+    "intel": ["intel.com"],
+    "英特尔": ["intel.com"],
+}
+OFFICIAL_QUERY_MARKERS = (
+    "官方",
+    "财报",
+    "年报",
+    "季报",
+    "公告",
+    "results",
+    "earnings",
+    "annual report",
+    "quarterly report",
+    "filing",
+    "investor relations",
+)
+
 
 def _hostname(url: str) -> str:
     try:
@@ -79,6 +105,30 @@ def source_trust_tier(url: str) -> int:
     if _domain_matches(hostname, REPUTABLE_NEWS_DOMAINS):
         return 2
     return 3
+
+
+def preferred_official_domains(query: str) -> list[str]:
+    """Restrict explicit filing/result searches to matching first-party domains."""
+    lowered = query.casefold()
+    if not any(marker.casefold() in lowered for marker in OFFICIAL_QUERY_MARKERS):
+        return []
+    domains: list[str] = []
+    for marker, candidates in OFFICIAL_QUERY_DOMAINS.items():
+        if marker.casefold() in lowered:
+            domains.extend(candidates)
+    return list(dict.fromkeys(domains))
+
+
+def _cache_database():
+    from src.storage import Database
+
+    return Database()
+
+
+def _cache_key(query: str, max_results: int) -> str:
+    normalized = " ".join(query.casefold().split())
+    payload = f"v1\x1f{normalized}\x1f{max_results}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -108,6 +158,9 @@ def _search_tavily(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dic
             "max_results": max_results,
             "topic": "news" if is_time_sensitive_query(query) else "general",
         }
+        preferred_domains = preferred_official_domains(query)
+        if preferred_domains:
+            request_body["include_domains"] = preferred_domains
         if is_time_sensitive_query(query):
             request_body["end_date"] = datetime.now(UTC).date().isoformat()
         payload = json.dumps(request_body).encode("utf-8")
@@ -276,12 +329,34 @@ def _do_search(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict], 
     Returns:
         (structured_results, formatted_text_for_llm)
     """
+    database = _cache_database()
+    query_key = _cache_key(query, max_results)
+    cached = database.get_cached_web_search(query_key)
+    if cached:
+        assessed, assessment = assess_web_results(query, cached["results"])
+        backend = f"{cached['backend']} cache"
+        return assessed, _format_results(query, backend, assessed, assessment)
+
     # Primary: Tavily (AI-agent-friendly, reliable)
     if SearchConfig.is_configured():
         results, backend = _search_tavily(query, max_results)
         if results:
             assessed, assessment = assess_web_results(query, results)
             if assessed:
+                ttl = (
+                    SearchConfig.news_cache_ttl_seconds
+                    if is_time_sensitive_query(query)
+                    else SearchConfig.cache_ttl_seconds
+                )
+                database.cache_web_search(
+                    query_key=query_key,
+                    query=query,
+                    backend=backend,
+                    results=results,
+                    expires_at=(datetime.now(UTC) + timedelta(seconds=ttl)).isoformat(
+                        timespec="seconds"
+                    ),
+                )
                 return assessed, _format_results(query, backend, assessed, assessment)
             logger.warning("Tavily results rejected by evidence-date policy; trying DDG")
         # Tavily failed → log and fall through to DDG
@@ -292,6 +367,19 @@ def _do_search(query: str, max_results: int = MAX_RESULTS) -> tuple[list[dict], 
     if not results:
         return results, backend
     assessed, assessment = assess_web_results(query, results)
+    if assessed:
+        ttl = (
+            SearchConfig.news_cache_ttl_seconds
+            if is_time_sensitive_query(query)
+            else SearchConfig.cache_ttl_seconds
+        )
+        database.cache_web_search(
+            query_key=query_key,
+            query=query,
+            backend=backend,
+            results=results,
+            expires_at=(datetime.now(UTC) + timedelta(seconds=ttl)).isoformat(timespec="seconds"),
+        )
     return assessed, _format_results(query, backend, assessed, assessment)
 
 

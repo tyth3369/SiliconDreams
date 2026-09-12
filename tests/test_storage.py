@@ -250,7 +250,7 @@ def test_schema_v1_database_migrates_archived_at_column(tmp_path):
             "SELECT value FROM schema_meta WHERE key='version'"
         ).fetchone()["value"]
     assert "archived_at" in columns
-    assert version == "3"
+    assert version == "4"
 
 
 def test_watchlist_is_persistent_and_idempotent(database):
@@ -263,6 +263,38 @@ def test_watchlist_is_persistent_and_idempotent(database):
     assert database.set_watchlist("台积电", watched=False) is True
     assert database.list_watchlist() == ["中芯国际"]
     assert database.set_watchlist("  ", watched=True) is False
+
+
+def test_web_search_cache_expiry_and_content_addressed_snapshots(database):
+    results = [
+        {
+            "title": "TSMC release",
+            "url": "https://investor.tsmc.com/update",
+            "snippet": "Official update",
+            "publisher": "TSMC",
+            "published_at": "2026-09-01",
+        }
+    ]
+    database.cache_web_search(
+        query_key="query-key",
+        query="TSMC latest",
+        backend="Tavily",
+        results=results,
+        expires_at="2099-01-01T00:00:00+00:00",
+    )
+    cached = database.get_cached_web_search("query-key", now="2026-09-12T00:00:00+00:00")
+    assert cached["results"] == results
+    assert database.get_cached_web_search("query-key", now="2100-01-01T00:00:00+00:00") is None
+    assert database.count("web_snapshots") == 1
+    database.cache_web_search(
+        query_key="query-key",
+        query="TSMC latest",
+        backend="Tavily",
+        results=results,
+        expires_at="2099-01-01T00:00:00+00:00",
+    )
+    assert database.count("web_snapshots") == 1
+    assert database.list_web_snapshots()[0]["content_hash"]
 
 
 def test_message_limit_returns_most_recent_items_in_conversation_order(database):

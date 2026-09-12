@@ -59,6 +59,8 @@ class SearchConfig:
     max_results: int = 5
     search_depth: str = "basic"  # "basic" or "advanced"
     timeout: int = 10  # seconds
+    cache_ttl_seconds: int = 24 * 60 * 60
+    news_cache_ttl_seconds: int = 15 * 60
 
     @classmethod
     def is_configured(cls) -> bool:
@@ -121,7 +123,7 @@ class AppConfig:
     """应用配置"""
 
     name: str = "SiliconDreams"
-    version: str = "0.9.0-dev.3"
+    version: str = "0.9.0-dev.4"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]
