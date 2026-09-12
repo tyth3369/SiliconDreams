@@ -18,7 +18,7 @@
 - [x] `uv pip check`、JavaScript 语法与 Git diff whitespace
 - [x] SQLite schema v6 integrity、foreign keys 与迁移历史
 - [x] GitHub Actions 主质量工作流
-- [ ] GitHub Actions 容器镜像构建与 Compose 配置
+- [x] GitHub Actions 容器镜像构建与 Compose 配置（run `34713016276`）
 
 ## 安全与隐私冻结
 
@@ -59,4 +59,3 @@
 ## 发布决策
 
 只有自动化门禁全部通过，且部署机人工验收没有 P0/P1 问题时，才把 `v1.0.0-rc.1` 晋升为 `v1.0.0`。候选期只接受阻断发布的修复，不再加入新功能。
-
