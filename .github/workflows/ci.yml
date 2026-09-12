@@ -22,3 +22,5 @@ jobs:
         run: uv run ruff format --check .
       - name: Tests
         run: uv run pytest --cov=src --cov-report=term-missing
+      - name: Citation benchmark
+        run: uv run python scripts/run_citation_benchmark.py

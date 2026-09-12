@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any, Protocol
 
+INLINE_CITATION_PATTERN = re.compile(r"\[(\d+)\]")
+
 
 class RetrievalBackend(Protocol):
     def retrieve(self, query: str, top_k: int = 5, rerank: bool = True) -> list[dict[str, Any]]: ...
@@ -79,3 +81,98 @@ def load_cases(path: str | Path) -> list[dict[str, Any]]:
     if not isinstance(cases, list):
         raise ValueError("evaluation file must contain a 'cases' list")
     return cases
+
+
+def citation_integrity(answer: str, citations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Measure whether inline citation markers resolve to the supplied source list."""
+    markers = [int(value) for value in INLINE_CITATION_PATTERN.findall(answer)]
+    valid = [marker for marker in markers if 1 <= marker <= len(citations)]
+    invalid = [marker for marker in markers if marker < 1 or marker > len(citations)]
+    return {
+        "markers": len(markers),
+        "valid_markers": len(valid),
+        "invalid_markers": invalid,
+        "marker_validity": len(valid) / len(markers) if markers else 0.0,
+        "cited_sources": len(set(valid)),
+        "available_sources": len(citations),
+    }
+
+
+def evaluate_citations(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """Evaluate manually annotated claim-to-source citation precision and coverage."""
+    if not cases:
+        return {
+            "cases": 0,
+            "citation_precision": 0.0,
+            "claim_coverage": 0.0,
+            "marker_validity": 0.0,
+            "details": [],
+        }
+
+    total_markers = 0
+    valid_markers = 0
+    supported_markers = 0
+    required_claims = 0
+    covered_claims = 0
+    details = []
+    for case in cases:
+        answer = str(case.get("answer", ""))
+        citations = list(case.get("citations") or [])
+        integrity = citation_integrity(answer, citations)
+        case_supported = 0
+        case_covered = 0
+        case_required = 0
+        annotated_marker_count = 0
+        claim_details = []
+        for claim in case.get("claims") or []:
+            claim_text = str(claim.get("text", ""))
+            present = bool(claim_text and claim_text in answer)
+            markers = (
+                [int(value) for value in INLINE_CITATION_PATTERN.findall(claim_text)]
+                if present
+                else []
+            )
+            supported_by = {int(value) for value in claim.get("supported_by") or []}
+            supported = [marker for marker in markers if marker in supported_by]
+            annotated_marker_count += len(markers)
+            case_supported += len(supported)
+            if claim.get("required", True):
+                case_required += 1
+                required_claims += 1
+                if supported:
+                    covered_claims += 1
+                    case_covered += 1
+            claim_details.append(
+                {
+                    "text": claim_text,
+                    "present": present,
+                    "markers": markers,
+                    "supported_by": sorted(supported_by),
+                    "supported": bool(supported),
+                }
+            )
+
+        # Markers outside an annotated claim cannot be counted as grounded.
+        case_total = integrity["markers"]
+        total_markers += case_total
+        valid_markers += integrity["valid_markers"]
+        bounded_supported = min(case_supported, annotated_marker_count, case_total)
+        supported_markers += bounded_supported
+        details.append(
+            {
+                "id": case.get("id", ""),
+                "citation_precision": bounded_supported / case_total if case_total else 0.0,
+                "claim_coverage": case_covered / case_required if case_required else 0.0,
+                "marker_validity": integrity["marker_validity"],
+                "invalid_markers": integrity["invalid_markers"],
+                "claims": claim_details,
+            }
+        )
+
+    return {
+        "cases": len(cases),
+        "citation_precision": supported_markers / total_markers if total_markers else 0.0,
+        "claim_coverage": covered_claims / required_claims if required_claims else 0.0,
+        "marker_validity": valid_markers / total_markers if total_markers else 0.0,
+        "details": details,
+    }

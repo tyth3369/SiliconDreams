@@ -209,6 +209,8 @@ class FinancialDataManager:
             if not requested:
                 requested = self._periods_from_query(query, set(quarterly))
             selected_quarters = [period for period in requested if period in quarterly]
+            annual_period = f"FY{c['year']}"
+            annual_requested = annual_period in requested
 
             if selected_quarters:
                 parts.append(f"### {key} ({c['name_en']}) [{c['ticker']}] — 季度实际值")
@@ -217,6 +219,11 @@ class FinancialDataManager:
                 for period in selected_quarters:
                     quarter = quarterly[period]
                     metrics = quarter["metrics"]
+                    metric_lines = [
+                        f"{label}: {_format_quarterly_metric(metric_key, metrics[metric_key])}"
+                        for metric_key, label, _fact_metric, _unit, _currency in QUARTERLY_METRICS
+                        if metric_key in metrics
+                    ]
                     refs.append(
                         {
                             "name": key,
@@ -226,14 +233,11 @@ class FinancialDataManager:
                             "source_url": quarter["source_url"],
                             "source_publisher": quarter.get("source_publisher", ""),
                             "source_published_at": quarter.get("source_published_at", ""),
+                            "snippet": f"{period}: {'; '.join(metric_lines)}",
                         }
                     )
                     parts.append(f"#### {period}")
-                    for metric_key, label, _fact_metric, _unit, _currency in QUARTERLY_METRICS:
-                        if metric_key in metrics:
-                            parts.append(
-                                f"- {label}: {_format_quarterly_metric(metric_key, metrics[metric_key])}"
-                            )
+                    parts.extend(f"- {line}" for line in metric_lines)
                     parts.extend(
                         [
                             f"- 官方来源: {quarter['source_title']} ({quarter['source_published_at']})",
@@ -249,7 +253,7 @@ class FinancialDataManager:
                 parts.append("")
                 continue
 
-            if requested:
+            if requested and not annual_requested:
                 available = ", ".join(sorted(quarterly)) or "无"
                 parts.extend(
                     [
@@ -271,6 +275,17 @@ class FinancialDataManager:
                     "source_url": c.get("source_url", ""),
                     "source_publisher": c.get("source_publisher", ""),
                     "source_published_at": c.get("source_published_at", ""),
+                    "snippet": (
+                        f"FY{c['year']}: revenue {c['revenue']['value']:.4g} "
+                        f"{c['currency']} {c.get('unit', '')}; gross margin "
+                        f"{c['gross_margin']['value']:.1f}%; net margin "
+                        f"{c['net_margin']['value']:.1f}%; CAPEX "
+                        f"{c['capex']['value']:.4g} {c['currency']} {c.get('unit', '')}; "
+                        f"CAPEX/revenue {c['capex']['intensity_pct']:.1f}%; R&D intensity "
+                        f"{c['rd_expense']['rd_ratio']:.1f}%; capacity utilization "
+                        f"{c['capacity']['utilization_rate']:.1f}%; process mix "
+                        f"{', '.join(f'{name} {value}' for name, value in c['capacity'].get('process_mix', {}).items())}"
+                    ),
                 }
             )
 

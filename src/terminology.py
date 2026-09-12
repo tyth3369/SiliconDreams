@@ -177,7 +177,25 @@ class TerminologyManager:
             parts.append("")
 
             if return_refs:
-                refs.append({"name": t["name"], "name_en": t.get("name_en", "")})
+                refs.append(
+                    {
+                        "name": t["name"],
+                        "name_en": t.get("name_en", ""),
+                        "snippet": " ".join(
+                            part
+                            for part in (
+                                f"定义：{t.get('definition', '')}" if t.get("definition") else "",
+                                f"技术代际：{t.get('generation', '')}"
+                                if t.get("generation")
+                                else "",
+                                f"商业影响：{t.get('business_impact', '')}"
+                                if t.get("business_impact")
+                                else "",
+                            )
+                            if part
+                        ),
+                    }
+                )
 
         context = "\n".join(parts)
 

@@ -222,7 +222,11 @@ def _lookup_terms(arguments: dict, tracker: CitationTracker) -> str:
         arguments["query"], max_terms=5, return_refs=True
     )
     for reference in references:
-        tracker.add_term(reference["name"])
+        tracker.add_term(
+            reference["name"],
+            name_en=reference.get("name_en", ""),
+            snippet=reference.get("snippet", ""),
+        )
     return context or "未在术语库中找到匹配术语。"
 
 
@@ -244,6 +248,7 @@ def _get_company_data(arguments: dict, tracker: CitationTracker) -> str:
             publisher=reference.get("source_publisher", ""),
             published_at=reference.get("source_published_at", ""),
             trust_tier=1,
+            snippet=reference.get("snippet", ""),
         )
 
     conflict_lines = []

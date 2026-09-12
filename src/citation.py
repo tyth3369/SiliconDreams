@@ -31,7 +31,7 @@ class Citation:
     source_label: str  # "source" | "term" | "financial"
     source_type: str  # "rag" | "term" | "financial"
     page: int | None = None  # page number (None for terms/financial)
-    snippet: str = ""  # truncated excerpt (first 200 chars)
+    snippet: str = ""  # bounded evidence excerpt
     score: float = 0.0  # relevance score (0-1 for RAG)
     url: str = ""  # web search URL (empty for non-web citations)
     name_en: str = ""  # company English name/ticker (for financial type)
@@ -45,7 +45,7 @@ class Citation:
     def display_source(self) -> str:
         """Human-readable source identifier."""
         if self.source_type == "term":
-            return self.source
+            return f"{self.source} ({self.name_en})" if self.name_en else self.source
         elif self.source_type == "financial":
             parts = [self.source]
             if self.name_en:
@@ -121,7 +121,7 @@ class CitationTracker:
             source_label=label_map.get(source_type, "source"),
             source_type=source_type,
             page=page,
-            snippet=snippet[:200],
+            snippet=snippet[:800],
             score=score,
             url=url,
             name_en=name_en,
@@ -134,9 +134,9 @@ class CitationTracker:
         )
         self._citations.append(citation)
 
-    def add_term(self, name: str) -> None:
+    def add_term(self, name: str, *, name_en: str = "", snippet: str = "") -> None:
         """Convenience: add a terminology citation."""
-        self.add(source=name, source_type="term")
+        self.add(source=name, source_type="term", name_en=name_en, snippet=snippet)
 
     def add_rag(self, source: str, page: int, snippet: str, score: float) -> None:
         """Convenience: add a RAG (PDF) citation."""
@@ -152,6 +152,7 @@ class CitationTracker:
         publisher: str = "",
         published_at: str = "",
         trust_tier: int = 1,
+        snippet: str = "",
     ) -> None:
         """Convenience: add a financial data citation."""
         self.add(
@@ -164,6 +165,7 @@ class CitationTracker:
             publisher=publisher,
             published_at=published_at,
             trust_tier=trust_tier,
+            snippet=snippet,
         )
 
     def add_web(
