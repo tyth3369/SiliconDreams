@@ -47,6 +47,10 @@ Browser
 5. 本地 `mmarco-mMiniLMv2-L12-H384-v1` cross-encoder 重排后，以查询所需指标的证据覆盖度做确定性终排。
 6. `src/evaluation.py` 计算 Recall@K 和 MRR。v0.8 的 12 题中英双语基准来自人工核验的 TSMC/SMIC 2025 官方年报，发布门槛为 Recall@5 ≥ 90%、MRR ≥ 70%。
 
+## 术语知识图谱
+
+`src/knowledge_graph.py` 将 100 条术语规范化为稳定 term 实体；无法解析为既有术语的关联词保留为 concept 实体，不再形成悬空字符串。`data/entity_aliases.json` 对 TSMC/SMIC/NVIDIA/NXP/TI 等常见公司别名进行人工归一化。`related_to` 与 `associated_with` 均生成显式反向边，`scripts/audit_knowledge_graph.py` 在发布前检查端点闭合、反向边和别名冲突。术语 Prompt 使用规范图谱邻居，但原始定义和商业影响仍来自 `terminology.json`。
+
 ## 引用
 
 `CitationTracker` 按来源类型、名称和页码去重。网页 URL 只允许绝对 HTTP(S)，所有文本 HTML escape。前端用 marked 渲染 Markdown、DOMPurify 消毒，再将 `[N]` 绑定到同一消息的引用条目。

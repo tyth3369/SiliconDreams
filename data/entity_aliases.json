@@ -1,0 +1,15 @@
+{
+  "companies": {
+    "台积电": ["TSMC", "Taiwan Semiconductor Manufacturing Company"],
+    "中芯国际": ["SMIC", "Semiconductor Manufacturing International Corporation"],
+    "英伟达": ["NVIDIA"],
+    "德州仪器": ["TI", "Texas Instruments"],
+    "恩智浦": ["NXP", "恩智浦 (NXP)"],
+    "瑞萨电子": ["瑞萨", "Renesas"],
+    "Coherent": ["Coherent (原II-VI)", "II-VI"],
+    "Alphawave Semi": ["Alphawave"],
+    "KLA": ["KLA (科磊)", "科磊"],
+    "大日本印刷": ["大日本印刷 (DNP)", "DNP"],
+    "凸版印刷": ["凸版印刷 (Toppan)", "Toppan"]
+  }
+}

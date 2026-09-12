@@ -23,6 +23,7 @@
 - 可复用的公司对比模板与指标口径字典；快捷对比明确直接披露、派生值和可比性边界
 - 证据型财务仪表盘：季度营收/毛利率、制程收入结构和 Capex 强度；季度数据点直达官方来源
 - 持久化公司 Watchlist 与官方披露事件时间线，可直接打开每期公告原文
+- 规范化术语图谱：稳定实体 ID、中英文别名、公司归一化、类型边与闭合审计
 
 ## 架构
 
@@ -82,6 +83,7 @@ uv run pytest --cov=src --cov-report=term-missing
 uv run playwright install chromium
 uv run pytest -m e2e
 uv run python scripts/benchmark_workbench.py
+uv run python scripts/audit_knowledge_graph.py
 uv run python scripts/run_official_retrieval_benchmark.py
 ```
 
@@ -104,6 +106,8 @@ data/foundry_financials.json  官方来源结构化数据
 data/metric_definitions.json 指标定义、单位、可比性与派生规则
 src/analysis_templates.py    可复用公司对比模板
 src/analytics.py             官方数据图表载荷与来源绑定
+src/knowledge_graph.py       规范化术语/公司实体与类型关系图
+data/entity_aliases.json     人工核验的公司实体别名
 templates/ + static/          Bloomberg Terminal 风格 UI
 assets/fonts/                 PDF 使用的 OFL 中文字体及许可证
 tests/                        回归测试
