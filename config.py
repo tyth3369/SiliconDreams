@@ -69,6 +69,61 @@ class SearchConfig:
         return bool(normalized and "your-tavily-api-key" not in normalized)
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+class SecurityConfig:
+    """Application authentication, CSRF, proxy, and rate-limit settings."""
+
+    environment: str = os.getenv("APP_ENV", "development").strip().lower()
+    auth_enabled: bool = _env_flag("AUTH_ENABLED", False)
+    username: str = os.getenv("APP_USERNAME", "researcher")
+    password_hash: str = os.getenv("APP_PASSWORD_HASH", "")
+    session_secret: str = os.getenv("APP_SESSION_SECRET", "")
+    cookie_secure: bool = _env_flag("COOKIE_SECURE", False)
+    trust_proxy_headers: bool = _env_flag("TRUST_PROXY_HEADERS", False)
+    session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", str(12 * 60 * 60)))
+    rate_limit_enabled: bool = _env_flag("RATE_LIMIT_ENABLED", auth_enabled)
+    request_limit_per_minute: int = int(os.getenv("REQUEST_LIMIT_PER_MINUTE", "120"))
+    ai_limit_per_minute: int = int(os.getenv("AI_LIMIT_PER_MINUTE", "20"))
+    login_attempts_per_5_minutes: int = int(os.getenv("LOGIN_ATTEMPTS_PER_5_MINUTES", "5"))
+
+    @classmethod
+    def validate(cls) -> None:
+        if cls.environment not in {"development", "test", "production"}:
+            raise RuntimeError("APP_ENV must be development, test, or production")
+        if cls.environment == "production" and not cls.auth_enabled:
+            raise RuntimeError("AUTH_ENABLED must be true when APP_ENV=production")
+        if not cls.auth_enabled:
+            return
+        missing = []
+        if not cls.username.strip():
+            missing.append("APP_USERNAME")
+        if not cls.password_hash.startswith("pbkdf2_sha256$"):
+            missing.append("APP_PASSWORD_HASH")
+        if len(cls.session_secret) < 32:
+            missing.append("APP_SESSION_SECRET (at least 32 characters)")
+        if cls.environment == "production" and not cls.cookie_secure:
+            missing.append("COOKIE_SECURE=true")
+        if cls.environment == "production" and not cls.rate_limit_enabled:
+            missing.append("RATE_LIMIT_ENABLED=true")
+        if missing:
+            raise RuntimeError("AUTH_ENABLED requires: " + ", ".join(missing))
+        limits = {
+            "SESSION_TTL_SECONDS": cls.session_ttl_seconds,
+            "REQUEST_LIMIT_PER_MINUTE": cls.request_limit_per_minute,
+            "AI_LIMIT_PER_MINUTE": cls.ai_limit_per_minute,
+            "LOGIN_ATTEMPTS_PER_5_MINUTES": cls.login_attempts_per_5_minutes,
+        }
+        invalid = [name for name, value in limits.items() if value <= 0]
+        if invalid:
+            raise RuntimeError("Security limits must be positive: " + ", ".join(invalid))
+
+
 # ── Embedding 配置 ─────────────────────────────────────
 class EmbeddingConfig:
     """BGE-M3 本地 Embedding 配置"""
@@ -124,7 +179,7 @@ class AppConfig:
     """应用配置"""
 
     name: str = "SiliconDreams"
-    version: str = "1.0.0-dev.1"
+    version: str = "1.0.0-dev.2"
     sidebar_width: int = 300  # px
     max_upload_size_mb: int = 50
     supported_pdf_types: list = ["pdf"]

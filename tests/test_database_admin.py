@@ -82,6 +82,41 @@ def test_invalid_backup_is_rejected_before_destination_changes(tmp_path):
     assert destination.read_text(encoding="utf-8") == "unchanged"
 
 
+def test_restore_accepts_verified_older_schema_and_migrates_on_open(tmp_path):
+    source, conversation_id = _populated_database(tmp_path / "source.db")
+    with source.connect() as connection:
+        connection.execute("UPDATE schema_meta SET value='4' WHERE key='version'")
+        connection.execute("DELETE FROM schema_migrations WHERE version=5")
+        connection.execute("DROP TRIGGER audit_events_no_update")
+        connection.execute("DROP TRIGGER audit_events_no_delete")
+        connection.execute("DROP INDEX idx_audit_events_created")
+        connection.execute("DROP INDEX idx_audit_events_action")
+        connection.execute("DROP TABLE audit_events")
+    backup_path = tmp_path / "v4.db"
+    with source.connect() as source_connection, sqlite3.connect(backup_path) as backup_connection:
+        source_connection.backup(backup_connection)
+
+    restored_path = restore_database(backup_path, tmp_path / "restored.db")
+    migrated = Database(restored_path)
+    assert migrated.list_messages(conversation_id)[0]["content"] == "Preserve this"
+    assert inspect_database(restored_path)["schema_version"] == SCHEMA_VERSION
+
+
+def test_online_backup_accepts_supported_older_schema(tmp_path):
+    source, _ = _populated_database(tmp_path / "source.db")
+    with source.connect() as connection:
+        connection.execute("UPDATE schema_meta SET value='4' WHERE key='version'")
+        connection.execute("DELETE FROM schema_migrations WHERE version=5")
+        connection.execute("DROP TRIGGER audit_events_no_update")
+        connection.execute("DROP TRIGGER audit_events_no_delete")
+        connection.execute("DROP INDEX idx_audit_events_created")
+        connection.execute("DROP INDEX idx_audit_events_action")
+        connection.execute("DROP TABLE audit_events")
+
+    backup_path = backup_database(source.path, tmp_path / "v4-backup.db")
+    assert inspect_database(backup_path)["schema_version"] == 4
+
+
 def test_database_admin_cli_runs_from_project_root(tmp_path):
     database, _ = _populated_database(tmp_path / "cli.db")
     result = subprocess.run(
@@ -100,3 +135,30 @@ def test_database_admin_cli_runs_from_project_root(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["schema_version"] == SCHEMA_VERSION
     assert payload["integrity"] == "ok"
+
+
+def test_database_admin_cli_reads_audit_events(tmp_path):
+    database, _ = _populated_database(tmp_path / "audit-cli.db")
+    database.add_audit_event(
+        request_id="req-cli",
+        actor="researcher",
+        action="POST /chat",
+        outcome="success",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/manage_database.py",
+            "--database",
+            str(database.path),
+            "audit",
+            "--limit",
+            "1",
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    assert payload["events"][0]["request_id"] == "req-cli"

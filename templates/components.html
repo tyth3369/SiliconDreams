@@ -13,7 +13,8 @@
         {{ conversation.display_title }}
     </button>
     <button class="conversation-action" type="button"
-            onclick="renameConversation(event, '{{ conversation.id }}', {{ conversation.display_title | tojson }})"
+            data-rename-conversation="{{ conversation.id }}"
+            data-current-title="{{ conversation.display_title }}"
             title="{{ t('conversation.rename') }}">REN</button>
     <button class="conversation-action" type="button"
             hx-post="/conversations/{{ conversation.id }}/archive"
@@ -61,10 +62,8 @@
                 <span>{{ t('job.stage.' ~ pdf.stage) }}</span>
                 <span>{{ pdf.progress }}%</span>
             </div>
-            <div class="job-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-                 aria-valuenow="{{ pdf.progress }}" aria-label="{{ pdf.progress }}%">
-                <span style="width: {{ pdf.progress }}%"></span>
-            </div>
+            <progress class="job-progress" max="100" value="{{ pdf.progress }}"
+                      aria-label="{{ pdf.progress }}%">{{ pdf.progress }}%</progress>
             {% if pdf.job_status == 'failed' and pdf.error %}
             <div class="file-error" title="{{ pdf.error }}">{{ pdf.error[:160] }}</div>
             {% endif %}
@@ -108,20 +107,23 @@
         <label>{{ t('sidebar.settings_language') }}</label>
         <div class="toggle-group">
             <button class="toggle-btn {{ 'active' if lang == 'zh' }}"
-                    onclick="setLang('zh')">中文</button>
+                    data-set-lang="zh">中文</button>
             <button class="toggle-btn {{ 'active' if lang == 'en' }}"
-                    onclick="setLang('en')">English</button>
+                    data-set-lang="en">English</button>
         </div>
     </div>
 
     <div class="setting-row">
         <label>{{ t('sidebar.settings_theme') }}</label>
         <div class="toggle-group" id="theme-toggles">
-            <button class="toggle-btn" data-theme="auto" onclick="setTheme('auto')">{{ t('theme.auto') }}</button>
-            <button class="toggle-btn" data-theme="dark" onclick="setTheme('dark')">{{ t('theme.dark') }}</button>
-            <button class="toggle-btn" data-theme="light" onclick="setTheme('light')">{{ t('theme.light') }}</button>
+            <button class="toggle-btn" data-theme="auto">{{ t('theme.auto') }}</button>
+            <button class="toggle-btn" data-theme="dark">{{ t('theme.dark') }}</button>
+            <button class="toggle-btn" data-theme="light">{{ t('theme.light') }}</button>
         </div>
     </div>
+    {% if auth_enabled %}
+    <div class="logout-form"><button type="button" data-logout>{{ t('auth.sign_out') }}</button></div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -131,19 +133,11 @@
     <div class="msg-role">USER</div>
     <div class="msg-content">{{ user_msg }}</div>
 </div>
-<div class="chat-msg assistant" id="msg-{{ assistant_id }}">
+<div class="chat-msg assistant" id="msg-{{ assistant_id }}"
+     data-stream-msg-id="{{ msg_id }}" data-stream-target-id="stream-{{ assistant_id }}">
     <div class="msg-role">AI</div>
     <div class="msg-content" id="stream-{{ assistant_id }}"></div>
 </div>
-<script>
-    // Register pending stream — initStream() in app.js will start it via htmx:afterSwap
-    (function() {
-        var msgId = '{{ msg_id }}';
-        var targetId = 'stream-{{ assistant_id }}';
-        if (window._pendingStreams === undefined) window._pendingStreams = {};
-        window._pendingStreams[msgId] = targetId;
-    })();
-</script>
 <div id="conversation-list" class="conversation-list" hx-swap-oob="innerHTML">
     {{ conversation_rows(conversations, active_conversation) }}
     {% if archived_conversations %}
@@ -236,7 +230,7 @@
         </a>
         {% endfor %}
     </details>
-    <script type="application/json" id="analytics-data">{{ analytics | tojson }}</script>
+    <div id="analytics-data" hidden>{{ analytics | tojson }}</div>
 </div>
 {% endif %}
 

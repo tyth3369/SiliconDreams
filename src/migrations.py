@@ -206,35 +206,85 @@ V4_STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS idx_web_snapshots_url ON web_snapshots(url, retrieved_at)",
 )
 
+V5_STATEMENTS = (
+    """
+    CREATE TABLE IF NOT EXISTS audit_events (
+        id TEXT PRIMARY KEY,
+        request_id TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        action TEXT NOT NULL,
+        target_type TEXT,
+        target_id TEXT,
+        outcome TEXT NOT NULL CHECK (outcome IN ('success', 'denied', 'error')),
+        client_hash TEXT,
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_audit_events_created ON audit_events(created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_audit_events_action ON audit_events(action, created_at)",
+    """
+    CREATE TRIGGER IF NOT EXISTS audit_events_no_update
+    BEFORE UPDATE ON audit_events BEGIN
+        SELECT RAISE(ABORT, 'audit events are append-only');
+    END
+    """,
+    """
+    CREATE TRIGGER IF NOT EXISTS audit_events_no_delete
+    BEFORE DELETE ON audit_events BEGIN
+        SELECT RAISE(ABORT, 'audit events are append-only');
+    END
+    """,
+)
+
 MIGRATIONS = (
     Migration(1, "evidence_conversations_jobs", V1_STATEMENTS),
     Migration(2, "conversation_archive_and_titles", V2_STATEMENTS),
     Migration(3, "company_watchlist", V3_STATEMENTS),
     Migration(4, "web_search_cache_and_snapshots", V4_STATEMENTS),
+    Migration(5, "append_only_security_audit", V5_STATEMENTS),
 )
 SCHEMA_VERSION = MIGRATIONS[-1].version
 
 REQUIRED_COLUMNS = {
-    "sources": {"id", "source_type", "title", "retrieved_at", "trust_tier"},
-    "documents": {"id", "source_id", "sha256", "parse_status"},
-    "chunks": {"id", "document_id", "source_id", "page", "text", "content_hash"},
-    "facts": {"id", "source_id", "company", "metric", "period", "value", "unit"},
-    "conversations": {"id", "title", "language", "archived_at", "created_at", "updated_at"},
-    "messages": {"id", "conversation_id", "role", "content", "citations_json"},
-    "jobs": {"id", "job_type", "status", "payload_json", "result_json"},
-    "watchlist": {"company", "created_at"},
-    "web_search_cache": {"query_key", "query", "backend", "results_json", "expires_at"},
-    "web_snapshots": {"id", "url", "content_hash", "retrieved_at"},
+    "sources": (1, {"id", "source_type", "title", "retrieved_at", "trust_tier"}),
+    "documents": (1, {"id", "source_id", "sha256", "parse_status"}),
+    "chunks": (1, {"id", "document_id", "source_id", "page", "text", "content_hash"}),
+    "facts": (1, {"id", "source_id", "company", "metric", "period", "value", "unit"}),
+    "conversations": (1, {"id", "title", "language", "created_at", "updated_at"}),
+    "messages": (1, {"id", "conversation_id", "role", "content", "citations_json"}),
+    "jobs": (1, {"id", "job_type", "status", "payload_json", "result_json"}),
+    "watchlist": (3, {"company", "created_at"}),
+    "web_search_cache": (4, {"query_key", "query", "backend", "results_json", "expires_at"}),
+    "web_snapshots": (4, {"id", "url", "content_hash", "retrieved_at"}),
+    "audit_events": (5, {"id", "request_id", "actor", "action", "outcome", "created_at"}),
 }
+REQUIRED_COLUMNS_BY_MIGRATION = {2: {"conversations": {"archived_at"}}}
 REQUIRED_OBJECTS = {
     "index": {
         "idx_sources_url",
         "idx_chunks_document_page",
         "idx_facts_lookup",
         "idx_messages_conversation",
-        "idx_web_snapshots_url",
     },
     "trigger": {"chunks_ai", "chunks_ad", "chunks_au"},
+}
+REQUIRED_OBJECTS_BY_MIGRATION = {
+    4: {
+        "index": {
+            "idx_web_snapshots_url",
+        }
+    },
+    5: {
+        "index": {
+            "idx_audit_events_created",
+            "idx_audit_events_action",
+        },
+        "trigger": {
+            "audit_events_no_update",
+            "audit_events_no_delete",
+        },
+    },
 }
 
 
@@ -305,10 +355,19 @@ def _record_migration(
     )
 
 
-def validate_schema(connection: sqlite3.Connection) -> None:
+def validate_schema(connection: sqlite3.Connection, version: int = SCHEMA_VERSION) -> None:
     """Reject partially migrated or manually drifted databases."""
     errors: list[str] = []
-    for table, required in REQUIRED_COLUMNS.items():
+    requirements = {
+        table: set(columns)
+        for table, (introduced, columns) in REQUIRED_COLUMNS.items()
+        if introduced <= version
+    }
+    for migration_version, additions in REQUIRED_COLUMNS_BY_MIGRATION.items():
+        if migration_version <= version:
+            for table, columns in additions.items():
+                requirements.setdefault(table, set()).update(columns)
+    for table, required in requirements.items():
         if not _table_exists(connection, table):
             errors.append(f"missing table {table}")
             continue
@@ -317,7 +376,14 @@ def validate_schema(connection: sqlite3.Connection) -> None:
             errors.append(f"table {table} missing columns: {', '.join(sorted(missing))}")
     if not _table_exists(connection, "chunks_fts"):
         errors.append("missing FTS table chunks_fts")
-    for object_type, required in REQUIRED_OBJECTS.items():
+    object_requirements = {
+        object_type: set(names) for object_type, names in REQUIRED_OBJECTS.items()
+    }
+    for migration_version, additions in REQUIRED_OBJECTS_BY_MIGRATION.items():
+        if migration_version <= version:
+            for object_type, names in additions.items():
+                object_requirements.setdefault(object_type, set()).update(names)
+    for object_type, required in object_requirements.items():
         present = {
             row[0]
             for row in connection.execute(

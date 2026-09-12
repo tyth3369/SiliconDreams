@@ -342,6 +342,25 @@ def test_missing_required_trigger_is_detected(tmp_path):
         Database(path)
 
 
+def test_audit_events_are_append_only(database):
+    event_id = database.add_audit_event(
+        request_id="req-1",
+        actor="researcher",
+        action="POST /chat",
+        outcome="success",
+        client_hash="private-hash",
+        metadata={"status_code": 200},
+    )
+    event = database.list_audit_events()[0]
+    assert event["id"] == event_id
+    assert event["metadata"] == {"status_code": 200}
+    with database.connect() as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            connection.execute("UPDATE audit_events SET actor='changed' WHERE id=?", (event_id,))
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            connection.execute("DELETE FROM audit_events WHERE id=?", (event_id,))
+
+
 def test_watchlist_is_persistent_and_idempotent(database):
     assert database.list_watchlist() == []
     assert database.set_watchlist("台积电", watched=True) is True

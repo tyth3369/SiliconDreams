@@ -71,20 +71,20 @@ def verify_database(path: str | Path, *, require_current_schema: bool = True) ->
         raise DatabaseAdminError(f"Integrity check failed: {status['integrity']}")
     if status["foreign_key_issues"]:
         raise DatabaseAdminError(f"Foreign-key check found {status['foreign_key_issues']} issue(s)")
-    if require_current_schema:
-        if status["schema_version"] != SCHEMA_VERSION:
-            raise DatabaseAdminError(
-                f"Expected schema v{SCHEMA_VERSION}, found v{status['schema_version']}"
-            )
-        database_path = Path(path).expanduser().resolve()
-        uri = f"file:{database_path.as_posix()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as connection:
-            validate_schema(connection)
+    version = status["schema_version"]
+    if version is None or not 1 <= version <= SCHEMA_VERSION:
+        raise DatabaseAdminError(f"Unsupported schema version: {version}")
+    if require_current_schema and version != SCHEMA_VERSION:
+        raise DatabaseAdminError(f"Expected schema v{SCHEMA_VERSION}, found v{version}")
+    database_path = Path(path).expanduser().resolve()
+    uri = f"file:{database_path.as_posix()}?mode=ro"
+    with sqlite3.connect(uri, uri=True) as connection:
+        validate_schema(connection, version=version)
     return status
 
 
 def backup_database(source: str | Path, destination: str | Path) -> Path:
-    """Create a transactionally consistent SQLite backup and verify it."""
+    """Create a consistent backup of any supported schema and verify it."""
     source_path = Path(source).expanduser().resolve()
     destination_path = Path(destination).expanduser().resolve()
     if not source_path.is_file():
@@ -93,6 +93,7 @@ def backup_database(source: str | Path, destination: str | Path) -> Path:
         raise DatabaseAdminError("Backup destination must differ from the source database")
     if destination_path.exists():
         raise DatabaseAdminError(f"Backup destination already exists: {destination_path}")
+    verify_database(source_path, require_current_schema=False)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
 
     source_uri = f"file:{source_path.as_posix()}?mode=ro"
@@ -102,7 +103,7 @@ def backup_database(source: str | Path, destination: str | Path) -> Path:
             sqlite3.connect(destination_path) as destination_connection,
         ):
             source_connection.backup(destination_connection)
-        verify_database(destination_path)
+        verify_database(destination_path, require_current_schema=False)
     except Exception:
         destination_path.unlink(missing_ok=True)
         raise
@@ -115,7 +116,7 @@ def restore_database(
     """Verify and atomically restore a SQLite backup."""
     backup_path = Path(backup).expanduser().resolve()
     destination_path = Path(destination).expanduser().resolve()
-    verify_database(backup_path)
+    verify_database(backup_path, require_current_schema=False)
     if backup_path == destination_path:
         raise DatabaseAdminError("Backup and restore destination must differ")
     if destination_path.exists() and not overwrite:
@@ -135,7 +136,7 @@ def restore_database(
             sqlite3.connect(temporary_path) as destination_connection,
         ):
             source_connection.backup(destination_connection)
-        verify_database(temporary_path)
+        verify_database(temporary_path, require_current_schema=False)
         os.replace(temporary_path, destination_path)
     except Exception:
         temporary_path.unlink(missing_ok=True)

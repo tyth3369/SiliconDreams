@@ -1,5 +1,6 @@
 import asyncio
 import io
+import re
 import time
 
 import pymupdf
@@ -7,6 +8,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 import server
+from src.security import SecurityManager, hash_password
 from src.storage import Database
 
 
@@ -15,8 +17,22 @@ def isolated_database(tmp_path, monkeypatch):
     server._ingestion_worker.stop()
     monkeypatch.setattr(server, "_db", Database(tmp_path / "server-test.db"))
     server._pending_agent_configs.clear()
+    server._rate_limiter.clear()
     yield
     server._ingestion_worker.stop()
+
+
+def _enable_auth(monkeypatch):
+    monkeypatch.setattr(server.SecurityConfig, "auth_enabled", True)
+    monkeypatch.setattr(server.SecurityConfig, "username", "researcher")
+    monkeypatch.setattr(
+        server.SecurityConfig,
+        "password_hash",
+        hash_password("correct horse battery staple", iterations=100_000),
+    )
+    monkeypatch.setattr(server.SecurityConfig, "session_secret", "s" * 48)
+    monkeypatch.setattr(server, "_security", SecurityManager("s" * 48))
+    monkeypatch.setitem(server.jinja.globals, "auth_enabled", True)
 
 
 async def _request(method: str, path: str, **kwargs):
@@ -32,12 +48,114 @@ def test_homepage_smoke():
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+    assert "'unsafe-inline'" not in response.headers["content-security-policy"]
+    assert "nonce-" in response.headers["content-security-policy"]
+    nonce = re.search(r"nonce-([^' ]+)", response.headers["content-security-policy"]).group(1)
+    assert f'nonce="{nonce}"' in response.text
+
+
+def test_enabled_auth_login_session_and_csrf(monkeypatch):
+    _enable_auth(monkeypatch)
+
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(
+            transport=transport, base_url="http://test", follow_redirects=False
+        ) as client:
+            denied = await client.get("/")
+            login_page = await client.get("/login")
+            preauth_csrf = client.cookies[server.CSRF_COOKIE]
+            logged_in = await client.post(
+                "/login",
+                data={
+                    "username": "researcher",
+                    "password": "correct horse battery staple",
+                    "csrf_token": preauth_csrf,
+                },
+            )
+            home = await client.get("/")
+            blocked = await client.post("/chat", data={"message": "csrf should fail"})
+            accepted = await client.post(
+                "/chat",
+                data={"message": "csrf should pass"},
+                headers={"X-CSRF-Token": client.cookies[server.CSRF_COOKIE]},
+            )
+            return denied, login_page, logged_in, home, blocked, accepted
+
+    denied, login_page, logged_in, home, blocked, accepted = asyncio.run(scenario())
+    assert denied.status_code == 303
+    assert denied.headers["location"] == "/login"
+    assert login_page.status_code == 200
+    assert "研究终端登录" in login_page.text
+    assert logged_in.status_code == 303
+    assert server.SESSION_COOKIE in logged_in.cookies
+    assert home.status_code == 200
+    assert "退出登录" in home.text
+    assert blocked.status_code == 403
+    assert accepted.status_code == 200
+    login_events = [
+        event
+        for event in server._db.list_audit_events()
+        if event["action"] == "POST /login" and event["outcome"] == "success"
+    ]
+    assert login_events[0]["actor"] == "researcher"
+
+
+def test_failed_login_is_audited_without_raw_client_address(monkeypatch):
+    _enable_auth(monkeypatch)
+
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            await client.get("/login")
+            return await client.post(
+                "/login",
+                data={
+                    "username": "researcher",
+                    "password": "wrong password",
+                    "csrf_token": client.cookies[server.CSRF_COOKIE],
+                },
+            )
+
+    response = asyncio.run(scenario())
+    assert response.status_code == 401
+    event = server._db.list_audit_events()[0]
+    assert event["action"] == "POST /login"
+    assert event["outcome"] == "denied"
+    assert event["actor"] == "anonymous"
+    assert event["client_hash"]
+    assert "127.0.0.1" not in str(event)
+
+
+def test_htmx_request_gets_login_redirect_header(monkeypatch):
+    _enable_auth(monkeypatch)
+    response = asyncio.run(_request("GET", "/sidebar?lang=en", headers={"HX-Request": "true"}))
+    assert response.status_code == 401
+    assert response.headers["HX-Redirect"] == "/login"
+
+
+def test_login_rate_limit_returns_retry_after(monkeypatch):
+    _enable_auth(monkeypatch)
+    monkeypatch.setattr(server.SecurityConfig, "rate_limit_enabled", True)
+    monkeypatch.setattr(server.SecurityConfig, "login_attempts_per_5_minutes", 1)
+
+    async def scenario():
+        transport = ASGITransport(app=server.app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            first = await client.post("/login", data={})
+            second = await client.post("/login", data={})
+            return first, second
+
+    first, second = asyncio.run(scenario())
+    assert first.status_code == 422
+    assert second.status_code == 429
+    assert int(second.headers["Retry-After"]) >= 1
 
 
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "1.0.0-dev.1"}
+    assert response.json() == {"status": "ok", "version": "1.0.0-dev.2"}
 
 
 def test_stats_smoke():

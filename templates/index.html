@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>SiliconDreams | AI Semiconductor Research</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/static/style.css?v=1.0.0-dev.1">
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
-    <script>
+    <link rel="stylesheet" href="/static/style.css?v=1.0.0-dev.2">
+    <script nonce="{{ csp_nonce }}" src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    <script nonce="{{ csp_nonce }}">
         // Language-dependent UI text for client-side language switch
         window._LANG_TEXT = {
             zh: {
@@ -46,7 +47,7 @@
             }
         };
     </script>
-    <script src="/static/app.js?v=1.0.0-dev.1" defer></script>
+    <script nonce="{{ csp_nonce }}" src="/static/app.js?v=1.0.0-dev.2" defer></script>
 </head>
 <body>
     <div class="app-layout">
@@ -63,8 +64,7 @@
             <form hx-post="/upload" hx-encoding="multipart/form-data"
                   hx-target="#sidebar-inner" hx-swap="innerHTML">
                 <div class="upload-zone">
-                    <input type="file" name="file" accept=".pdf"
-                           onchange="this.form.dispatchEvent(new Event('submit', {bubbles: true}))">
+                    <input type="file" name="file" accept=".pdf" data-auto-submit>
                     <span class="sidebar-upload-hint">{{ t('sidebar.upload_hint') }}</span>
                 </div>
                 <p class="hint sidebar-upload-help">{{ t('sidebar.upload_help') }}</p>
@@ -133,8 +133,8 @@
 
             <!-- Chat Input -->
             <div class="chat-input-area">
-                <form id="chat-form" hx-post="/chat" hx-target="#chat-container" hx-swap="beforeend"
-                      hx-on::after-request="this.reset(); initStream();">
+                <form id="chat-form" data-chat-form hx-post="/chat"
+                      hx-target="#chat-container" hx-swap="beforeend">
                     <input type="text" name="message"
                            placeholder="{{ t('chat.placeholder') }}"
                            autocomplete="off" required>

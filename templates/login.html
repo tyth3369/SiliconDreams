@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiliconDreams | {{ t('auth.sign_in') }}</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/style.css?v=1.0.0-dev.2">
+    <script nonce="{{ csp_nonce }}">
+        var savedTheme = document.cookie.match(/(?:^|;\s*)theme=([^;]*)/);
+        var theme = savedTheme ? savedTheme[1] : 'auto';
+        if (theme === 'auto') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+    </script>
+</head>
+<body class="login-page">
+    <main class="login-shell">
+        <div class="brand-title">SILICON DREAMS</div>
+        <div class="brand-tagline">ELECTRONICS/SEMICONDUCTOR AI ANALYST</div>
+        <div class="login-rule"></div>
+        <h1>{{ t('auth.login_title') }}</h1>
+        {% if error %}<p class="login-error" role="alert">{{ error }}</p>{% endif %}
+        <form method="post" action="/login" class="login-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="username">{{ t('auth.username') }}</label>
+            <input id="username" name="username" autocomplete="username" maxlength="120" required autofocus>
+            <label for="password">{{ t('auth.password') }}</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" maxlength="500" required>
+            <button type="submit">{{ t('auth.sign_in') }}</button>
+        </form>
+    </main>
+</body>
+</html>
