@@ -14,6 +14,8 @@ jobs:
           enable-cache: true
       - name: Install Python and dependencies
         run: uv sync --locked
+      - name: Install browser runtime
+        run: uv run playwright install --with-deps chromium
       - name: Lint
         run: uv run ruff check .
       - name: Format check

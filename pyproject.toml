@@ -1,6 +1,6 @@
 [project]
 name = "silicondreams"
-version = "0.9.0.dev4"
+version = "0.9.0.dev5"
 description = "Evidence-first semiconductor investment research assistant"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -27,6 +27,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28,<1",
+    "playwright>=1.55,<2",
     "pytest>=9,<10",
     "pytest-cov>=7,<8",
     "ruff>=0.13,<1",
@@ -35,6 +36,7 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-q --strict-markers --disable-warnings"
 testpaths = ["tests"]
+markers = ["e2e: real-browser end-to-end checks"]
 
 [tool.coverage.run]
 branch = true

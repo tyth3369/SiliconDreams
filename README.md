@@ -79,6 +79,9 @@ docker compose up -d
 uv run ruff check .
 uv run pytest
 uv run pytest --cov=src --cov-report=term-missing
+uv run playwright install chromium
+uv run pytest -m e2e
+uv run python scripts/benchmark_workbench.py
 uv run python scripts/run_official_retrieval_benchmark.py
 ```
 

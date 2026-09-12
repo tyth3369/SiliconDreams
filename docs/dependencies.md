@@ -17,7 +17,7 @@
 | RAG | ChromaDB, sentence-transformers, torch |
 | PDF | PyMuPDF, PyMuPDF4LLM, pdfplumber, tabulate |
 | Data | pandas, Pydantic |
-| Dev | pytest, pytest-cov, Ruff, httpx |
+| Dev | pytest, pytest-cov, Ruff, httpx, Playwright |
 
 Docker 与 Caddy 属于部署基础设施，不是 Python 运行时依赖，因此不写入 `pyproject.toml`。
 
@@ -31,6 +31,8 @@ uv lock --check
 uv pip check
 uv run ruff check .
 uv run pytest
+uv run playwright install chromium
+uv run pytest -m e2e
 uv export --no-dev --format requirements-txt --no-hashes --output-file requirements.txt
 ```
 

@@ -82,6 +82,12 @@ Browser
 - PDF 后台摄入采用单机 SQLite 队列；多实例部署前需要改为共享任务队列和跨进程锁。
 - 当前身份模型适用于 localhost 单用户，不适合直接公开部署。
 
+## 浏览器与性能回归
+
+- `tests/test_browser_e2e.py` 启动隔离 SQLite 的真实 Uvicorn + Chromium，验证主题、语言、图表、Watchlist 以及对话 DOM 不丢失。
+- CI 安装固定于 lockfile 的 Playwright Chromium 并执行该测试。
+- `scripts/benchmark_workbench.py` 对无外部 API 的核心工作台路由建立可重复的本机中位数/P95基线。
+
 ## v0.8 部署
 
 - 生产拓扑：Caddy（TLS + Basic Auth）→ 单 worker Uvicorn → SQLite/Chroma 持久目录。
