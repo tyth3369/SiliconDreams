@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v1.0.0-dev.4)
+SiliconDreams — FastAPI Server (v1.0.0-rc.1)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -179,9 +179,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; "
-        f"script-src 'self' 'nonce-{request.state.csp_nonce}' https://unpkg.com https://cdn.jsdelivr.net; "
-        "style-src 'self' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
+        f"script-src 'self' 'nonce-{request.state.csp_nonce}'; "
+        "style-src 'self'; font-src 'self'; "
         "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
         "base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
     )

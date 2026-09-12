@@ -24,3 +24,21 @@ jobs:
         run: uv run pytest --cov=src --cov-report=term-missing
       - name: Citation benchmark
         run: uv run python scripts/run_citation_benchmark.py
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate Compose configuration
+        run: |
+          cp .env.production.example .env.production
+          cp .env.caddy.example .env.caddy
+          docker compose config --quiet
+      - name: Build production image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          tags: silicondreams:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

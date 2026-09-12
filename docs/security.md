@@ -12,7 +12,7 @@
 - 登录、AI 请求和普通请求采用独立滑动窗口限流。当前部署限定单进程，因此限流状态位于内存；多实例前必须迁移到共享存储。
 - 所有变更请求写入 SQLite `audit_events`；数据库触发器拒绝 UPDATE 和 DELETE。日志只保存经 HMAC 截断的客户端标识，不保存原始 IP、密码、API Key 或请求正文。
 - AI 运维遥测只保存随机请求 ID、会话外键、模型/工具计数、耗时、token、错误码和来源类型计数；不复制用户问题、模型回答、来源标题、URL 或证据片段。
-- 每个 HTML 响应生成独立 CSP nonce。脚本不允许 `unsafe-inline`；页面同时启用 frame deny、nosniff、严格 referrer policy、权限限制和跨源 opener 隔离。
+- 每个 HTML 响应生成独立 CSP nonce。脚本不允许 `unsafe-inline`；HTMX、Marked、DOMPurify 与 IBM Plex 字体均以锁定版本随应用本地提供，CSP 的脚本、样式和字体只允许 `'self'`。页面同时启用 frame deny、nosniff、严格 referrer policy、权限限制和跨源 opener 隔离。
 - 网页、PDF 与工具结果均视为不可信证据，不能作为系统指令执行。
 
 ## 生产配置
@@ -69,4 +69,4 @@ docker compose logs --since=24h app
 - 单共享账号，无法区分同一用户名下的不同人员。
 - 限流为单进程内存状态，重启后清零。
 - 登出不会单独吊销无状态 token；浏览器会删除 Cookie，服务端强制全局吊销依赖会话密钥轮换。
-- 外部 JavaScript 从固定 CDN 加载；生产网络应监控依赖可用性，后续可改为本地托管以进一步缩小供应链风险。
+- 前端运行时已本地化，但这些 vendored 文件不会由 Python 锁文件自动升级；升级时必须核对上游版本、许可证和 SHA-256，并重新跑浏览器测试。

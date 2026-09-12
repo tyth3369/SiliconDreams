@@ -155,7 +155,29 @@ def test_login_rate_limit_returns_retry_after(monkeypatch):
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "1.0.0-dev.4"}
+    assert response.json() == {"status": "ok", "version": "1.0.0-rc.1"}
+
+
+def test_main_page_uses_only_self_hosted_frontend_runtime_assets():
+    response = asyncio.run(_request("GET", "/"))
+    assert response.status_code == 200
+    assert 'src="/static/vendor/htmx-1.9.12.min.js"' in response.text
+    assert 'src="/static/vendor/marked-15.0.12.min.js"' in response.text
+    assert 'src="/static/vendor/dompurify-3.4.15.min.js"' in response.text
+    assert "unpkg.com" not in response.text
+    assert "cdn.jsdelivr.net" not in response.text
+    assert "fonts.googleapis.com" not in response.text
+
+
+def test_content_security_policy_has_no_third_party_runtime_origins():
+    response = asyncio.run(_request("GET", "/"))
+    policy = response.headers["content-security-policy"]
+    assert "script-src 'self'" in policy
+    assert "style-src 'self'" in policy
+    assert "font-src 'self'" in policy
+    assert "unpkg.com" not in policy
+    assert "cdn.jsdelivr.net" not in policy
+    assert "googleapis.com" not in policy
 
 
 def test_operations_metrics_are_aggregate_and_empty_by_default():
