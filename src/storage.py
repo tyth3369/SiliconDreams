@@ -18,7 +18,7 @@ from typing import Any
 from config import DATABASE_FILE
 from src.evidence_policy import canonical_fact_value
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def utc_now() -> str:
@@ -163,6 +163,29 @@ CREATE TABLE IF NOT EXISTS watchlist (
     company TEXT PRIMARY KEY,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS web_search_cache (
+    query_key TEXT PRIMARY KEY,
+    query TEXT NOT NULL,
+    backend TEXT NOT NULL,
+    results_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS web_snapshots (
+    id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    title TEXT NOT NULL,
+    snippet TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    publisher TEXT,
+    published_at TEXT,
+    retrieved_at TEXT NOT NULL,
+    UNIQUE(url, content_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_web_snapshots_url ON web_snapshots(url, retrieved_at);
 """
 
 
@@ -765,6 +788,90 @@ class Database:
                 connection.execute("DELETE FROM watchlist WHERE company=?", (normalized,))
         return True
 
+    def get_cached_web_search(self, query_key: str, *, now: str | None = None) -> dict | None:
+        """Return an unexpired structured search result."""
+        timestamp = now or utc_now()
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM web_search_cache WHERE query_key=? AND expires_at>?",
+                (query_key, timestamp),
+            ).fetchone()
+        if row is None:
+            return None
+        item = dict(row)
+        item["results"] = json.loads(item.pop("results_json"))
+        return item
+
+    def cache_web_search(
+        self,
+        *,
+        query_key: str,
+        query: str,
+        backend: str,
+        results: list[dict[str, Any]],
+        expires_at: str,
+    ) -> None:
+        """Persist a search response plus content-addressed result snapshots."""
+        now = utc_now()
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO web_search_cache(
+                    query_key, query, backend, results_json, created_at, expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(query_key) DO UPDATE SET
+                    query=excluded.query,
+                    backend=excluded.backend,
+                    results_json=excluded.results_json,
+                    created_at=excluded.created_at,
+                    expires_at=excluded.expires_at
+                """,
+                (
+                    query_key,
+                    query,
+                    backend,
+                    json.dumps(results, ensure_ascii=False),
+                    now,
+                    expires_at,
+                ),
+            )
+            for result in results:
+                url = str(result.get("url") or "")
+                snippet = str(result.get("snippet") or "")
+                if not url:
+                    continue
+                content_hash = hashlib.sha256(snippet.encode("utf-8")).hexdigest()
+                snapshot_id = stable_id("snap", url, content_hash)
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO web_snapshots(
+                        id, url, title, snippet, content_hash, publisher,
+                        published_at, retrieved_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        snapshot_id,
+                        url,
+                        str(result.get("title") or ""),
+                        snippet,
+                        content_hash,
+                        str(result.get("publisher") or ""),
+                        str(result.get("published_at") or ""),
+                        now,
+                    ),
+                )
+
+    def list_web_snapshots(self, url: str | None = None, limit: int = 100) -> list[dict]:
+        """Inspect immutable search-result snapshots for provenance audits."""
+        clause = "WHERE url=?" if url else ""
+        params: tuple[Any, ...] = (url, limit) if url else (limit,)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM web_snapshots {clause} ORDER BY retrieved_at DESC LIMIT ?",
+                params,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def list_messages(self, conversation_id: str, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as connection:
             rows = connection.execute(
@@ -970,6 +1077,8 @@ class Database:
             "messages",
             "jobs",
             "watchlist",
+            "web_search_cache",
+            "web_snapshots",
         }
         if table not in allowed:
             raise ValueError(f"Unsupported table: {table}")
