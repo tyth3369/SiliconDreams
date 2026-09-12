@@ -8,6 +8,14 @@ def test_citation_tracker_deduplicates_same_source():
     assert len(tracker.to_list()) == 1
 
 
+def test_term_citation_preserves_definition_excerpt():
+    tracker = CitationTracker()
+    tracker.add_term("先进制程", name_en="Advanced Process Node", snippet="7nm and below")
+    citation = tracker.to_list()[0]
+    assert citation["name_en"] == "Advanced Process Node"
+    assert citation["snippet"] == "7nm and below"
+
+
 def test_web_citation_preserves_url():
     tracker = CitationTracker()
     tracker.add_web("TSMC release", "https://example.com/release", "source excerpt")
@@ -38,11 +46,13 @@ def test_financial_citation_is_descriptive():
         year="2025",
         reference_title="TSMC 4Q25 Quarterly Management Report",
         url="https://example.com/tsmc-q4.pdf",
+        snippet="FY2025: revenue 122.42 USD billion",
     )
     display = tracker.to_list()[0]["display_source"]
     assert "FY2025" in display
     assert "Quarterly Management Report" in display
     assert tracker.to_list()[0]["trust_tier"] == 1
+    assert tracker.to_list()[0]["snippet"].startswith("FY2025")
 
 
 def test_quarterly_financial_citations_are_not_deduplicated_across_periods():

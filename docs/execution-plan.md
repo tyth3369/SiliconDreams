@@ -41,11 +41,11 @@
 
 - [x] 完整数据迁移和 schema versioning
 - [x] 公网部署前身份认证、CSRF、限流、审计日志和 CSP nonce
-- [ ] 真实 benchmark 达到约定 Recall@5 / citation precision 门槛
+- [x] 真实 benchmark 达到约定 Recall@5 / citation precision 门槛
 - [ ] 成本、延迟、错误率和来源覆盖度可观测
 - [x] 安装、备份、恢复、升级和安全文档
 - [ ] 发布候选冻结与验收清单
 
 ## 发布门槛
 
-每个里程碑必须同时满足：Ruff 通过、全部 pytest 通过、依赖检查通过、secrets 未跟踪、真实浏览器关键路径通过、devlog 已更新。GitHub push 只能在用户明确授权后进行。
+每个里程碑必须同时满足：Ruff 通过、全部 pytest 通过、依赖检查通过、secrets 未跟踪、真实浏览器关键路径通过、检索与引用基准通过、devlog 已更新。GitHub push 只能在用户明确授权后进行。

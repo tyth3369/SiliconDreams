@@ -1,6 +1,7 @@
+import json
 from pathlib import Path
 
-from src.evaluation import evaluate_retrieval, load_cases
+from src.evaluation import citation_integrity, evaluate_citations, evaluate_retrieval, load_cases
 
 
 class FixtureRetriever:
@@ -82,3 +83,40 @@ def test_official_golden_set_is_bilingual_and_reviewed():
     assert [case["language"] for case in cases].count("zh") == 6
     assert [case["language"] for case in cases].count("en") == 6
     assert all(case["expected"] for case in cases)
+
+
+def test_citation_integrity_rejects_out_of_range_markers():
+    report = citation_integrity("Supported[1], broken[3].", [{"source": "one"}])
+    assert report["marker_validity"] == 0.5
+    assert report["invalid_markers"] == [3]
+
+
+def test_citation_evaluation_measures_precision_and_claim_coverage():
+    report = evaluate_citations(
+        [
+            {
+                "id": "mixed",
+                "answer": "Supported fact[1]. Unsupported mapping[2]. Uncited claim.",
+                "citations": [{"source": "one"}, {"source": "two"}],
+                "claims": [
+                    {"text": "Supported fact[1]", "supported_by": [1]},
+                    {"text": "Unsupported mapping[2]", "supported_by": [1]},
+                    {"text": "Uncited claim", "supported_by": [2]},
+                ],
+            }
+        ]
+    )
+    assert report["citation_precision"] == 0.5
+    assert report["claim_coverage"] == 1 / 3
+    assert report["marker_validity"] == 1.0
+
+
+def test_reviewed_citation_golden_set_passes_release_thresholds():
+    fixture = Path(__file__).parent / "fixtures" / "citation_golden.json"
+    manifest = json.loads(fixture.read_text(encoding="utf-8"))
+    report = evaluate_citations(manifest["cases"])
+    assert len(manifest["cases"]) == 6
+    assert {case["language"] for case in manifest["cases"]} == {"zh", "en"}
+    assert report["citation_precision"] >= manifest["thresholds"]["citation_precision"]
+    assert report["claim_coverage"] >= manifest["thresholds"]["claim_coverage"]
+    assert report["marker_validity"] >= manifest["thresholds"]["marker_validity"]

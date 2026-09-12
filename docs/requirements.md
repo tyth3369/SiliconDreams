@@ -20,6 +20,7 @@
 - PDF 同时使用 BGE-M3 稠密召回和 BM25，RRF 融合后由 cross-encoder 重排。
 - “最新”问题优先网页；财报问题优先本地 PDF/官方结构化事实。
 - 检索质量通过人工 golden set 的 Recall@K/MRR 评估，不凭演示印象判断；v0.8 发布门槛为 Recall@5 ≥ 90%、MRR ≥ 70%。
+- 引用质量使用真实 Agent 回答的人工 claim→source 标注集评估；发布门槛为 citation precision ≥ 95%、claim coverage ≥ 90%、编号有效率 100%。
 
 ### 3. 精确财务分析
 

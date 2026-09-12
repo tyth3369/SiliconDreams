@@ -108,6 +108,28 @@ def test_non_numeric_question_never_enters_a_loop():
     assert events[-1] == {"done": True}
 
 
+def test_company_query_uses_deterministic_fallback_when_planner_returns_no_call(monkeypatch):
+    executed = []
+
+    def fake_execute(name, arguments, tracker):
+        executed.append((name, arguments))
+        tracker.add_financial("台积电", year="FY2025", reference_title="Official results")
+        return "official evidence"
+
+    monkeypatch.setattr("src.agent_loop.execute_tool", fake_execute)
+    events = _events(
+        run_agent_loop(
+            NoToolClient(),
+            [{"role": "user", "content": "What was TSMC FY2025 revenue?"}],
+            CitationTracker(),
+            lang="en",
+            available_retrieval_tools={"get_company_data"},
+        )
+    )
+    assert executed == [("get_company_data", {"company": "台积电", "periods": []})]
+    assert any(event.get("citations") for event in events)
+
+
 def test_invalid_planned_arguments_are_rejected(monkeypatch):
     class InvalidClient(NoToolClient):
         def chat_with_tools(self, messages, tools, model=None, tool_choice="auto"):

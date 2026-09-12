@@ -116,6 +116,35 @@ def _format_duration(elapsed: float) -> str:
     return f"{elapsed:.1f}s"
 
 
+def _fallback_retrieval_calls(query: str, planner_tools: list[dict]) -> list[dict]:
+    """Recover deterministic local lookups when a provider emits no valid tool call."""
+    available = {tool["function"]["name"] for tool in planner_tools}
+    calls = []
+    if "get_company_data" in available:
+        from src.financial_data import FinancialDataManager
+
+        for company in FinancialDataManager().find_companies(query)[:2]:
+            calls.append(
+                {
+                    "id": f"fallback-company-{len(calls)}",
+                    "name": "get_company_data",
+                    "arguments": {"company": company, "periods": []},
+                }
+            )
+    if not calls and "lookup_terms" in available:
+        from src.terminology import TerminologyManager
+
+        if TerminologyManager().find_terms(query):
+            calls.append(
+                {
+                    "id": "fallback-terms-0",
+                    "name": "lookup_terms",
+                    "arguments": {"query": query},
+                }
+            )
+    return calls
+
+
 def _execute_retrieval_plan(
     calls: list[dict], tracker: CitationTracker, messages: list[dict], lang: str
 ) -> Generator[str, None, None]:
@@ -197,6 +226,8 @@ def run_agent_loop(
             tool_choice="auto",
         )
         retrieval_calls = _normalize_planned_calls(plan.get("tool_calls"))
+        if not retrieval_calls:
+            retrieval_calls = _fallback_retrieval_calls(user_query, planner_tools)
     except Exception as error:
         logger.error("Evidence planning failed: %s", error, exc_info=True)
         retrieval_calls = []

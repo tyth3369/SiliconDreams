@@ -55,6 +55,8 @@ Browser
 
 `CitationTracker` 按来源类型、名称和页码去重。网页 URL 只允许绝对 HTTP(S)，所有文本 HTML escape。前端用 marked 渲染 Markdown、DOMPurify 消毒，再将 `[N]` 绑定到同一消息的引用条目。
 
+`src/evaluation.py` 同时检查行内编号范围、人工标注 claim 的来源支持关系和可核验陈述覆盖率。`tests/fixtures/citation_golden.json` 冻结 6 个由真实 DeepSeek Agent 生成并人工复核的中英双语回答；CI 强制 citation precision ≥ 95%、claim coverage ≥ 90%、marker validity = 100%。结构化财务与术语引用均携带本次实际提供给模型的有界证据摘要，而不是只有笼统数据库名称。
+
 时效性查询使用 Tavily `news` topic 并把当前日期作为 `end_date`；普通知识查询使用 `general`。网页结果进入上下文前按相关度、Tier 和时效状态重排。Tier 1 是公司/监管官方域名；Tier 2 仅由显式白名单中的国际主流媒体和半导体专业媒体构成；其余均为 Tier 3。引用面板显示发布者、日期、Tier，以及“日期未知/较旧背景来源”标签。最终回答提示包含本次实际来源构成，并要求低等级来源不得无说明覆盖官方披露。
 
 明确包含“官方/财报/年报/季报/filing/results”等意图的公司查询通过 Tavily `include_domains` 约束到对应公司或监管域名。一般搜索缓存 24 小时，时效性搜索缓存 15 分钟；缓存命中仍重新执行当前日期的时效策略。每个返回摘要以 URL + 内容哈希保存到 SQLite `web_snapshots`，支持事后审计检索时实际提供给模型的网页证据。

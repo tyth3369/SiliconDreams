@@ -1,3 +1,5 @@
+from src.agent_tools import execute_tool
+from src.citation import CitationTracker
 from src.financial_data import FinancialDataManager
 from src.storage import Database
 from src.terminology import TerminologyManager
@@ -41,6 +43,30 @@ def test_financial_reference_points_to_official_source():
     _, refs = FinancialDataManager().build_context("台积电财务数据")
     assert refs[0]["source_url"].startswith("https://investor.tsmc.com/")
     assert "Management Report" in refs[0]["source_title"]
+
+
+def test_explicit_fy_period_returns_annual_not_missing_quarter():
+    context, refs = FinancialDataManager().build_context("SMIC FY2025 results", periods=["FY2025"])
+    assert "9.327 USD billion" in context
+    assert "不得用年度数据替代季度数据" not in context
+    assert refs[0]["year"] == 2025
+    assert "revenue 9.327 USD billion" in refs[0]["snippet"]
+
+
+def test_company_tool_preserves_financial_evidence_in_citation():
+    tracker = CitationTracker()
+    result = execute_tool(
+        "get_company_data",
+        {"company": "TSMC", "periods": ["FY2025"]},
+        tracker,
+    )
+
+    citations = tracker.to_list()
+    assert "122.4 USD billion" in result
+    assert len(citations) == 1
+    assert citations[0]["source_type"] == "financial"
+    assert citations[0]["url"].startswith("https://investor.tsmc.com/")
+    assert "revenue 122.4 USD billion" in citations[0]["snippet"]
 
 
 def test_financial_context_excludes_unsourced_analyst_narrative():
