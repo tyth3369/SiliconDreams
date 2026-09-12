@@ -131,6 +131,7 @@ tests/                        回归测试
 - PDF、Embedding、向量和会话存储在本机；用户问题和检索证据会发送给配置的 DeepSeek API，实时搜索查询会发送给 Tavily。
 - `ai_runs` / `ai_tool_events` 只保存请求 ID、耗时、token、工具名、错误码和来源类型计数，不保存问题、回答、来源名称、URL 或证据片段。`/ops/metrics` 与 `manage_database.py metrics` 提供聚合运维视图。
 - 网页和 PDF 内容被视为不可信证据，不作为系统指令执行。
+- HTMX、Marked、DOMPurify 与 IBM Plex 字体均锁定版本并由 `/static/` 本地提供；第三方许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 - 本项目用于研究辅助，不构成投资建议。重要判断应回到原始公告核验。
 
 ## 文档
@@ -141,3 +142,5 @@ tests/                        回归测试
 - [执行计划](docs/execution-plan.md)
 - [API 与模型配置](docs/api-keys-guide.md)
 - [依赖说明](docs/dependencies.md)
+- [v1.0 发布候选验收清单](docs/release-checklist-v1.0.md)
+- [v1.0.0-rc.1 发布说明](docs/release-notes-v1.0.0-rc.1.md)
