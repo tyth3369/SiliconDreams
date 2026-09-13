@@ -17,8 +17,8 @@
 - [x] 工作台无外部 API 性能基线
 - [x] `uv pip check`、JavaScript 语法与 Git diff whitespace
 - [x] SQLite schema v6 integrity、foreign keys 与迁移历史
-- [x] GitHub Actions 主质量工作流
-- [x] GitHub Actions 容器镜像构建与 Compose 配置（run `34713016276`）
+- [x] GitHub Actions 主质量工作流（run `34771845925`）
+- [x] GitHub Actions 容器镜像构建与 Compose 配置（run `34771845925`）
 - [x] `pip-audit` 生产依赖门禁；仅允许已复核且上游无修复版本的 Chroma Server 公告
 - [x] Chroma 架构回归：只允许嵌入式 `PersistentClient`，禁止 HTTP Client、Server 服务和端口暴露
 
