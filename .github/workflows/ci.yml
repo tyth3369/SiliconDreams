@@ -41,6 +41,8 @@ jobs:
           cp .env.production.example .env.production
           cp .env.caddy.example .env.caddy
           docker compose config --quiet
+          SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:test \
+            docker compose -f compose.yaml -f compose.registry.yaml config --quiet
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Build production image

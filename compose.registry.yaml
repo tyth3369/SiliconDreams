@@ -1,0 +1,5 @@
+services:
+  app:
+    image: ${SILICONDREAMS_IMAGE:?Set SILICONDREAMS_IMAGE to a versioned GHCR image}
+    pull_policy: always
+

@@ -18,12 +18,15 @@ def test_chromadb_remains_embedded_and_has_no_http_client():
 
 def test_compose_does_not_expose_a_chromadb_service():
     compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+    registry_override = (ROOT / "compose.registry.yaml").read_text(encoding="utf-8")
     app_block = compose.split("\n  caddy:", 1)[0]
 
     assert "\n  chroma:" not in compose.lower()
     assert "chroma run" not in compose.lower()
     assert '    expose:\n      - "8000"' in app_block
     assert "    ports:" not in app_block
+    assert "    ports:" not in registry_override
+    assert "SILICONDREAMS_IMAGE" in registry_override
 
 
 def test_ci_ignores_only_reviewed_unfixed_chromadb_advisories():

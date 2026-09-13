@@ -111,3 +111,4 @@ Browser
 - BGE-M3 与 Cross-Encoder 位于独立 Docker 命名卷，应用数据绑定到宿主机 `data/`。
 - `APP_ENV=production` 在认证配置缺失或 Cookie 非 Secure 时拒绝启动。
 - 由于 SSE hand-off 仍为进程内状态，当前版本禁止多 worker 或多实例部署。
+- `v*` 标签触发 GitHub Actions 发布版本化 GHCR 镜像，推送后以真实容器执行 `/healthz` 冒烟测试并生成 provenance attestation；ECS 可通过 `compose.registry.yaml` 拉取固定标签，源码构建仍作为回退。
