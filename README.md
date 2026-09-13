@@ -144,5 +144,5 @@ tests/                        回归测试
 - [API 与模型配置](docs/api-keys-guide.md)
 - [依赖说明](docs/dependencies.md)
 - [v1.0 发布候选验收清单](docs/release-checklist-v1.0.md)
-- [v1.0.0-rc.2 发布说明](docs/release-notes-v1.0.0-rc.2.md)
+- [v1.0.0-rc.3 发布说明](docs/release-notes-v1.0.0-rc.3.md)
 - [依赖安全公告与限时例外](docs/security-advisories.md)

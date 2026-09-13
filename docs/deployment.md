@@ -65,7 +65,28 @@ docker compose run --rm app python scripts/generate_auth_config.py
 
 Caddy 只负责 TLS 与反向代理，登录、CSRF、限流和审计均由应用处理。不要提交 `.env.production` 或 `.env.caddy`。
 
-## 5. 构建并下载本地模型
+## 5. 获取应用镜像并下载本地模型
+
+### 方式 A：拉取版本化 GHCR 镜像（推荐）
+
+每个 `v*` 标签都会由 GitHub Actions 构建镜像、运行 `/healthz` 冒烟测试并生成 provenance attestation。部署时只使用明确版本，不使用浮动 `latest`：
+
+```bash
+export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.3
+docker compose -f compose.yaml -f compose.registry.yaml pull app
+docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
+  python scripts/generate_auth_config.py
+# 将生成的认证配置写入 .env.production 后继续
+docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
+  python src/tools/download_bge_m3.py
+docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
+  python src/tools/download_reranker.py
+docker compose -f compose.yaml -f compose.registry.yaml up -d --no-build
+```
+
+GHCR 容器包首次发布后默认为私有。仓库管理员应在 GitHub Package 设置中把 `silicondreams` 的 visibility 改为 Public；公开容器包可匿名拉取。若保留私有，先用具有 `read:packages` 的细粒度凭据执行 `docker login ghcr.io`。不要把凭据写入仓库或 shell history。GitHub 说明：[Container registry 权限](https://docs.github.com/en/packages/learn-github-packages/about-permissions-for-github-packages)。
+
+### 方式 B：在 ECS 从源码构建（回退）
 
 ```bash
 docker compose build
@@ -83,6 +104,8 @@ docker compose ps
 docker compose logs -f --tail=100
 curl -fsS http://127.0.0.1:8000/healthz
 ```
+
+如果采用 GHCR 镜像，以上所有 `docker compose` 命令都要追加 `-f compose.yaml -f compose.registry.yaml`，并保持 `SILICONDREAMS_IMAGE` 指向同一版本标签。
 
 最后访问 `https://sillycon.xyz`。Caddy 会在 DNS 已正确指向且 80/443 可达时自动申请、续期 TLS 证书，并将 HTTP 重定向到 HTTPS。
 
@@ -110,6 +133,16 @@ docker compose up -d
 docker compose exec app python scripts/manage_database.py verify
 docker compose exec app python scripts/manage_database.py audit --limit 50
 docker compose exec app python scripts/manage_database.py metrics --hours 24
+```
+
+GHCR 部署的升级方式是先备份，再更新版本化镜像变量并拉取：
+
+```bash
+export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:NEW_VERSION
+docker compose -f compose.yaml -f compose.registry.yaml pull app
+docker compose -f compose.yaml -f compose.registry.yaml up -d --no-build app
+docker compose -f compose.yaml -f compose.registry.yaml exec app \
+  python scripts/manage_database.py verify
 ```
 
 完整灾备还应包含 `data/pdfs/` 与 `data/chroma_db/`；Caddy 证书卷可以自动重建，本地模型卷可以重新下载。停机后的完整目录归档可使用：
