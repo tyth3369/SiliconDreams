@@ -17,7 +17,7 @@
 | RAG | ChromaDB, sentence-transformers, torch |
 | PDF | PyMuPDF, PyMuPDF4LLM, pdfplumber, tabulate |
 | Data | pandas, Pydantic |
-| Dev | pytest, pytest-cov, Ruff, httpx, Playwright |
+| Dev | pytest, pytest-cov, Ruff, httpx, Playwright, pip-audit |
 
 Docker 与 Caddy 属于部署基础设施，不是 Python 运行时依赖，因此不写入 `pyproject.toml`。
 
@@ -29,6 +29,7 @@ LangChain、LlamaIndex 和 Streamlit 已从活跃依赖中删除。
 uv sync --dev
 uv lock --check
 uv pip check
+uv run pip-audit -r requirements.txt --timeout 60  # 已复核例外以 CI 为唯一可执行策略
 uv run ruff check .
 uv run pytest
 uv run playwright install chromium

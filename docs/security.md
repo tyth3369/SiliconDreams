@@ -14,6 +14,7 @@
 - AI 运维遥测只保存随机请求 ID、会话外键、模型/工具计数、耗时、token、错误码和来源类型计数；不复制用户问题、模型回答、来源标题、URL 或证据片段。
 - 每个 HTML 响应生成独立 CSP nonce。脚本不允许 `unsafe-inline`；HTMX、Marked、DOMPurify 与 IBM Plex 字体均以锁定版本随应用本地提供，CSP 的脚本、样式和字体只允许 `'self'`。页面同时启用 frame deny、nosniff、严格 referrer policy、权限限制和跨源 opener 隔离。
 - 网页、PDF 与工具结果均视为不可信证据，不能作为系统指令执行。
+- CI 使用 `pip-audit` 阻断未复核的生产依赖漏洞。当前 ChromaDB 无修复版本的 Server API 公告采用严格限时例外；攻击面、补偿控制和移除条件见 [security-advisories.md](security-advisories.md)。
 
 ## 生产配置
 
@@ -70,3 +71,4 @@ docker compose logs --since=24h app
 - 限流为单进程内存状态，重启后清零。
 - 登出不会单独吊销无状态 token；浏览器会删除 Cookie，服务端强制全局吊销依赖会话密钥轮换。
 - 前端运行时已本地化，但这些 vendored 文件不会由 Python 锁文件自动升级；升级时必须核对上游版本、许可证和 SHA-256，并重新跑浏览器测试。
+- ChromaDB 依赖当前包含上游尚未修复的 HTTP Server 安全公告；本项目只能继续使用嵌入式 `PersistentClient`，不得启动或暴露 Chroma Server。详见 [security-advisories.md](security-advisories.md)。

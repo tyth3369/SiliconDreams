@@ -1,5 +1,5 @@
 /**
- * SiliconDreams — Client-side JS (v1.0.0-rc.1)
+ * SiliconDreams — Client-side JS (v1.0.0-rc.2)
  * Handles: theme switching, SSE streaming, language switching.
  * Minimal — most interactivity via HTMX.
  */
