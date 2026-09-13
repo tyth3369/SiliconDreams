@@ -1,6 +1,6 @@
 [project]
 name = "silicondreams"
-version = "1.0.0rc1"
+version = "1.0.0rc2"
 description = "Evidence-first semiconductor investment research assistant"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -27,6 +27,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28,<1",
+    "pip-audit>=2.10,<3",
     "playwright>=1.55,<2",
     "pytest>=9,<10",
     "pytest-cov>=7,<8",

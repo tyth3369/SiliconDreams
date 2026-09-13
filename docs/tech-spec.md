@@ -89,6 +89,7 @@ Browser
 - schema v5 的 `audit_events` 保存写请求结果和匿名化客户端标识，触发器拒绝修改或删除。
 - 每个页面请求生成独立 CSP nonce；CSP 不允许 `unsafe-inline`。nosniff、frame deny、referrer policy、permissions policy、COOP 和生产 HSTS 默认启用。
 - Prompt 明确把网页/PDF/工具输出视为不可信证据，禁止执行嵌入指令。
+- CI 使用 `pip-audit` 检查导出的生产依赖；未复核漏洞直接阻断。ChromaDB 上游尚无修复版本的 HTTP Server 公告只在嵌入式 `PersistentClient`、无 Server/HTTP Client/端口暴露的约束下限时例外，并由架构测试持续验证。
 
 ## 已知边界
 
