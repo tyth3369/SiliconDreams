@@ -72,7 +72,10 @@ docker compose run --rm app python scripts/generate_auth_config.py
 docker compose run --rm app python src/tools/download_bge_m3.py
 docker compose run --rm app python src/tools/download_reranker.py
 docker compose up -d
+curl -fsS https://sillycon.xyz/readyz
 ```
+
+本地模型下载固定到已审计的 Hugging Face commit，并在原子落盘前校验大小与 SHA-256。生产健康状态使用 `/readyz`，只有数据库、API 配置、BGE-M3 与 reranker 全部就绪才返回 200。
 
 当前 SSE hand-off 是进程内状态，生产命令必须保持一个 Uvicorn worker。
 
@@ -92,7 +95,7 @@ uv run python scripts/run_citation_benchmark.py
 uv run python scripts/manage_database.py status
 uv run python scripts/manage_database.py audit --limit 50
 uv run python scripts/manage_database.py metrics --hours 24
-uv run python scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.5 --expected-ip ECS_PUBLIC_IPV4
+uv run python scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.6 --expected-ip ECS_PUBLIC_IPV4
 ```
 
 正式检索基准由 TSMC 与 SMIC 2025 官方年报、6 个中文问题和 6 个英文问题组成；每个答案页码和关键文本均人工核验，PDF 以 SHA-256 锁定。v0.8 实测 Recall@5 为 **100%**、MRR 为 **84.03%**，高于 90% / 70% 发布门槛。脚本会下载并隔离索引官方年报，低于门槛时返回失败状态。
@@ -146,6 +149,7 @@ tests/                        回归测试
 - [API 与模型配置](docs/api-keys-guide.md)
 - [依赖说明](docs/dependencies.md)
 - [v1.0 发布候选验收清单](docs/release-checklist-v1.0.md)
+- [v1.0.0-rc.6 发布说明](docs/release-notes-v1.0.0-rc.6.md)
 - [v1.0.0-rc.5 发布说明](docs/release-notes-v1.0.0-rc.5.md)
 - [v1.0.0-rc.4 发布说明](docs/release-notes-v1.0.0-rc.4.md)
 - [依赖安全公告与限时例外](docs/security-advisories.md)

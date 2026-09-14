@@ -60,6 +60,18 @@ def test_successful_public_verification(monkeypatch):
                 ),
                 json.dumps({"status": "ok", "version": "1.0.0-rc.4"}).encode(),
             )
+        if url == "https://sillycon.xyz/readyz":
+            return (
+                200,
+                _headers(),
+                json.dumps(
+                    {
+                        "status": "ready",
+                        "version": "1.0.0-rc.4",
+                        "checks": {"database": True, "llm": True, "models": True},
+                    }
+                ).encode(),
+            )
         raise AssertionError(url)
 
     monkeypatch.setattr(verifier, "_request", fake_request)
@@ -68,7 +80,7 @@ def test_successful_public_verification(monkeypatch):
     )
 
     assert report.passed is True
-    assert len(report.checks) == 7
+    assert len(report.checks) == 8
     assert report.to_dict()["passed"] is True
 
 
@@ -89,6 +101,8 @@ def test_verification_reports_failures_without_credentials(monkeypatch):
             return 200, _headers(), b""
         if url.endswith("/healthz"):
             return 200, _headers(), b'{"status":"ok","version":"wrong"}'
+        if url.endswith("/readyz"):
+            return 503, _headers(), b'{"status":"not_ready","version":"wrong","checks":{}}'
         if url.endswith("/login"):
             return 200, _headers(), b"login"
         return 200, _headers(), b"public root"
@@ -101,6 +115,7 @@ def test_verification_reports_failures_without_credentials(monkeypatch):
         "tls",
         "http_redirect",
         "health",
+        "readiness",
         "auth_boundary",
         "security_headers",
         "login_cookie",
@@ -114,6 +129,21 @@ def test_health_network_error_is_a_failed_check(monkeypatch):
     result = verifier._check_health("https://sillycon.xyz", "1.0.0", 1.0)
     assert result.passed is False
     assert "down" in result.detail
+
+
+def test_readiness_requires_every_check(monkeypatch):
+    monkeypatch.setattr(
+        verifier,
+        "_request",
+        lambda *_args: (
+            200,
+            _headers(),
+            b'{"status":"ready","version":"1.0.0","checks":{"database":true,"models":false}}',
+        ),
+    )
+    result = verifier._check_readiness("https://sillycon.xyz", "1.0.0", 1.0)
+    assert result.passed is False
+    assert "models" in result.detail
 
 
 def test_dns_rejects_proxy_fake_ip_and_wrong_expected_address(monkeypatch):

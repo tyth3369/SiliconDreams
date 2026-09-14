@@ -146,6 +146,37 @@ def _check_health(base_url: str, expected_version: str, timeout: float) -> Check
     )
 
 
+def _check_readiness(base_url: str, expected_version: str, timeout: float) -> CheckResult:
+    try:
+        status, _headers, body = _request(urljoin(base_url + "/", "readyz"), timeout)
+        payload = json.loads(body.decode("utf-8"))
+    except (OSError, URLError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return CheckResult("readiness", False, f"readiness request failed: {exc}")
+    checks = payload.get("checks")
+    checks_ready = (
+        isinstance(checks, dict)
+        and bool(checks)
+        and all(value is True for value in checks.values())
+    )
+    actual_version = str(payload.get("version", ""))
+    passed = (
+        status == 200
+        and payload.get("status") == "ready"
+        and actual_version == expected_version
+        and checks_ready
+    )
+    failed_checks = (
+        sorted(name for name, value in checks.items() if value is not True)
+        if isinstance(checks, dict)
+        else ["missing_checks"]
+    )
+    detail = (
+        f"HTTP {status}; status={payload.get('status')}; version={actual_version or '<missing>'}; "
+        f"failed={','.join(failed_checks) or '<none>'}"
+    )
+    return CheckResult("readiness", passed, detail)
+
+
 def _check_auth_boundary(base_url: str, timeout: float) -> CheckResult:
     try:
         status, headers, _body = _request(base_url + "/", timeout)
@@ -240,6 +271,7 @@ def verify_deployment(
         _check_tls(hostname, port, timeout),
         _check_http_redirect(normalized, timeout),
         _check_health(normalized, expected_version, timeout),
+        _check_readiness(normalized, expected_version, timeout),
         _check_auth_boundary(normalized, timeout),
         _check_security_headers(normalized, timeout),
         _check_login_cookie(normalized, timeout),

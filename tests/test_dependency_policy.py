@@ -77,3 +77,18 @@ def test_public_deployment_workflow_is_credential_free():
     assert '--expected-version "$EXPECTED_VERSION"' in workflow
     assert "secrets." not in workflow
     assert "contents: read" in workflow
+
+
+def test_local_models_use_pinned_verified_artifacts():
+    artifacts = (ROOT / "src" / "model_artifacts.py").read_text(encoding="utf-8")
+    downloader = (ROOT / "src" / "tools" / "model_download.py").read_text(encoding="utf-8")
+    embedding = (ROOT / "src" / "embedding_manager.py").read_text(encoding="utf-8")
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+
+    assert 'revision="5617a9f61b028005a4858fdac845db406aefb181"' in artifacts
+    assert 'revision="1427fd652930e4ba29e8149678df786c240d8825"' in artifacts
+    assert "sha256" in artifacts
+    assert "/resolve/main/" not in downloader
+    assert ".part" in downloader
+    assert "trust_remote_code=False" in embedding
+    assert "127.0.0.1:8000/readyz" in compose

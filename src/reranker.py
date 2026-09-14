@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any, ClassVar
 
 from config import RAGConfig, RerankerConfig
@@ -29,10 +28,10 @@ class RerankerManager:
 
     @staticmethod
     def is_available() -> bool:
-        path = Path(RerankerConfig.local_path)
-        return (path / "config.json").is_file() and (
-            (path / "model.safetensors").is_file() or (path / "pytorch_model.bin").is_file()
-        )
+        from src.model_artifacts import RERANKER_MANIFEST, model_cache_status
+
+        ready, _detail = model_cache_status(RERANKER_MANIFEST)
+        return ready
 
     def get_model(self):
         if self._model is not None:
@@ -44,11 +43,12 @@ class RerankerManager:
         from sentence_transformers import CrossEncoder
 
         from src.embedding_manager import EmbeddingManager
+        from src.model_artifacts import RERANKER_MANIFEST
 
         device = EmbeddingManager.get_instance().get_device()
         try:
             self._model = CrossEncoder(
-                str(RerankerConfig.local_path),
+                str(RERANKER_MANIFEST.cache_dir),
                 device=device,
                 max_length=RerankerConfig.max_length,
                 local_files_only=True,
@@ -58,12 +58,12 @@ class RerankerManager:
                 raise
             logger.warning("Reranker failed on %s; retrying on CPU", device, exc_info=True)
             self._model = CrossEncoder(
-                str(RerankerConfig.local_path),
+                str(RERANKER_MANIFEST.cache_dir),
                 device="cpu",
                 max_length=RerankerConfig.max_length,
                 local_files_only=True,
             )
-        logger.info("Cross-encoder reranker loaded from %s", RerankerConfig.local_path)
+        logger.info("Cross-encoder reranker loaded from %s", RERANKER_MANIFEST.cache_dir)
         return self._model
 
     def rerank(

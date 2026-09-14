@@ -108,9 +108,10 @@ Browser
 
 - 生产拓扑：Caddy（TLS）→ 应用认证与限流 → 单 worker Uvicorn → SQLite/Chroma 持久目录。
 - Caddy 对 SSE 禁用响应缓冲，自动完成 HTTP 到 HTTPS 跳转与证书续期。
-- BGE-M3 与 Cross-Encoder 位于独立 Docker 命名卷，应用数据绑定到宿主机 `data/`。
+- BGE-M3 与 Cross-Encoder 位于独立 Docker 命名卷，应用数据绑定到宿主机 `data/`。模型下载固定到完整 Hugging Face commit，先写 `.part`，逐文件校验大小与 SHA-256 后原子落盘；运行期只接受与固定清单匹配的完成标记，且 BGE-M3 禁用 remote code。
 - Linux 镜像固定使用 PyTorch 官方 CPU wheel，不包含 CUDA/NVIDIA/Triton；uv 下载缓存使用 BuildKit cache mount，不写入运行镜像；macOS 开发环境仍使用支持 MPS 的原生 wheel。
 - `APP_ENV=production` 在认证配置缺失或 Cookie 非 Secure 时拒绝启动。
 - 由于 SSE hand-off 仍为进程内状态，当前版本禁止多 worker 或多实例部署。
 - `v*` 标签触发 GitHub Actions 发布版本化 GHCR 镜像，推送后以真实容器执行 `/healthz` 冒烟测试并生成 provenance attestation；ECS 可通过 `compose.registry.yaml` 拉取固定标签，源码构建仍作为回退。
-- `scripts/verify_deployment.py` 对公网部署执行无凭据验收：拒绝非公网/Fake-IP DNS，核对可选 ECS IP、TLS、HTTP 跳转、精确版本、未登录访问边界、安全响应头和 CSRF Cookie 属性；不触碰登录凭据或研究数据。
+- `/healthz` 只做存活检查；`/readyz` 检查 SQLite、LLM、网页搜索与两套固定版本模型。生产 Compose 以 `/readyz` 决定健康状态，发布镜像的无模型冒烟测试仍使用 `/healthz`。
+- `scripts/verify_deployment.py` 对公网部署执行无凭据验收：拒绝非公网/Fake-IP DNS，核对可选 ECS IP、TLS、HTTP 跳转、精确版本、`/readyz` 全部依赖、未登录访问边界、安全响应头和 CSRF Cookie 属性；不触碰登录凭据或研究数据。

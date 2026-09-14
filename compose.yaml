@@ -13,7 +13,7 @@ services:
       - ./backups:/app/backups
       - model_cache:/root/.cache/silicondreams/models
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/healthz"]
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/readyz"]
       interval: 30s
       timeout: 5s
       retries: 5

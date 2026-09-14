@@ -14,7 +14,7 @@ from __future__ import annotations
 _ZH = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v1.0.0-rc.5 | (c) 2026",
+    "app.footer": "SiliconDreams v1.0.0-rc.6 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "财报上传",
     "sidebar.upload_hint": "拖拽或点击上传 PDF 财报",
@@ -124,7 +124,7 @@ _ZH = {
 _EN = {
     # -- App / Brand --
     "app.tagline": "ELECTRONICS/SEMICONDUCTOR AI ANALYST",
-    "app.footer": "SiliconDreams v1.0.0-rc.5 | (c) 2026",
+    "app.footer": "SiliconDreams v1.0.0-rc.6 | (c) 2026",
     # -- Sidebar --
     "sidebar.upload_title": "Upload Reports",
     "sidebar.upload_hint": "Drag & drop PDF financial reports",

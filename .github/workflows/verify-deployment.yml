@@ -8,9 +8,9 @@ on:
         required: true
         type: string
       expected_version:
-        description: Exact version expected from /healthz
+        description: Exact version expected from /healthz and /readyz
         required: true
-        default: 1.0.0-rc.5
+        default: 1.0.0-rc.6
         type: string
       base_url:
         description: Canonical HTTPS origin
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Verify DNS, TLS, application and security boundary
+      - name: Verify DNS, TLS, readiness and security boundary
         run: |
           python scripts/verify_deployment.py \
             --base-url "$BASE_URL" \

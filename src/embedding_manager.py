@@ -59,41 +59,26 @@ class EmbeddingManager:
             self._device = self._detect_device()
         return self._device
 
-    # Local cache path (populated by src/tools/download_bge_m3.py)
-    LOCAL_CACHE = "~/.cache/silicondreams/models/bge-m3"
-
     @staticmethod
     def _is_model_cached(model_name: str) -> bool:
-        """Check if a HuggingFace model is already cached locally."""
-        import os as _os
+        """Return true only for the pinned, fully verified local artifact set."""
+        from src.model_artifacts import BGE_M3_MANIFEST, model_cache_status
 
-        # 1. Check local cache (curl_cffi download, preferred on macOS)
-        local_path = _os.path.expanduser(EmbeddingManager.LOCAL_CACHE)
-        if _os.path.isdir(local_path) and _os.path.isfile(
-            _os.path.join(local_path, "pytorch_model.bin")
-        ):
-            return True
-
-        # 2. Check standard HuggingFace cache
-        safe_name = "models--" + model_name.replace("/", "--")
-        cache_dir = _os.path.expanduser(f"~/.cache/huggingface/hub/{safe_name}")
-        if _os.path.isdir(cache_dir):
-            snapshots = _os.path.join(cache_dir, "snapshots")
-            if _os.path.isdir(snapshots) and _os.listdir(snapshots):
-                return True
-        return False
+        if model_name != BGE_M3_MANIFEST.model_id:
+            return False
+        ready, _detail = model_cache_status(BGE_M3_MANIFEST)
+        return ready
 
     @staticmethod
     def _get_model_path(model_name: str) -> str:
         """
-        Return the best model path to use. Prefers local curl_cffi cache
-        over the HuggingFace model ID (which triggers network access).
+        Return the verified pinned local path when it is available.
         """
-        import os as _os
+        from src.model_artifacts import BGE_M3_MANIFEST, model_cache_status
 
-        local_path = _os.path.expanduser(EmbeddingManager.LOCAL_CACHE)
-        if _os.path.isfile(_os.path.join(local_path, "pytorch_model.bin")):
-            return local_path
+        ready, _detail = model_cache_status(BGE_M3_MANIFEST)
+        if model_name == BGE_M3_MANIFEST.model_id and ready:
+            return str(BGE_M3_MANIFEST.cache_dir)
         return model_name
 
     def get_model(self):
@@ -117,8 +102,9 @@ class EmbeddingManager:
             _os.environ.setdefault("HF_HUB_OFFLINE", "1")
             logger.info("BGE-M3 模型已缓存，跳过在线检查（HF_HUB_OFFLINE=1）")
         else:
-            logger.info("首次使用，需要下载 BGE-M3 模型（约 2GB）...")
-            logger.info("   如遇 SSL 错误，请运行: python src/tools/download_bge_m3.py")
+            raise RuntimeError(
+                "BGE-M3 cache is missing or unverified. Run: python src/tools/download_bge_m3.py"
+            )
 
         device = self.get_device()
 
@@ -131,8 +117,8 @@ class EmbeddingManager:
         self._model = SentenceTransformer(
             model_name_or_path=model_path,
             device=device,
-            trust_remote_code=True,
-            local_files_only=self._is_model_cached(EmbeddingConfig.model_name),
+            trust_remote_code=False,
+            local_files_only=True,
         )
         self._model.max_seq_length = EmbeddingConfig.max_length
 
