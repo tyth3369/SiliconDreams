@@ -56,3 +56,11 @@ def test_linux_uses_hashed_cpu_only_pytorch_dependency():
     assert not re.search(r"^(?:nvidia-|cuda-|triton==)", requirements, re.MULTILINE)
     assert "pip-audit --disable-pip -r requirements.txt" in workflow
     assert "assert torch.version.cuda is None" in workflow
+
+
+def test_docker_build_cache_is_not_persisted_in_runtime_image():
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "UV_LINK_MODE=copy" in dockerfile
+    assert dockerfile.count("--mount=type=cache,id=uv-cache,target=/root/.cache/uv") == 2
+    assert "RUN uv sync" not in dockerfile
