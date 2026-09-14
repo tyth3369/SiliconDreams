@@ -23,7 +23,7 @@
 - [x] Chroma 架构回归：只允许嵌入式 `PersistentClient`，禁止 HTTP Client、Server 服务和端口暴露
 - [x] 标签触发的 GHCR 镜像发布、运行态 `/healthz` 冒烟测试与 provenance attestation（rc.4 run `34810709773`；digest `sha256:63a660e97d87d5784e1e85c9ff02a459e3750ea04acb0651996ce7b6243cf465`）
 - [x] 无凭据公网部署验收器及 Fake-IP/非公网 DNS 防误判测试
-- [ ] Linux 生产镜像使用官方 `torch+cpu`，容器内 CUDA 断言、镜像大小记录与运行态冒烟测试通过
+- [x] Linux 生产镜像使用官方 `torch+cpu`，容器内 CUDA 断言、镜像大小记录与运行态冒烟测试通过（main run `34815246221`；tag run `34815486076`；release-image run `34815486126`）
 
 ## 安全与隐私冻结
 

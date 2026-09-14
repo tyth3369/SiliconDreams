@@ -17,7 +17,7 @@ docker compose -f compose.yaml -f compose.registry.yaml pull app
 docker compose -f compose.yaml -f compose.registry.yaml up -d --no-build
 ```
 
-镜像 digest、镜像大小、运行态 `/healthz` 与 provenance attestation 将在标签工作流通过后补入本文。
+镜像 digest：`sha256:52615f147d2db0d0a9ec68951751e163139387be7ff0f35761f99dcb30c19585`。发布工作流按 digest 回拉镜像后确认 `torch 2.14.0+cpu`、镜像大小 `1,713,377,249` 字节，并从真实容器的 `/healthz` 得到 `1.0.0-rc.5`。构建来源已生成 [provenance attestation](https://github.com/tyth3369/SiliconDreams/attestations/47270759)，签名写入 Rekor 与 GHCR。
 
 ## 上线验收
 
