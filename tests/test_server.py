@@ -155,7 +155,52 @@ def test_login_rate_limit_returns_retry_after(monkeypatch):
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "1.0.0-rc.5"}
+    assert response.json() == {"status": "ok", "version": "1.0.0-rc.6"}
+
+
+def test_readyz_reports_all_dependencies(monkeypatch):
+    import src.model_artifacts as artifacts
+
+    monkeypatch.setattr(server.LLMConfig, "is_configured", classmethod(lambda cls: True))
+    monkeypatch.setattr(server.SearchConfig, "is_configured", classmethod(lambda cls: True))
+    monkeypatch.setattr(
+        artifacts,
+        "model_cache_status",
+        lambda _manifest: (True, "verified"),
+    )
+
+    response = asyncio.run(_request("GET", "/readyz"))
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "version": "1.0.0-rc.6",
+        "checks": {
+            "database": True,
+            "llm": True,
+            "web_search": True,
+            "embedding_model": True,
+            "reranker_model": True,
+        },
+    }
+
+
+def test_readyz_fails_closed_when_dependency_is_missing(monkeypatch):
+    import src.model_artifacts as artifacts
+
+    monkeypatch.setattr(server.LLMConfig, "is_configured", classmethod(lambda cls: True))
+    monkeypatch.setattr(server.SearchConfig, "is_configured", classmethod(lambda cls: False))
+    monkeypatch.setattr(
+        artifacts,
+        "model_cache_status",
+        lambda manifest: ("bge-m3" in manifest.model_id, "test status"),
+    )
+
+    response = asyncio.run(_request("GET", "/readyz"))
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["status"] == "not_ready"
+    assert payload["checks"]["web_search"] is False
+    assert payload["checks"]["reranker_model"] is False
 
 
 def test_main_page_uses_only_self_hosted_frontend_runtime_assets():

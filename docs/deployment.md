@@ -72,7 +72,7 @@ Caddy 只负责 TLS 与反向代理，登录、CSRF、限流和审计均由应�
 每个 `v*` 标签都会由 GitHub Actions 构建镜像、运行 `/healthz` 冒烟测试并生成 provenance attestation。部署时只使用明确版本，不使用浮动 `latest`：
 
 ```bash
-export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.5
+export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.6
 docker compose -f compose.yaml -f compose.registry.yaml pull app
 docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
   python scripts/generate_auth_config.py
@@ -96,7 +96,7 @@ docker compose run --rm app python src/tools/download_bge_m3.py
 docker compose run --rm app python src/tools/download_reranker.py
 ```
 
-模型约占 3GB，保存在 Docker 命名卷 `model_cache` 中。下载器支持断点续传。
+模型约占 3GB，保存在 Docker 命名卷 `model_cache` 中。下载器支持断点续传，并固定上游 commit、核对每个文件的大小与 SHA-256；只有全部校验成功才会写入模型完成标记。
 
 ## 6. 启动与验证
 
@@ -105,19 +105,22 @@ docker compose up -d
 docker compose ps
 docker compose logs -f --tail=100
 curl -fsS http://127.0.0.1:8000/healthz
+curl -fsS http://127.0.0.1:8000/readyz
 ```
+
+`/healthz` 只证明应用进程存活；`/readyz` 还会检查 SQLite、DeepSeek/Tavily 配置以及两套本地模型的固定版本缓存。生产 Compose 以 `/readyz` 判断 app 是否 healthy，因此模型或 API 配置缺失时 Caddy 不会把半初始化实例投入服务。
 
 如果采用 GHCR 镜像，以上所有 `docker compose` 命令都要追加 `-f compose.yaml -f compose.registry.yaml`，并保持 `SILICONDREAMS_IMAGE` 指向同一版本标签。
 
 最后访问 `https://sillycon.xyz`。Caddy 会在 DNS 已正确指向且 80/443 可达时自动申请、续期 TLS 证书，并将 HTTP 重定向到 HTTPS。
 
-从仓库目录运行无凭据公网验收器，自动检查 DNS、TLS、HTTP 跳转、运行版本、未登录访问边界、安全响应头和 CSRF Cookie 属性：
+从仓库目录运行无凭据公网验收器，自动检查 DNS、TLS、HTTP 跳转、运行版本、运行就绪状态、未登录访问边界、安全响应头和 CSRF Cookie 属性：
 
 ```bash
 uv run python scripts/verify_deployment.py \
   --base-url https://sillycon.xyz \
   --alias-url https://www.sillycon.xyz \
-  --expected-version 1.0.0-rc.5 \
+  --expected-version 1.0.0-rc.6 \
   --expected-ip ECS_PUBLIC_IPV4
 ```
 

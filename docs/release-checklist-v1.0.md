@@ -1,6 +1,6 @@
 # SiliconDreams v1.0 发布候选验收清单
 
-候选版本：`v1.0.0-rc.5`
+候选版本：`v1.0.0-rc.6`
 验收日期：2026-09-13  
 最近稳定版：`v0.9.0`
 
@@ -53,10 +53,11 @@
 - [ ] DNS `sillycon.xyz` / `www.sillycon.xyz` 指向目标 ECS
 - [ ] 仅开放公网 80/443；8000 不直接暴露；SSH 仅可信来源
 - [ ] 真实 `.env.production` 权限为 600，API Key 未出现在镜像、日志或 Git
-- [ ] 下载 BGE-M3 与 reranker 后，模型卷可在容器重启后复用
+- [ ] 下载 BGE-M3 与 reranker 后，固定 commit、大小、SHA-256 和完成标记均通过，模型卷可在容器重启后复用
 - [ ] `docker compose up -d` 后 app 与 Caddy 均 healthy
-- [ ] 运行 `scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.5 --expected-ip ECS_PUBLIC_IPV4` 全部通过
-- [ ] `https://sillycon.xyz/healthz` 返回 `v1.0.0-rc.5`，HTTP 自动跳转 HTTPS
+- [ ] `/readyz` 返回 `ready`，且 database、llm、web_search、embedding_model、reranker_model 均为 `true`
+- [ ] 运行 `scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.6 --expected-ip ECS_PUBLIC_IPV4` 全部通过
+- [ ] `https://sillycon.xyz/healthz` 返回 `1.0.0-rc.6`，HTTP 自动跳转 HTTPS
 - [ ] 登录失败、CSRF 拒绝和 AI 限流行为符合预期
 - [ ] 用一份真实 PDF 验证上传→后台解析→索引→带页码引用回答
 - [ ] 用一个“最新”问题验证 Tavily、来源日期、行内引用和外链
@@ -65,4 +66,4 @@
 
 ## 发布决策
 
-只有自动化门禁全部通过，且部署机人工验收没有 P0/P1 问题时，才把 `v1.0.0-rc.5` 晋升为 `v1.0.0`。候选期只接受阻断发布的修复，不再加入新功能。
+只有自动化门禁全部通过，且部署机人工验收没有 P0/P1 问题时，才把 `v1.0.0-rc.6` 晋升为 `v1.0.0`。候选期只接受阻断发布的修复，不再加入新功能。

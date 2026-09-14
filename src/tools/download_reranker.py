@@ -1,61 +1,25 @@
 #!/usr/bin/env python3
-"""Download the multilingual cross-encoder using system curl with resume support."""
+"""Download and verify the pinned multilingual cross-encoder reranker."""
 
 from __future__ import annotations
 
 import argparse
-import subprocess
+import sys
 from pathlib import Path
 
-MODEL_NAME = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
-LOCAL_PATH = Path.home() / ".cache" / "silicondreams" / "models" / "mmarco-reranker"
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-FILES = (
-    "config.json",
-    "model.safetensors",
-    "sentencepiece.bpe.model",
-    "special_tokens_map.json",
-    "tokenizer.json",
-    "tokenizer_config.json",
-)
-
-
-def download_file(url: str, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    partial = destination.with_suffix(destination.suffix + ".part")
-    command = [
-        "curl",
-        "-fL",
-        "--retry",
-        "5",
-        "--retry-all-errors",
-        "--retry-delay",
-        "3",
-        "-C",
-        "-",
-        "-o",
-        str(partial),
-        url,
-    ]
-    subprocess.run(command, check=True, timeout=1800)
-    partial.replace(destination)
+from src.model_artifacts import RERANKER_MANIFEST  # noqa: E402
+from src.tools.model_download import download_model  # noqa: E402
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mirror", default="https://hf-mirror.com")
     args = parser.parse_args()
-    base = f"{args.mirror.rstrip('/')}/{MODEL_NAME}/resolve/main"
-    destination = LOCAL_PATH
-
-    for filename in FILES:
-        target = destination / filename
-        if target.exists() and target.stat().st_size > 0:
-            print(f"skip {filename} ({target.stat().st_size / 1_000_000:.1f} MB)")
-            continue
-        print(f"download {filename}")
-        download_file(f"{base}/{filename}", target)
-    print(f"ready: {destination}")
+    download_model(RERANKER_MANIFEST, mirror=args.mirror)
 
 
 if __name__ == "__main__":

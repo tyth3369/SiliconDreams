@@ -1,4 +1,4 @@
-# SiliconDreams — 需求规格 v1.0-rc.5
+# SiliconDreams — 需求规格 v1.0-rc.6
 
 ## 产品目标
 

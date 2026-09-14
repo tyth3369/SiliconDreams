@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v1.0.0-rc.5)
+SiliconDreams — FastAPI Server (v1.0.0-rc.6)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.
@@ -23,7 +23,13 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import Cookie, Depends, FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -75,7 +81,7 @@ _security = SecurityManager(
 _rate_limiter = SlidingWindowLimiter()
 SESSION_COOKIE = "sd_session"
 CSRF_COOKIE = "sd_csrf"
-PUBLIC_PATHS = {"/healthz", "/login"}
+PUBLIC_PATHS = {"/healthz", "/readyz", "/login"}
 
 
 def _client_address(request: Request) -> str:
@@ -124,7 +130,11 @@ async def add_security_headers(request: Request, call_next):
     is_public = path.startswith("/static/") or path in PUBLIC_PATHS
 
     response: Response | None = None
-    if SecurityConfig.rate_limit_enabled and not path.startswith("/static/") and path != "/healthz":
+    if (
+        SecurityConfig.rate_limit_enabled
+        and not path.startswith("/static/")
+        and path not in {"/healthz", "/readyz"}
+    ):
         session = request.state.auth_session
         identity = session.session_id if session else _client_address(request)
         if path == "/login" and request.method == "POST":
@@ -360,6 +370,33 @@ def _stream_tokens_with_capture(generator, conversation_id: str, tracker: Citati
 async def healthz():
     """Lightweight container/orchestrator health probe."""
     return {"status": "ok", "version": AppConfig.version}
+
+
+@app.get("/readyz")
+async def readyz():
+    """Fail closed until database, providers, and pinned local models are ready."""
+    from src.model_artifacts import BGE_M3_MANIFEST, RERANKER_MANIFEST, model_cache_status
+
+    checks = {
+        "database": False,
+        "llm": LLMConfig.is_configured(),
+        "web_search": SearchConfig.is_configured(),
+        "embedding_model": model_cache_status(BGE_M3_MANIFEST)[0],
+        "reranker_model": model_cache_status(RERANKER_MANIFEST)[0],
+    }
+    try:
+        with _db.connect() as connection:
+            checks["database"] = connection.execute("SELECT 1").fetchone()[0] == 1
+    except Exception:
+        logger.exception("Readiness database check failed")
+
+    ready = all(checks.values())
+    payload = {
+        "status": "ready" if ready else "not_ready",
+        "version": AppConfig.version,
+        "checks": checks,
+    }
+    return JSONResponse(payload, status_code=200 if ready else 503)
 
 
 @app.get("/ops/metrics")

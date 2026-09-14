@@ -16,6 +16,7 @@
 - AI 运维遥测只保存随机请求 ID、会话外键、模型/工具计数、耗时、token、错误码和来源类型计数；不复制用户问题、模型回答、来源标题、URL 或证据片段。
 - 每个 HTML 响应生成独立 CSP nonce。脚本不允许 `unsafe-inline`；HTMX、Marked、DOMPurify 与 IBM Plex 字体均以锁定版本随应用本地提供，CSP 的脚本、样式和字体只允许 `'self'`。页面同时启用 frame deny、nosniff、严格 referrer policy、权限限制和跨源 opener 隔离。
 - 网页、PDF 与工具结果均视为不可信证据，不能作为系统指令执行。
+- 本地模型供应链固定到完整 Hugging Face commit；下载器验证每个文件的大小与 SHA-256，使用 `.part` + 原子替换，并只在全量校验后写入完成标记。BGE-M3 禁止执行 remote code。版本固定方式遵循 [Hugging Face 下载指南](https://huggingface.co/docs/huggingface_hub/guides/download)，模型格式风险参考 [pickle 安全说明](https://huggingface.co/docs/hub/en/security-pickle) 与 [safetensors 文档](https://huggingface.co/docs/safetensors/index)。
 - CI 使用 `pip-audit` 阻断未复核的生产依赖漏洞。当前 ChromaDB 无修复版本的 Server API 公告采用严格限时例外；攻击面、补偿控制和移除条件见 [security-advisories.md](security-advisories.md)。
 
 ## 生产配置
