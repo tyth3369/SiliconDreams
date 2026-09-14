@@ -21,7 +21,7 @@
 - [x] GitHub Actions 容器镜像构建与 Compose 配置（run `34771845925`）
 - [x] `pip-audit` 生产依赖门禁；仅允许已复核且上游无修复版本的 Chroma Server 公告
 - [x] Chroma 架构回归：只允许嵌入式 `PersistentClient`，禁止 HTTP Client、Server 服务和端口暴露
-- [x] 标签触发的 GHCR 镜像发布、运行态 `/healthz` 冒烟测试与 provenance attestation（run `34775169826`；digest `sha256:d7cc625f0f5ded5367bc17002c289d5e9da2685444d66cb0ef1b708af164d2a3`）
+- [x] 标签触发的 GHCR 镜像发布、运行态 `/healthz` 冒烟测试与 provenance attestation（rc.4 run `34810709773`；digest `sha256:63a660e97d87d5784e1e85c9ff02a459e3750ea04acb0651996ce7b6243cf465`）
 - [x] 无凭据公网部署验收器及 Fake-IP/非公网 DNS 防误判测试
 
 ## 安全与隐私冻结
