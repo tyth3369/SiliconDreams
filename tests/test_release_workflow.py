@@ -13,6 +13,8 @@ def test_release_workflow_publishes_versioned_image_and_attestation():
     assert "id-token: write" in workflow
     assert "push: true" in workflow
     assert "type=ref,event=tag" in workflow
+    assert "flavor: latest=false" in workflow
+    assert "type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}" in workflow
     assert "http://127.0.0.1:8765/healthz" in workflow
     assert "subject-digest: ${{ steps.push.outputs.digest }}" in workflow
 

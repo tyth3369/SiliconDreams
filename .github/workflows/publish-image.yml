@@ -31,6 +31,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME }}
+          flavor: latest=false
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
@@ -73,4 +74,3 @@ jobs:
           subject-name: ${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
-

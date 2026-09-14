@@ -84,7 +84,9 @@ docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
 docker compose -f compose.yaml -f compose.registry.yaml up -d --no-build
 ```
 
-GHCR 容器包首次发布后默认为私有。仓库管理员应在 GitHub Package 设置中把 `silicondreams` 的 visibility 改为 Public；公开容器包可匿名拉取。若保留私有，先用具有 `read:packages` 的细粒度凭据执行 `docker login ghcr.io`。不要把凭据写入仓库或 shell history。GitHub 说明：[Container registry 权限](https://docs.github.com/en/packages/learn-github-packages/about-permissions-for-github-packages)。
+`ghcr.io/tyth3369/silicondreams` 已验证为 Public，可匿名拉取。若未来改为私有，先用具有 `read:packages` 的细粒度凭据执行 `docker login ghcr.io`。不要把凭据写入仓库或 shell history。GitHub 说明：[Container registry 权限](https://docs.github.com/en/packages/learn-github-packages/about-permissions-for-github-packages)。
+
+候选版必须使用完整版本标签。发布系统关闭 metadata-action 的自动 `latest` 行为；只有不含预发布后缀的稳定标签才显式更新 `latest`。
 
 ### 方式 B：在 ECS 从源码构建（回退）
 
