@@ -82,7 +82,7 @@ docker compose up -d
 uv run ruff check .
 uv run pytest
 uv run pytest --cov=src --cov-report=term-missing
-uv run pip-audit -r requirements.txt --timeout 60  # 例外参数以 CI 和 security-advisories.md 为准
+uv run pip-audit --disable-pip -r requirements.txt --timeout 60  # 例外参数以 CI 和 security-advisories.md 为准
 uv run playwright install chromium
 uv run pytest -m e2e
 uv run python scripts/benchmark_workbench.py
@@ -92,7 +92,7 @@ uv run python scripts/run_citation_benchmark.py
 uv run python scripts/manage_database.py status
 uv run python scripts/manage_database.py audit --limit 50
 uv run python scripts/manage_database.py metrics --hours 24
-uv run python scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.4 --expected-ip ECS_PUBLIC_IPV4
+uv run python scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.5 --expected-ip ECS_PUBLIC_IPV4
 ```
 
 正式检索基准由 TSMC 与 SMIC 2025 官方年报、6 个中文问题和 6 个英文问题组成；每个答案页码和关键文本均人工核验，PDF 以 SHA-256 锁定。v0.8 实测 Recall@5 为 **100%**、MRR 为 **84.03%**，高于 90% / 70% 发布门槛。脚本会下载并隔离索引官方年报，低于门槛时返回失败状态。
@@ -146,5 +146,6 @@ tests/                        回归测试
 - [API 与模型配置](docs/api-keys-guide.md)
 - [依赖说明](docs/dependencies.md)
 - [v1.0 发布候选验收清单](docs/release-checklist-v1.0.md)
+- [v1.0.0-rc.5 发布说明](docs/release-notes-v1.0.0-rc.5.md)
 - [v1.0.0-rc.4 发布说明](docs/release-notes-v1.0.0-rc.4.md)
 - [依赖安全公告与限时例外](docs/security-advisories.md)

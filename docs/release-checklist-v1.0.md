@@ -1,6 +1,6 @@
 # SiliconDreams v1.0 发布候选验收清单
 
-候选版本：`v1.0.0-rc.4`
+候选版本：`v1.0.0-rc.5`
 验收日期：2026-09-13  
 最近稳定版：`v0.9.0`
 
@@ -23,6 +23,7 @@
 - [x] Chroma 架构回归：只允许嵌入式 `PersistentClient`，禁止 HTTP Client、Server 服务和端口暴露
 - [x] 标签触发的 GHCR 镜像发布、运行态 `/healthz` 冒烟测试与 provenance attestation（rc.4 run `34810709773`；digest `sha256:63a660e97d87d5784e1e85c9ff02a459e3750ea04acb0651996ce7b6243cf465`）
 - [x] 无凭据公网部署验收器及 Fake-IP/非公网 DNS 防误判测试
+- [ ] Linux 生产镜像使用官方 `torch+cpu`，容器内 CUDA 断言、镜像大小记录与运行态冒烟测试通过
 
 ## 安全与隐私冻结
 
@@ -53,8 +54,8 @@
 - [ ] 真实 `.env.production` 权限为 600，API Key 未出现在镜像、日志或 Git
 - [ ] 下载 BGE-M3 与 reranker 后，模型卷可在容器重启后复用
 - [ ] `docker compose up -d` 后 app 与 Caddy 均 healthy
-- [ ] 运行 `scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.4 --expected-ip ECS_PUBLIC_IPV4` 全部通过
-- [ ] `https://sillycon.xyz/healthz` 返回 `v1.0.0-rc.4`，HTTP 自动跳转 HTTPS
+- [ ] 运行 `scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.5 --expected-ip ECS_PUBLIC_IPV4` 全部通过
+- [ ] `https://sillycon.xyz/healthz` 返回 `v1.0.0-rc.5`，HTTP 自动跳转 HTTPS
 - [ ] 登录失败、CSRF 拒绝和 AI 限流行为符合预期
 - [ ] 用一份真实 PDF 验证上传→后台解析→索引→带页码引用回答
 - [ ] 用一个“最新”问题验证 Tavily、来源日期、行内引用和外链
@@ -63,4 +64,4 @@
 
 ## 发布决策
 
-只有自动化门禁全部通过，且部署机人工验收没有 P0/P1 问题时，才把 `v1.0.0-rc.4` 晋升为 `v1.0.0`。候选期只接受阻断发布的修复，不再加入新功能。
+只有自动化门禁全部通过，且部署机人工验收没有 P0/P1 问题时，才把 `v1.0.0-rc.5` 晋升为 `v1.0.0`。候选期只接受阻断发布的修复，不再加入新功能。

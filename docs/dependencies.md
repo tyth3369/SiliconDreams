@@ -19,6 +19,8 @@
 | Data | pandas, Pydantic |
 | Dev | pytest, pytest-cov, Ruff, httpx, Playwright, pip-audit |
 
+Linux 生产镜像通过 uv 的显式 PyTorch CPU 索引安装 `torch+cpu`，不携带 CUDA、NVIDIA 或 Triton 运行库；macOS 继续从 PyPI 安装原生 wheel 并保留 Apple Silicon MPS。`requirements.txt` 由 `uv.lock` 导出并包含完整哈希，CI 使用 `pip-audit --disable-pip` 直接审计锁定版本，避免二次解析到不同软件源。
+
 Docker 与 Caddy 属于部署基础设施，不是 Python 运行时依赖，因此不写入 `pyproject.toml`。
 
 LangChain、LlamaIndex 和 Streamlit 已从活跃依赖中删除。
@@ -29,12 +31,12 @@ LangChain、LlamaIndex 和 Streamlit 已从活跃依赖中删除。
 uv sync --dev
 uv lock --check
 uv pip check
-uv run pip-audit -r requirements.txt --timeout 60  # 已复核例外以 CI 为唯一可执行策略
+uv run pip-audit --disable-pip -r requirements.txt --timeout 60  # 已复核例外以 CI 为唯一可执行策略
 uv run ruff check .
 uv run pytest
 uv run playwright install chromium
 uv run pytest -m e2e
-uv export --no-dev --format requirements-txt --no-hashes --output-file requirements.txt
+uv export --no-dev --format requirements-txt --output-file requirements.txt
 ```
 
 ## 磁盘占用

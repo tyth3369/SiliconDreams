@@ -72,7 +72,7 @@ Caddy 只负责 TLS 与反向代理，登录、CSRF、限流和审计均由应�
 每个 `v*` 标签都会由 GitHub Actions 构建镜像、运行 `/healthz` 冒烟测试并生成 provenance attestation。部署时只使用明确版本，不使用浮动 `latest`：
 
 ```bash
-export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.4
+export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.5
 docker compose -f compose.yaml -f compose.registry.yaml pull app
 docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
   python scripts/generate_auth_config.py
@@ -117,7 +117,7 @@ curl -fsS http://127.0.0.1:8000/healthz
 uv run python scripts/verify_deployment.py \
   --base-url https://sillycon.xyz \
   --alias-url https://www.sillycon.xyz \
-  --expected-version 1.0.0-rc.4 \
+  --expected-version 1.0.0-rc.5 \
   --expected-ip ECS_PUBLIC_IPV4
 ```
 

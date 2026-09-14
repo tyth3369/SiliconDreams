@@ -55,6 +55,10 @@ jobs:
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
         run: |
           docker pull "${IMAGE_NAME}@${IMAGE_DIGEST}"
+          docker run --rm "${IMAGE_NAME}@${IMAGE_DIGEST}" python -c \
+            "import torch; assert torch.version.cuda is None; print(torch.__version__)"
+          docker image inspect "${IMAGE_NAME}@${IMAGE_DIGEST}" \
+            --format 'image_size_bytes={{.Size}}'
           docker run --detach --name silicondreams-release-smoke --publish 8765:8000 \
             "${IMAGE_NAME}@${IMAGE_DIGEST}"
           for attempt in $(seq 1 30); do

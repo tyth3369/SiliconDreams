@@ -37,3 +37,22 @@ def test_ci_ignores_only_reviewed_unfixed_chromadb_advisories():
     assert ignored == REVIEWED_CHROMA_ADVISORIES
     for advisory in REVIEWED_CHROMA_ADVISORIES:
         assert advisory in policy
+
+
+def test_linux_uses_hashed_cpu_only_pytorch_dependency():
+    project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert 'index = "pytorch-cpu", marker = "sys_platform == \'linux\'"' in project
+    assert 'url = "https://download.pytorch.org/whl/cpu"' in project
+    assert "explicit = true" in project
+    assert re.search(
+        r"^torch==[^\s;]+\+cpu ; sys_platform == 'linux'",
+        requirements,
+        re.MULTILINE,
+    )
+    assert "--hash=sha256:" in requirements
+    assert not re.search(r"^(?:nvidia-|cuda-|triton==)", requirements, re.MULTILINE)
+    assert "pip-audit --disable-pip -r requirements.txt" in workflow
+    assert "assert torch.version.cuda is None" in workflow
