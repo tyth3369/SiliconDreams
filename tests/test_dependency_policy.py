@@ -64,3 +64,16 @@ def test_docker_build_cache_is_not_persisted_in_runtime_image():
     assert "UV_LINK_MODE=copy" in dockerfile
     assert dockerfile.count("--mount=type=cache,id=uv-cache,target=/root/.cache/uv") == 2
     assert "RUN uv sync" not in dockerfile
+
+
+def test_public_deployment_workflow_is_credential_free():
+    workflow = (ROOT / ".github" / "workflows" / "verify-deployment.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "workflow_dispatch:" in workflow
+    assert "expected_ip:" in workflow
+    assert "python scripts/verify_deployment.py" in workflow
+    assert '--expected-version "$EXPECTED_VERSION"' in workflow
+    assert "secrets." not in workflow
+    assert "contents: read" in workflow

@@ -123,6 +123,8 @@ uv run python scripts/verify_deployment.py \
 
 也可追加 `--json` 输出供 CI 或运维平台读取。别名检查会验证 `www` 的 DNS、TLS 和到主域名的规范跳转。命令不会发送登录凭据、API Key 或研究内容；任何检查失败都会返回非零退出码。若本地代理启用了 Fake-IP，类似 `198.18.0.0/15` 的非公网结果会被明确拒绝。建议同时在 ECS 本机执行一次，以排除本地代理 DNS 的影响。
 
+不熟悉终端时，可以打开 GitHub 仓库的 **Actions → Verify public deployment → Run workflow**，只填写 ECS 公网 IPv4；其余三项已有 `sillycon.xyz`、`www.sillycon.xyz` 和当前候选版本的默认值。该工作流从 GitHub 的公网 Runner 运行同一验证器，只申请仓库只读权限，不读取任何 GitHub Secret、应用密码或 API Key。检查失败时展开 `Verify DNS, TLS, application and security boundary` 即可看到具体失败项。
+
 应用必须保持单个 Uvicorn worker；当前 POST 请求到 SSE 流之间的短暂交接状态仍位于进程内。横向扩容前要先把这部分迁移到 Redis 或统一的持久队列。
 
 ## 7. 更新、备份和回滚

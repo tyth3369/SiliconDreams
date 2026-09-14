@@ -1,0 +1,50 @@
+name: Verify public deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_ip:
+        description: ECS public IPv4 address
+        required: true
+        type: string
+      expected_version:
+        description: Exact version expected from /healthz
+        required: true
+        default: 1.0.0-rc.5
+        type: string
+      base_url:
+        description: Canonical HTTPS origin
+        required: true
+        default: https://sillycon.xyz
+        type: string
+      alias_url:
+        description: Optional alias HTTPS origin
+        required: false
+        default: https://www.sillycon.xyz
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASE_URL: ${{ inputs.base_url }}
+      ALIAS_URL: ${{ inputs.alias_url }}
+      EXPECTED_VERSION: ${{ inputs.expected_version }}
+      EXPECTED_IP: ${{ inputs.expected_ip }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Verify DNS, TLS, application and security boundary
+        run: |
+          python scripts/verify_deployment.py \
+            --base-url "$BASE_URL" \
+            --alias-url "$ALIAS_URL" \
+            --expected-version "$EXPECTED_VERSION" \
+            --expected-ip "$EXPECTED_IP" \
+            --json
