@@ -155,7 +155,7 @@ def test_login_rate_limit_returns_retry_after(monkeypatch):
 def test_healthz():
     response = asyncio.run(_request("GET", "/healthz"))
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "1.0.0-rc.3"}
+    assert response.json() == {"status": "ok", "version": "1.0.0-rc.4"}
 
 
 def test_main_page_uses_only_self_hosted_frontend_runtime_assets():
