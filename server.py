@@ -1,5 +1,5 @@
 """
-SiliconDreams — FastAPI Server (v1.0.0-rc.3)
+SiliconDreams — FastAPI Server (v1.0.0-rc.4)
 =======================================
 Electronics / Semiconductor AI Investment Research Analyst.
 FastAPI + HTMX + Jinja2 + SSE streaming + Agent-driven tool calling.

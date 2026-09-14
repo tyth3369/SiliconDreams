@@ -72,7 +72,7 @@ Caddy 只负责 TLS 与反向代理，登录、CSRF、限流和审计均由应�
 每个 `v*` 标签都会由 GitHub Actions 构建镜像、运行 `/healthz` 冒烟测试并生成 provenance attestation。部署时只使用明确版本，不使用浮动 `latest`：
 
 ```bash
-export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.3
+export SILICONDREAMS_IMAGE=ghcr.io/tyth3369/silicondreams:v1.0.0-rc.4
 docker compose -f compose.yaml -f compose.registry.yaml pull app
 docker compose -f compose.yaml -f compose.registry.yaml run --rm app \
   python scripts/generate_auth_config.py
@@ -110,6 +110,18 @@ curl -fsS http://127.0.0.1:8000/healthz
 如果采用 GHCR 镜像，以上所有 `docker compose` 命令都要追加 `-f compose.yaml -f compose.registry.yaml`，并保持 `SILICONDREAMS_IMAGE` 指向同一版本标签。
 
 最后访问 `https://sillycon.xyz`。Caddy 会在 DNS 已正确指向且 80/443 可达时自动申请、续期 TLS 证书，并将 HTTP 重定向到 HTTPS。
+
+从仓库目录运行无凭据公网验收器，自动检查 DNS、TLS、HTTP 跳转、运行版本、未登录访问边界、安全响应头和 CSRF Cookie 属性：
+
+```bash
+uv run python scripts/verify_deployment.py \
+  --base-url https://sillycon.xyz \
+  --alias-url https://www.sillycon.xyz \
+  --expected-version 1.0.0-rc.4 \
+  --expected-ip ECS_PUBLIC_IPV4
+```
+
+也可追加 `--json` 输出供 CI 或运维平台读取。别名检查会验证 `www` 的 DNS、TLS 和到主域名的规范跳转。命令不会发送登录凭据、API Key 或研究内容；任何检查失败都会返回非零退出码。若本地代理启用了 Fake-IP，类似 `198.18.0.0/15` 的非公网结果会被明确拒绝。建议同时在 ECS 本机执行一次，以排除本地代理 DNS 的影响。
 
 应用必须保持单个 Uvicorn worker；当前 POST 请求到 SSE 流之间的短暂交接状态仍位于进程内。横向扩容前要先把这部分迁移到 Redis 或统一的持久队列。
 

@@ -112,3 +112,4 @@ Browser
 - `APP_ENV=production` 在认证配置缺失或 Cookie 非 Secure 时拒绝启动。
 - 由于 SSE hand-off 仍为进程内状态，当前版本禁止多 worker 或多实例部署。
 - `v*` 标签触发 GitHub Actions 发布版本化 GHCR 镜像，推送后以真实容器执行 `/healthz` 冒烟测试并生成 provenance attestation；ECS 可通过 `compose.registry.yaml` 拉取固定标签，源码构建仍作为回退。
+- `scripts/verify_deployment.py` 对公网部署执行无凭据验收：拒绝非公网/Fake-IP DNS，核对可选 ECS IP、TLS、HTTP 跳转、精确版本、未登录访问边界、安全响应头和 CSRF Cookie 属性；不触碰登录凭据或研究数据。

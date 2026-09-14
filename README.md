@@ -92,6 +92,7 @@ uv run python scripts/run_citation_benchmark.py
 uv run python scripts/manage_database.py status
 uv run python scripts/manage_database.py audit --limit 50
 uv run python scripts/manage_database.py metrics --hours 24
+uv run python scripts/verify_deployment.py --alias-url https://www.sillycon.xyz --expected-version 1.0.0-rc.4 --expected-ip ECS_PUBLIC_IPV4
 ```
 
 正式检索基准由 TSMC 与 SMIC 2025 官方年报、6 个中文问题和 6 个英文问题组成；每个答案页码和关键文本均人工核验，PDF 以 SHA-256 锁定。v0.8 实测 Recall@5 为 **100%**、MRR 为 **84.03%**，高于 90% / 70% 发布门槛。脚本会下载并隔离索引官方年报，低于门槛时返回失败状态。
@@ -119,6 +120,7 @@ src/knowledge_graph.py       规范化术语/公司实体与类型关系图
 data/entity_aliases.json     人工核验的公司实体别名
 src/migrations.py            有序事务化 SQLite schema 迁移
 scripts/manage_database.py   数据库状态、校验、审计、备份与恢复 CLI
+scripts/verify_deployment.py 无凭据公网 DNS/TLS/安全边界验收 CLI
 scripts/run_citation_benchmark.py  人工核验的真实 Agent 引用质量门禁
 src/observability.py         无研究正文的请求级成本、延迟、错误与来源覆盖遥测
 templates/ + static/          Bloomberg Terminal 风格 UI
@@ -144,5 +146,5 @@ tests/                        回归测试
 - [API 与模型配置](docs/api-keys-guide.md)
 - [依赖说明](docs/dependencies.md)
 - [v1.0 发布候选验收清单](docs/release-checklist-v1.0.md)
-- [v1.0.0-rc.3 发布说明](docs/release-notes-v1.0.0-rc.3.md)
+- [v1.0.0-rc.4 发布说明](docs/release-notes-v1.0.0-rc.4.md)
 - [依赖安全公告与限时例外](docs/security-advisories.md)
