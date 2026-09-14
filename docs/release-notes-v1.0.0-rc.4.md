@@ -17,7 +17,7 @@ docker compose -f compose.yaml -f compose.registry.yaml pull app
 docker compose -f compose.yaml -f compose.registry.yaml up -d --no-build
 ```
 
-镜像 digest 和 attestation 链接将在标签发布工作流完成后写入 GitHub Release。
+镜像 digest：`sha256:63a660e97d87d5784e1e85c9ff02a459e3750ea04acb0651996ce7b6243cf465`。标签工作流已拉回该 digest 并通过真实 `/healthz` 冒烟测试；[provenance attestation](https://github.com/tyth3369/SiliconDreams/attestations/47261142) 已签名并上传至 Rekor 与 GHCR。
 
 ## 上线验收
 
