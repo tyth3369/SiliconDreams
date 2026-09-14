@@ -18,7 +18,8 @@ docker compose -f compose.yaml -f compose.registry.yaml pull app
 docker compose -f compose.yaml -f compose.registry.yaml up -d --no-build
 ```
 
-首次发布后需在 GitHub Package 设置中将容器包设为 Public，或在 ECS 使用 `read:packages` 凭据登录 GHCR。完整部署步骤见 [deployment.md](deployment.md)。
+该容器包已验证为 Public，可匿名拉取。完整部署步骤见 [deployment.md](deployment.md)。
+
+已发布 digest：`sha256:d7cc625f0f5ded5367bc17002c289d5e9da2685444d66cb0ef1b708af164d2a3`。
 
 目标 ECS 的 DNS、HTTPS、真实 PDF、Tavily、备份恢复和 24 小时观察仍是晋升 v1.0.0 前的必要人工门禁。
-
